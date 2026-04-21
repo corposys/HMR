@@ -4,6 +4,8 @@
 
 HMR es una plataforma moderna e integral diseñada específicamente para cubrir y optimizar los flujos operativos internos del Hotel Margarita Real. Desarrollada con un enfoque central en el **minimalismo**, el rendimiento y la experiencia de usuario (UX/UI).
 
+Durante el refactor reciente, el frontend pasó a una estructura feature-first con rutas modularizadas, shared components y carga diferida por pantalla.
+
 ---
 
 ## 🛠 Tech Stack
@@ -46,14 +48,31 @@ El proyecto sigue una arquitectura clara separando frontend, backend y configura
 │   ├── app/                   # Código de routers, bases de datos y modelos
 │   └── ...
 ├── src/                       # ⚛️ FRONTEND (React)
-│   ├── components/            # Componentes reutilizables modulares (ej. Signatures/, Maintenance/)
+│   ├── app/                   # Composición de la app y rutas modulares
+│   │   └── routes/            # Definición de rutas públicas/protegidas
 │   ├── context/               # Manejadores de Estado Global (ej. AuthContext)
-│   ├── hooks/                 # Custom Hooks de React (ej. fetching unificado)
-│   ├── pages/                 # Páginas completas/Rutas
+│   ├── features/              # Módulos por dominio (auth, dashboard, maintenance, etc.)
+│   ├── shared/                # Componentes reutilizables y layout global
+│   ├── utils/                 # Utilidades comunes
 │   ├── index.css              # Variables globales y directivas base
 │   └── main.jsx               # Entrypoint de React
 └── public/                    # Archivos estáticos puramente públicos (imágenes corporativas)
 ```
+
+### Refactor en 5 fases
+
+1. Normalización de aliases e imports.
+2. Extracción de la capa shared para componentes y layout comunes.
+3. Migración completa a estructura feature-first bajo `src/features`.
+4. Modularización de rutas en `src/app/routes`.
+5. Lazy loading de pantallas principales para dividir los chunks del frontend.
+
+### Convenciones actuales
+
+* Los módulos funcionales viven en `src/features`.
+* Los componentes compartidos viven en `src/shared`.
+* Las rutas se componen desde `src/app/routes`.
+* Los alias de importación están alineados entre Vite y VS Code.
 
 ---
 
@@ -127,3 +146,9 @@ npm run dev
 ```
 
 *(Recuerda que debes tener corriendo el backend `docker-compose up -d hmr-backend postgres` para realizar peticiones reales)*.
+
+---
+
+## 🧹 Limpieza del proyecto
+
+Durante la reorganización se eliminó el árbol legado de páginas y componentes duplicados que ya no participaban en la app activa. La estructura actual queda concentrada en `src/app`, `src/features`, `src/shared`, `src/context` y `src/utils`.

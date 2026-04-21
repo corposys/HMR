@@ -1,21 +1,18 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
-import { ToastProvider } from './context/ToastContext';
-import ProtectedRoute from './components/common/ProtectedRoute';
-import Layout from './components/layout/Layout';
-import Dashboard from './pages/Dashboard';
-import Settings from './pages/Settings/Settings';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import Signatures from './pages/Signatures';
-import SignaturesHistory from './pages/SignaturesHistory';
-import MaintenanceHistory from './pages/Maintenance/MaintenanceHistory';
-import MaintenanceDashboard from './pages/Maintenance/MaintenanceDashboard';
-import RoomTimeline from './pages/Maintenance/RoomTimeline';
-import RoomsMaintenance from './pages/Maintenance/RoomsMaintenance';
-import VehicleControl from './pages/Security/VehicleControl';
-import Linen from './pages/Housekeeping/Linen';
-import Reservations from './pages/Reception/Reservations';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { Suspense } from 'react';
+import { AuthProvider } from '@context/AuthContext';
+import { ToastProvider } from '@context/ToastContext';
+import ProtectedRoute from '@shared/common/ProtectedRoute';
+import Layout from '@shared/layout/Layout';
+import { publicRoutes, protectedRoutes, fallbackRoute } from '@app/routes';
+
+function RouteFallback() {
+    return (
+        <div className="min-h-[40vh] flex items-center justify-center p-6 text-[var(--color-text-muted)]">
+            Cargando módulo...
+        </div>
+    );
+}
 
 /**
  * App - Componente raíz de la aplicación
@@ -27,36 +24,31 @@ function App() {
         <BrowserRouter>
             <ToastProvider>
                 <AuthProvider>
-                    <Routes>
-                        {/* Rutas públicas */}
-                        <Route path="/login" element={<Login />} />
-                        <Route path="/register" element={<Register />} />
+                    <Suspense fallback={<RouteFallback />}>
+                        <Routes>
+                            {publicRoutes.map((route) => (
+                                <Route key={route.path} path={route.path} element={route.element} />
+                            ))}
 
-                        {/* Rutas protegidas */}
-                        <Route
-                            path="/"
-                            element={
-                                <ProtectedRoute>
-                                    <Layout />
-                                </ProtectedRoute>
-                            }
-                        >
-                            <Route index element={<Dashboard />} />
-                            <Route path="signatures" element={<SignaturesHistory />} />
-                            <Route path="signatures/new" element={<Signatures />} />
-                            <Route path="maintenance" element={<MaintenanceHistory />} />
-                            <Route path="maintenance/dashboard" element={<MaintenanceDashboard />} />
-                            <Route path="maintenance/room/:id" element={<RoomTimeline />} />
-                            <Route path="maintenance/rooms" element={<RoomsMaintenance />} />
-                            <Route path="security/vehicle-control" element={<VehicleControl />} />
-                            <Route path="housekeeping/lenceria" element={<Linen />} />
-                            <Route path="reception/reservas" element={<Reservations />} />
-                            <Route path="settings" element={<Settings />} />
-                        </Route>
+                            {/* Rutas protegidas */}
+                            <Route
+                                path="/"
+                                element={
+                                    <ProtectedRoute>
+                                        <Layout />
+                                    </ProtectedRoute>
+                                }
+                            >
+                                {protectedRoutes.map((route) => (
+                                    route.index
+                                        ? <Route key="index" index element={route.element} />
+                                        : <Route key={route.path} path={route.path} element={route.element} />
+                                ))}
+                            </Route>
 
-                        {/* Redirect para rutas no encontradas */}
-                        <Route path="*" element={<Navigate to="/" replace />} />
-                    </Routes>
+                            <Route path={fallbackRoute.path} element={fallbackRoute.element} />
+                        </Routes>
+                    </Suspense>
                 </AuthProvider>
             </ToastProvider>
         </BrowserRouter>
