@@ -40,6 +40,7 @@ class RoomCreate(BaseModel):
     category: str = "hotel"
 
 class RoomUpdate(BaseModel):
+    room_number: Optional[str] = None
     status: Optional[str] = None
     category: Optional[str] = None
 
@@ -265,6 +266,34 @@ async def update_module(module_id: int, data: ModuleUpdate, current_user: dict =
         release_connection(conn)
 
 
+@router.delete("/modules/{module_id}")
+async def delete_module(module_id: int, current_user: dict = Depends(get_current_user)):
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT id FROM modules WHERE id = %s", (module_id,))
+        if not cur.fetchone():
+            raise HTTPException(status_code=404, detail="Módulo no encontrado")
+
+        cur.execute("SELECT id FROM floors WHERE module_id = %s", (module_id,))
+        floor_ids = [row[0] for row in cur.fetchall()]
+        if floor_ids:
+            cur.execute("DELETE FROM rooms WHERE floor_id = ANY(%s)", (floor_ids,))
+            cur.execute("DELETE FROM floors WHERE module_id = %s", (module_id,))
+
+        cur.execute("DELETE FROM modules WHERE id = %s", (module_id,))
+        conn.commit()
+        return {"success": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cur.close()
+        release_connection(conn)
+
+
 # ── Floors CRUD ──────────────────────────────────────────────────────────────
 
 @router.post("/floors")
@@ -319,6 +348,29 @@ async def update_floor(floor_id: int, data: FloorUpdate, current_user: dict = De
         release_connection(conn)
 
 
+@router.delete("/floors/{floor_id}")
+async def delete_floor(floor_id: int, current_user: dict = Depends(get_current_user)):
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT id FROM floors WHERE id = %s", (floor_id,))
+        if not cur.fetchone():
+            raise HTTPException(status_code=404, detail="Piso no encontrado")
+
+        cur.execute("DELETE FROM rooms WHERE floor_id = %s", (floor_id,))
+        cur.execute("DELETE FROM floors WHERE id = %s", (floor_id,))
+        conn.commit()
+        return {"success": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cur.close()
+        release_connection(conn)
+
+
 # ── Rooms CRUD ───────────────────────────────────────────────────────────────
 
 @router.post("/rooms")
@@ -347,6 +399,8 @@ async def update_room(room_id: int, data: RoomUpdate, current_user: dict = Depen
     try:
         cur = conn.cursor()
         updates, params = [], []
+        if data.room_number is not None:
+            updates.append("room_number = %s"); params.append(data.room_number)
         if data.status is not None:
             updates.append("status = %s"); params.append(data.status)
         if data.category is not None:
@@ -357,6 +411,26 @@ async def update_room(room_id: int, data: RoomUpdate, current_user: dict = Depen
 
         params.append(room_id)
         cur.execute(f"UPDATE rooms SET {', '.join(updates)} WHERE id = %s", params)
+        conn.commit()
+        if cur.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Habitación no encontrada")
+        return {"success": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cur.close()
+        release_connection(conn)
+
+
+@router.delete("/rooms/{room_id}")
+async def delete_room(room_id: int, current_user: dict = Depends(get_current_user)):
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute("DELETE FROM rooms WHERE id = %s", (room_id,))
         conn.commit()
         if cur.rowcount == 0:
             raise HTTPException(status_code=404, detail="Habitación no encontrada")

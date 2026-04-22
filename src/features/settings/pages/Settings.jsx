@@ -57,7 +57,7 @@ export default function Settings() {
                 </div>
             </div>
 
-            <div className="bg-[var(--color-bg-secondary)] rounded-xl border border-[var(--color-border)] shadow-sm overflow-visible">
+            <div className="bg-[var(--color-bg-secondary)] rounded-xl border border-[var(--color-border)] shadow-sm overflow-hidden">
                 <div className="border-b border-[var(--color-border)]">
                     <nav className="flex overflow-x-auto" aria-label="Tabs">
                         {tabs.map((tab) => {
@@ -82,7 +82,7 @@ export default function Settings() {
                     </nav>
                 </div>
 
-                <div className="p-6 bg-[var(--color-bg-primary)]">
+                <div className="p-6 bg-[var(--color-bg-primary)] rounded-b-xl h-auto min-h-0">
                     {(() => {
                         const ActiveComponent = tabs.find(t => t.id === activeTab)?.component;
                         return ActiveComponent ? <ActiveComponent /> : <div className="p-4 text-center">Componente no encontrado</div>;
