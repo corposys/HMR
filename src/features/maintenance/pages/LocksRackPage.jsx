@@ -185,7 +185,7 @@ export default function LocksRackPage() {
 
         return Object.values(groups).sort((a, b) => {
             if (a.moduleId === b.moduleId) {
-                return a.floorCode.localeCompare(b.floorCode);
+                return a.floorCode.localeCompare(b.floorCode, undefined, { numeric: true });
             }
             return a.moduleId - b.moduleId;
         });
@@ -215,7 +215,7 @@ export default function LocksRackPage() {
                 const scoreA = getUrgencyScore(a, a.prediction);
                 const scoreB = getUrgencyScore(b, b.prediction);
                 if (scoreA !== scoreB) return scoreA - scoreB;
-                return a.room_number.localeCompare(b.room_number);
+                return a.room_number.localeCompare(b.room_number, undefined, { numeric: true });
             })
             .slice(0, 8);
     }, [filteredLocks, predictionsByRoom]);
@@ -226,10 +226,7 @@ export default function LocksRackPage() {
             rooms: [...group.rooms]
                 .map((item) => ({ ...item, prediction: predictionsByRoom[item.room_id] || null }))
                 .sort((a, b) => {
-                    const scoreA = getUrgencyScore(a, a.prediction);
-                    const scoreB = getUrgencyScore(b, b.prediction);
-                    if (scoreA !== scoreB) return scoreA - scoreB;
-                    return a.room_number.localeCompare(b.room_number);
+                    return a.room_number.localeCompare(b.room_number, undefined, { numeric: true });
                 }),
         }));
 
@@ -251,7 +248,7 @@ export default function LocksRackPage() {
             .sort((a, b) => a.moduleId - b.moduleId)
             .map((module) => ({
                 ...module,
-                floors: module.floors.sort((a, b) => a.floorCode.localeCompare(b.floorCode)),
+                floors: module.floors.sort((a, b) => a.floorCode.localeCompare(b.floorCode, undefined, { numeric: true })),
             }));
     }, [groupedByFloor, predictionsByRoom]);
 
