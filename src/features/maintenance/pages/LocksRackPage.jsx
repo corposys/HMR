@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { DoorOpen, Loader2, Search, Battery, AlertCircle, ShieldAlert, Calendar, User, Plus, RefreshCw, TriangleAlert, ChevronDown, ChevronRight, X } from 'lucide-react';
+import { DoorOpen, Loader2, Search, Battery, AlertCircle, ShieldAlert, Calendar, User, Plus, RefreshCw, TriangleAlert, ChevronDown, ChevronRight, X, Activity, BatteryFull } from 'lucide-react';
 import { useLocksOverview } from '@features/maintenance/hooks/useLocks';
 import CreateLockEventModal from '@features/maintenance/components/CreateLockEventModal';
 
@@ -91,6 +91,11 @@ export default function LocksRackPage() {
     const filteredLocks = useMemo(() => {
         const q = search.trim().toLowerCase();
         return locks.filter((item) => {
+            // Ocultar habitaciones, pisos o módulos clausurados
+            if (item.room_status === 'inactive' || item.module_is_active === false || item.floor_is_active === false) {
+                return false;
+            }
+
             if (statusFilter !== 'all' && item.status !== statusFilter) {
                 return false;
             }
@@ -185,7 +190,11 @@ export default function LocksRackPage() {
 
         return Object.values(groups).sort((a, b) => {
             if (a.moduleId === b.moduleId) {
-                return a.floorCode.localeCompare(b.floorCode, undefined, { numeric: true });
+                const codeA = String(a.floorCode).toUpperCase();
+                const codeB = String(b.floorCode).toUpperCase();
+                if (codeA === 'PB') return -1;
+                if (codeB === 'PB') return 1;
+                return codeA.localeCompare(codeB, undefined, { numeric: true });
             }
             return a.moduleId - b.moduleId;
         });
@@ -248,7 +257,13 @@ export default function LocksRackPage() {
             .sort((a, b) => a.moduleId - b.moduleId)
             .map((module) => ({
                 ...module,
-                floors: module.floors.sort((a, b) => a.floorCode.localeCompare(b.floorCode, undefined, { numeric: true })),
+                floors: module.floors.sort((a, b) => {
+                    const codeA = String(a.floorCode).toUpperCase();
+                    const codeB = String(b.floorCode).toUpperCase();
+                    if (codeA === 'PB') return -1;
+                    if (codeB === 'PB') return 1;
+                    return codeA.localeCompare(codeB, undefined, { numeric: true });
+                }),
             }));
     }, [groupedByFloor, predictionsByRoom]);
 
@@ -382,36 +397,36 @@ export default function LocksRackPage() {
                     </div>
                 )}
 
-                {groupedByFloor.length === 0 ? (
-                    <div className="rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-10 text-center">
-                        <p className="text-sm text-[var(--color-text-muted)]">No hay cerraduras para mostrar con los filtros actuales.</p>
-                    </div>
-                ) : (
-                    <div className="grid items-start gap-4 xl:grid-cols-[1.35fr_1fr]">
-                        <div className="space-y-3">
-                            <div className="flex flex-wrap items-center gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-2">
-                                {[
-                                    { value: 'all', label: 'Todas' },
-                                    { value: 'operational', label: 'Operativas' },
-                                    { value: 'preventive', label: 'Preventivas' },
-                                    { value: 'failure', label: 'Falla' },
-                                    { value: 'out_of_service', label: 'Fuera de servicio' },
-                                ].map((option) => (
-                                    <button
-                                        key={option.value}
-                                        type="button"
-                                        onClick={() => setStatusFilter(option.value)}
-                                        className={`rounded-lg border px-2.5 py-1 text-xs transition-colors ${statusFilter === option.value
-                                            ? 'border-[var(--color-primary)]/40 bg-[var(--color-primary)]/10 text-[var(--color-primary)]'
-                                            : 'border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-border-hover)] hover:text-[var(--color-text-primary)]'
-                                            }`}
-                                    >
-                                        {option.label}
-                                    </button>
-                                ))}
-                            </div>
+                <div className="grid items-start gap-4 xl:grid-cols-[1.35fr_1fr]">
+                    <div className="space-y-3">
+                        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-2">
+                            {[
+                                { value: 'all', label: 'Todas' },
+                                { value: 'operational', label: 'Operativas' },
+                                { value: 'preventive', label: 'Preventivas' },
+                                { value: 'failure', label: 'Falla' },
+                                { value: 'out_of_service', label: 'Fuera de servicio' },
+                            ].map((option) => (
+                                <button
+                                    key={option.value}
+                                    type="button"
+                                    onClick={() => setStatusFilter(option.value)}
+                                    className={`rounded-lg border px-2.5 py-1 text-xs transition-colors ${statusFilter === option.value
+                                        ? 'border-[var(--color-primary)]/40 bg-[var(--color-primary)]/10 text-[var(--color-primary)]'
+                                        : 'border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-border-hover)] hover:text-[var(--color-text-primary)]'
+                                        }`}
+                                >
+                                    {option.label}
+                                </button>
+                            ))}
+                        </div>
 
-                            {sortedGroupedByModule.map((module) => (
+                        {groupedByFloor.length === 0 ? (
+                            <div className="rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-10 text-center">
+                                <p className="text-sm text-[var(--color-text-muted)]">No hay cerraduras para mostrar con los filtros actuales.</p>
+                            </div>
+                        ) : (
+                            sortedGroupedByModule.map((module) => (
                                 <section key={module.moduleId} className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)]/90">
                                     <div className="flex items-center justify-between border-b border-[var(--color-border)]/70 bg-[var(--color-bg-primary)]/45 px-4 py-2.5">
                                         <button
@@ -506,135 +521,178 @@ export default function LocksRackPage() {
                                         </div>
                                     )}
                                 </section>
-                            ))}
-                        </div>
+                            ))
+                        )}
+                    </div>
 
-                        <aside className="h-fit self-start rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-3">
+                        <aside className="h-fit self-start rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-5 shadow-sm">
                             {detailLoading ? (
-                                <div className="flex min-h-[320px] items-center justify-center">
+                                <div className="flex min-h-[400px] items-center justify-center">
                                     <Loader2 className="h-6 w-6 animate-spin text-[var(--color-primary)]" />
                                 </div>
                             ) : !selectedLock ? (
-                                <div className="flex min-h-[320px] items-center justify-center text-center text-sm text-[var(--color-text-muted)]">
-                                    Selecciona una cerradura para ver su historial.
+                                <div className="flex min-h-[400px] flex-col items-center justify-center gap-3 text-center text-sm text-[var(--color-text-muted)]">
+                                    <div className="rounded-full bg-[var(--color-bg-primary)] p-4">
+                                        <DoorOpen className="h-8 w-8 text-[var(--color-text-muted)] opacity-50" />
+                                    </div>
+                                    <p>Selecciona una cerradura para ver su historial y detalles.</p>
                                 </div>
                             ) : (
-                                <div className="space-y-3">
+                                <div className="space-y-6">
+                                    {/* Header */}
                                     <div className="flex items-start justify-between gap-3">
-                                        <div>
-                                            <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">Hab. {selectedLock.room_number}</h3>
-                                            <p className="text-xs text-[var(--color-text-muted)]">{selectedLock.module_name} · {selectedLock.floor_code}</p>
-                                            <p className="text-[10px] text-[var(--color-text-muted)]">{selectedLock.code}</p>
+                                        <div className="flex items-center gap-3">
+                                            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--color-primary)]/10 text-[var(--color-primary)]">
+                                                <DoorOpen className="h-6 w-6" />
+                                            </div>
+                                            <div>
+                                                <h3 className="flex items-center gap-2 text-lg font-bold tracking-tight text-[var(--color-text-primary)]">
+                                                    Hab. {selectedLock.room_number}
+                                                    <span className="text-sm font-normal opacity-40 text-[var(--color-text-muted)]">|</span>
+                                                    <span className="text-xs font-medium text-[var(--color-text-muted)]">{selectedLock.module_name} - {selectedLock.floor_code}</span>
+                                                </h3>
+                                                <p className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] opacity-75">{selectedLock.code}</p>
+                                            </div>
                                         </div>
                                         <button
                                             type="button"
                                             onClick={() => fetchLockDetail(selectedLockId)}
-                                            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[var(--color-border)] text-[var(--color-text-muted)] transition-colors hover:border-[var(--color-primary)]/40 hover:text-[var(--color-text-primary)]"
+                                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-primary)]/50 text-[var(--color-text-muted)] transition-all hover:border-[var(--color-primary)]/40 hover:bg-[var(--color-primary)]/5 hover:text-[var(--color-primary)]"
                                             title="Recargar historial"
                                         >
-                                            <RefreshCw className="h-3.5 w-3.5" />
+                                            <RefreshCw className="h-4 w-4" />
                                         </button>
                                     </div>
 
-                                    <div className="flex flex-wrap gap-1.5">
-                                        {Object.entries(LOCK_STATUS_LABELS).map(([value, label]) => {
-                                            const active = selectedLock.status === value;
-                                            return (
-                                                <button
-                                                    key={value}
-                                                    type="button"
-                                                    onClick={() => handleUpdateLockStatus(value)}
-                                                    disabled={updatingStatus}
-                                                    className={`rounded-md border px-2 py-1 text-[10px] font-semibold uppercase tracking-wide transition-colors ${active
-                                                        ? `${LOCK_STATUS_STYLES[value]} border`
-                                                        : 'border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-border-hover)]'
-                                                        }`}
-                                                >
-                                                    {label}
-                                                </button>
-                                            );
-                                        })}
+                                    {/* Status Tags */}
+                                    <div className="space-y-2">
+                                        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
+                                            <AlertCircle className="h-3.5 w-3.5" />
+                                            <span>Estado actual</span>
+                                        </div>
+                                        <div className="flex flex-wrap gap-2">
+                                            {Object.entries(LOCK_STATUS_LABELS).map(([value, label]) => {
+                                                const active = selectedLock.status === value;
+                                                return (
+                                                    <button
+                                                        key={value}
+                                                        type="button"
+                                                        onClick={() => handleUpdateLockStatus(value)}
+                                                        disabled={updatingStatus}
+                                                        className={`rounded-lg border px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide transition-all ${active
+                                                            ? `${LOCK_STATUS_STYLES[value]} ring-1 ring-inset ring-current/20 shadow-sm`
+                                                            : 'border-[var(--color-border)] bg-[var(--color-bg-primary)]/30 text-[var(--color-text-secondary)] hover:border-[var(--color-border-hover)] hover:bg-[var(--color-bg-primary)]'
+                                                            }`}
+                                                    >
+                                                        {label}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-2 rounded-lg border border-[var(--color-border)]/70 bg-[var(--color-bg-primary)]/35 p-2 text-[10px] text-[var(--color-text-muted)]">
-                                        <div>
-                                            <p className="mb-0.5 uppercase tracking-wide">Salud batería</p>
-                                            <p className="text-sm font-semibold text-[var(--color-text-primary)]">
+                                    {/* Battery Info */}
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="flex flex-col justify-center rounded-xl border border-[var(--color-border)]/70 bg-[var(--color-bg-primary)]/35 p-3.5">
+                                            <div className="flex items-center gap-1.5 mb-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
+                                                <BatteryFull className="h-3.5 w-3.5" />
+                                                Salud batería
+                                            </div>
+                                            <div className="text-lg font-bold text-[var(--color-text-primary)]">
                                                 {selectedPrediction ? `${selectedPrediction.health_score}%` : 'N/A'}
-                                            </p>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <p className="mb-0.5 uppercase tracking-wide">Próximo cambio</p>
-                                            <p className="text-sm font-semibold text-[var(--color-text-primary)]">
+                                        <div className="flex flex-col justify-center rounded-xl border border-[var(--color-border)]/70 bg-[var(--color-bg-primary)]/35 p-3.5">
+                                            <div className="flex items-center gap-1.5 mb-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
+                                                <Calendar className="h-3.5 w-3.5" />
+                                                Próximo cambio
+                                            </div>
+                                            <div className="text-lg font-bold text-[var(--color-text-primary)]">
                                                 {selectedPrediction
                                                     ? (selectedPrediction.days_remaining <= 0
-                                                        ? `${Math.abs(selectedPrediction.days_remaining)}d vencida`
+                                                        ? <span className="text-red-400">{Math.abs(selectedPrediction.days_remaining)}d vencida</span>
                                                         : `${selectedPrediction.days_remaining}d restantes`)
                                                     : 'Sin datos'}
-                                            </p>
+                                            </div>
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center gap-2">
+                                    {/* Action Buttons */}
+                                    <div className="grid grid-cols-2 gap-3">
                                         <button
                                             type="button"
                                             onClick={() => setShowCreate(true)}
-                                            className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-[var(--color-primary)]/40 bg-[var(--color-primary)]/10 py-2 text-xs font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-primary)]/20"
+                                            className="group flex items-center justify-center gap-2 rounded-xl border border-[var(--color-primary)]/30 bg-[var(--color-primary)]/10 py-2.5 text-xs font-semibold text-[var(--color-primary)] transition-all hover:bg-[var(--color-primary)]/20 hover:border-[var(--color-primary)]/50 hover:shadow-sm"
                                         >
-                                            <Plus className="h-3.5 w-3.5" />
+                                            <Plus className="h-4 w-4 transition-transform group-hover:scale-110" />
                                             Registrar evento
                                         </button>
                                         <button
                                             type="button"
                                             onClick={() => setShowTimelineModal(true)}
-                                            className="inline-flex flex-1 items-center justify-center rounded-lg border border-[var(--color-border)] py-2 text-xs font-semibold text-[var(--color-text-secondary)] transition-colors hover:border-[var(--color-border-hover)] hover:text-[var(--color-text-primary)]"
+                                            className="group flex items-center justify-center gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-primary)]/30 py-2.5 text-xs font-semibold text-[var(--color-text-secondary)] transition-all hover:border-[var(--color-border-hover)] hover:bg-[var(--color-bg-primary)] hover:text-[var(--color-text-primary)] hover:shadow-sm"
                                         >
                                             Ver detalle
+                                            <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
                                         </button>
                                     </div>
 
-                                    <div className="rounded-lg border border-[var(--color-border)]/70 bg-[var(--color-bg-primary)]/30 p-2 text-xs text-[var(--color-text-muted)]">
-                                        <div className="flex items-center justify-between gap-2">
-                                            <span>Último mantenimiento</span>
-                                            <span className="font-medium text-[var(--color-text-primary)]">{formatShortDate(selectedLock.last_maintenance_at)}</span>
+                                    {/* Maintenance Summary */}
+                                    <div className="rounded-xl border border-[var(--color-border)]/70 bg-[var(--color-bg-primary)]/20 p-3">
+                                        <div className="flex items-center justify-between gap-2 border-b border-[var(--color-border)]/50 pb-2 mb-2 text-xs">
+                                            <span className="text-[var(--color-text-muted)] flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5"/> Último mantenimiento</span>
+                                            <span className="font-semibold text-[var(--color-text-primary)]">{formatShortDate(selectedLock.last_maintenance_at)}</span>
                                         </div>
-                                        <div className="mt-1 flex items-center justify-between gap-2">
-                                            <span>Último tipo</span>
-                                            <span className="font-medium text-[var(--color-text-primary)]">{selectedLock.last_maintenance_type || '—'}</span>
+                                        <div className="flex items-center justify-between gap-2 text-xs">
+                                            <span className="text-[var(--color-text-muted)] flex items-center gap-1.5"><ShieldAlert className="h-3.5 w-3.5"/> Último tipo</span>
+                                            <span className="font-semibold text-[var(--color-text-primary)]">{selectedLock.last_maintenance_type || '—'}</span>
                                         </div>
                                     </div>
 
-                                    <div className="space-y-2">
-                                        <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">Historial reciente</h4>
+                                    {/* Recent History */}
+                                    <div className="space-y-3">
+                                        <div className="flex items-center justify-between">
+                                            <h4 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
+                                                <AlertCircle className="h-3.5 w-3.5" />
+                                                Historial reciente
+                                            </h4>
+                                            <span className="text-[10px] font-medium text-[var(--color-text-muted)] bg-[var(--color-bg-primary)] px-2 py-0.5 rounded-full">{events.length} {events.length === 1 ? 'evento' : 'eventos'}</span>
+                                        </div>
 
                                         {events.length === 0 ? (
-                                            <p className="rounded-md border border-dashed border-[var(--color-border)] p-3 text-xs text-[var(--color-text-muted)]">
-                                                Esta cerradura aún no tiene eventos registrados.
-                                            </p>
+                                            <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-bg-primary)]/20 p-6 text-center text-xs text-[var(--color-text-muted)]">
+                                                <Calendar className="h-6 w-6 opacity-30" />
+                                                <p>Esta cerradura aún no tiene eventos registrados.</p>
+                                            </div>
                                         ) : (
-                                            <div className="max-h-[360px] space-y-1.5 overflow-y-auto pr-1">
+                                            <div className="max-h-[300px] space-y-2.5 overflow-y-auto pr-2 custom-scrollbar">
                                                 {events.map((event) => (
-                                                    <article key={event.id} className="rounded-md border border-[var(--color-border)]/80 bg-[var(--color-bg-primary)]/35 p-2">
-                                                        <div className="flex items-center justify-between gap-2">
-                                                            <span className={`rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${event.type === 'battery' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'}`}>
+                                                    <article key={event.id} className="group relative overflow-hidden rounded-xl border border-[var(--color-border)]/80 bg-[var(--color-bg-primary)]/40 p-3 transition-colors hover:border-[var(--color-border-hover)] hover:bg-[var(--color-bg-primary)]/60">
+                                                        <div className="absolute left-0 top-0 h-full w-1 bg-transparent transition-colors group-hover:bg-[var(--color-primary)]/30" />
+                                                        <div className="mb-2 flex items-center justify-between gap-2">
+                                                            <span className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${event.type === 'battery' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'}`}>
+                                                                {event.type === 'battery' ? <Battery className="h-3 w-3" /> : <ShieldAlert className="h-3 w-3" />}
                                                                 {event.type === 'battery' ? 'Batería' : 'Mecánico'}
                                                             </span>
-                                                            <span className="text-[10px] text-[var(--color-text-muted)] flex items-center gap-1">
+                                                            <span className="flex items-center gap-1 text-[10px] font-medium text-[var(--color-text-muted)]">
                                                                 <Calendar className="h-3 w-3" />
                                                                 {formatShortDate(event.performed_at)}
                                                             </span>
                                                         </div>
                                                         {event.part_name && (
-                                                            <p className="mt-1 text-[10px] font-medium text-[var(--color-text-secondary)]">Pieza: {event.part_name}</p>
+                                                            <div className="mb-1.5 flex items-start gap-1.5 text-xs text-[var(--color-text-secondary)]">
+                                                                <div className="mt-0.5 h-1.5 w-1.5 rounded-full bg-[var(--color-text-muted)]/50 shrink-0" />
+                                                                <span className="font-medium">Pieza: <span className="text-[var(--color-text-primary)]">{event.part_name}</span></span>
+                                                            </div>
                                                         )}
                                                         {event.description && (
-                                                            <p className="mt-1 text-xs text-[var(--color-text-secondary)]">{event.description}</p>
+                                                            <p className="mb-2 pl-3 text-xs leading-relaxed text-[var(--color-text-secondary)] border-l-2 border-[var(--color-border)]/50">{event.description}</p>
                                                         )}
                                                         {event.user_name && (
-                                                            <p className="mt-1 text-[10px] text-[var(--color-text-muted)] flex items-center gap-1">
+                                                            <div className="flex items-center gap-1.5 text-[10px] font-medium text-[var(--color-text-muted)] mt-2 pt-2 border-t border-[var(--color-border)]/50">
                                                                 <User className="h-3 w-3" />
                                                                 {event.user_name}
-                                                            </p>
+                                                            </div>
                                                         )}
                                                     </article>
                                                 ))}
@@ -643,9 +701,8 @@ export default function LocksRackPage() {
                                     </div>
                                 </div>
                             )}
-                        </aside>
-                    </div>
-                )}
+                    </aside>
+                </div>
             </div>
 
             {showCreate && selectedLock && (
@@ -659,77 +716,154 @@ export default function LocksRackPage() {
             )}
 
             {showTimelineModal && selectedLock && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowTimelineModal(false)} />
-                    <div className="relative z-10 w-full max-w-3xl rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] shadow-2xl">
-                        <button
-                            type="button"
-                            onClick={() => setShowTimelineModal(false)}
-                            className="absolute right-4 top-4 inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--color-border)] text-[var(--color-text-muted)] transition-colors hover:border-[var(--color-border-hover)] hover:text-[var(--color-text-primary)]"
-                            aria-label="Cerrar detalle"
-                        >
-                            <X className="h-4 w-4" />
-                        </button>
-
-                        <div className="border-b border-[var(--color-border)] px-5 py-4 pr-14">
-                            <h3 className="text-2xl font-semibold text-[var(--color-text-primary)]">Hab. {selectedLock.room_number}</h3>
-                            <p className="text-sm text-[var(--color-text-secondary)]">{selectedLock.module_name} · {selectedLock.floor_code}</p>
-                            <p className="text-xs text-[var(--color-text-muted)]">{selectedLock.code}</p>
-                        </div>
-
-                        <div className="max-h-[75vh] space-y-4 overflow-y-auto p-5">
-                            <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-primary)]/35 p-4">
-                                <h4 className="mb-3 text-sm font-semibold text-[var(--color-text-primary)]">Predicción de batería</h4>
-                                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                                    <div>
-                                        <p className="text-[11px] uppercase tracking-wider text-[var(--color-text-muted)]">Salud batería</p>
-                                        <p className="text-xl font-bold text-[var(--color-text-primary)]">{selectedPrediction ? `${selectedPrediction.health_score}%` : 'N/A'}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-[11px] uppercase tracking-wider text-[var(--color-text-muted)]">Próximo cambio</p>
-                                        <p className="text-xl font-bold text-[var(--color-text-primary)]">
-                                            {selectedPrediction
-                                                ? (selectedPrediction.days_remaining <= 0
-                                                    ? `${Math.abs(selectedPrediction.days_remaining)}d vencida`
-                                                    : `${selectedPrediction.days_remaining}d restantes`)
-                                                : 'Sin datos'}
-                                        </p>
-                                    </div>
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onClick={() => setShowTimelineModal(false)} />
+                    <div className="relative z-10 w-full max-w-6xl flex max-h-[90vh] flex-col overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] shadow-2xl">
+                        
+                        {/* Header */}
+                        <div className="flex flex-shrink-0 items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-bg-primary)]/30 px-5 py-4">
+                            <div className="flex items-center gap-3">
+                                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--color-primary)]/10 text-[var(--color-primary)]">
+                                    <DoorOpen className="h-5 w-5" />
+                                </div>
+                                <div>
+                                    <h3 className="flex items-center gap-2 text-lg font-bold tracking-tight text-[var(--color-text-primary)]">
+                                        Hab. {selectedLock.room_number}
+                                        <span className="text-sm font-normal opacity-40 text-[var(--color-text-muted)]">|</span>
+                                        <span className="text-xs font-medium text-[var(--color-text-muted)]">{selectedLock.module_name} - {selectedLock.floor_code}</span>
+                                    </h3>
+                                    <p className="mt-0.5 text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] opacity-75">{selectedLock.code}</p>
                                 </div>
                             </div>
+                            <button
+                                type="button"
+                                onClick={() => setShowTimelineModal(false)}
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-primary)]/50 text-[var(--color-text-muted)] transition-all hover:border-[var(--color-border-hover)] hover:bg-[var(--color-bg-primary)] hover:text-[var(--color-text-primary)]"
+                                aria-label="Cerrar detalle"
+                            >
+                                <X className="h-4 w-4" />
+                            </button>
+                        </div>
 
-                            <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-primary)]/35">
-                                <div className="border-b border-[var(--color-border)] px-4 py-3">
-                                    <h4 className="text-sm font-semibold text-[var(--color-text-primary)]">Historial completo</h4>
-                                    <p className="text-xs text-[var(--color-text-muted)]">{events.length} {events.length === 1 ? 'registro' : 'registros'}</p>
+                        {/* Body */}
+                        <div className="flex-1 overflow-y-auto p-5 custom-scrollbar">
+                            <div className="grid gap-5 lg:grid-cols-[1fr_2fr]">
+                                {/* Left Column: Summary */}
+                                <div className="space-y-5">
+                                    <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-primary)]/40 p-5">
+                                        <h4 className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-[var(--color-text-primary)]" style={{ marginBottom: '16px' }}>
+                                            <BatteryFull className="h-3.5 w-3.5 text-[var(--color-primary)]" />
+                                            Predicción de batería
+                                        </h4>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div className="flex flex-col justify-center rounded-xl border border-[var(--color-border)]/70 bg-[var(--color-bg-primary)]/35 p-3.5">
+                                                <div className="flex items-center gap-1.5 mb-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
+                                                    <BatteryFull className="h-3.5 w-3.5" />
+                                                    Salud batería
+                                                </div>
+                                                <div className="text-lg font-bold text-[var(--color-text-primary)]">
+                                                    {selectedPrediction ? `${selectedPrediction.health_score}%` : 'N/A'}
+                                                </div>
+                                            </div>
+                                            <div className="flex flex-col justify-center rounded-xl border border-[var(--color-border)]/70 bg-[var(--color-bg-primary)]/35 p-3.5">
+                                                <div className="flex items-center gap-1.5 mb-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
+                                                    <Calendar className="h-3.5 w-3.5" />
+                                                    Próximo cambio
+                                                </div>
+                                                <div className="text-lg font-bold text-[var(--color-text-primary)]">
+                                                    {selectedPrediction
+                                                        ? (selectedPrediction.days_remaining <= 0
+                                                            ? <span className="text-red-400">{Math.abs(selectedPrediction.days_remaining)}d vencida</span>
+                                                            : `${selectedPrediction.days_remaining}d restantes`)
+                                                        : 'Sin datos'}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-primary)]/40 p-5">
+                                        <h4 className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-[var(--color-text-primary)]" style={{ marginBottom: '16px' }}>
+                                            <AlertCircle className="h-3.5 w-3.5 text-[var(--color-primary)]" />
+                                            Resumen
+                                        </h4>
+                                        <div className="space-y-2.5">
+                                            <div className="flex items-center justify-between rounded-lg bg-[var(--color-bg-secondary)] px-3.5 py-2.5 border border-[var(--color-border)]/50">
+                                                <span className="text-[11px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]">Total eventos</span>
+                                                <span className="text-sm font-bold text-[var(--color-text-primary)]">{events.length}</span>
+                                            </div>
+                                            <div className="flex items-center justify-between rounded-lg bg-[var(--color-bg-secondary)] px-3.5 py-2.5 border border-[var(--color-border)]/50">
+                                                <span className="text-[11px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]">Último evento</span>
+                                                <span className="text-xs font-bold text-[var(--color-text-primary)]">{events.length > 0 ? formatShortDate(events[0].performed_at) : '—'}</span>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
 
-                                {events.length === 0 ? (
-                                    <p className="p-4 text-sm text-[var(--color-text-muted)]">Esta cerradura aún no tiene eventos registrados.</p>
-                                ) : (
-                                    <div className="space-y-2 p-3">
-                                        {events.map((event) => (
-                                            <article key={event.id} className="rounded-lg border border-[var(--color-border)]/80 bg-[var(--color-bg-secondary)] p-3">
-                                                <div className="flex items-center justify-between gap-2">
-                                                    <span className={`rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${event.type === 'battery' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'}`}>
-                                                        {event.type === 'battery' ? 'Batería' : 'Mecánico'}
-                                                    </span>
-                                                    <span className="text-[11px] text-[var(--color-text-muted)]">{formatShortDate(event.performed_at)}</span>
-                                                </div>
-
-                                                {event.part_name && (
-                                                    <p className="mt-2 text-xs font-medium text-[var(--color-text-secondary)]">Pieza: {event.part_name}</p>
-                                                )}
-                                                {event.description && (
-                                                    <p className="mt-1 text-sm text-[var(--color-text-secondary)]">{event.description}</p>
-                                                )}
-                                                {event.user_name && (
-                                                    <p className="mt-2 text-[11px] text-[var(--color-text-muted)]">Técnico: {event.user_name}</p>
-                                                )}
-                                            </article>
-                                        ))}
+                                {/* Right Column: History */}
+                                <div className="flex flex-col overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-primary)]/40">
+                                    <div className="flex items-center justify-between border-b border-[var(--color-border)]/50 bg-[var(--color-bg-primary)]/20 px-4 py-3.5">
+                                        <h4 className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-[var(--color-text-primary)]">
+                                            <ShieldAlert className="h-3.5 w-3.5 text-[var(--color-primary)]" />
+                                            Historial completo
+                                        </h4>
+                                        <span className="rounded-full bg-[var(--color-primary)]/10 px-2.5 py-0.5 text-[10px] font-bold text-[var(--color-primary)]">
+                                            {events.length} {events.length === 1 ? 'registro' : 'registros'}
+                                        </span>
                                     </div>
-                                )}
+
+                                    <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+                                        {events.length === 0 ? (
+                                            <div className="flex min-h-[250px] flex-col items-center justify-center gap-2.5 text-center opacity-60">
+                                                <Calendar className="h-10 w-10 text-[var(--color-text-muted)] opacity-50" />
+                                                <p className="text-xs font-medium text-[var(--color-text-muted)]">Esta cerradura aún no tiene eventos registrados.</p>
+                                            </div>
+                                        ) : (
+                                            <div className="relative space-y-4 before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-[var(--color-border)] before:to-transparent">
+                                                {events.map((event, index) => (
+                                                    <div key={event.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
+                                                        {/* Icon */}
+                                                        <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-[var(--color-bg-secondary)] bg-[var(--color-bg-primary)] shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow-sm z-10">
+                                                            {event.type === 'battery' ? <Battery className="w-4 h-4 text-emerald-400" /> : <ShieldAlert className="w-4 h-4 text-amber-400" />}
+                                                        </div>
+                                                        
+                                                        {/* Content Card */}
+                                                        <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] shadow-sm transition-all hover:shadow-md hover:border-[var(--color-border-hover)]">
+                                                            <div className="flex items-center justify-between mb-2">
+                                                                <span className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${event.type === 'battery' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'}`}>
+                                                                    {event.type === 'battery' ? 'Batería' : 'Mecánico'}
+                                                                </span>
+                                                                <time className="text-[11px] font-bold text-[var(--color-text-muted)] flex items-center gap-1">
+                                                                    <Calendar className="w-3 h-3"/>
+                                                                    {formatShortDate(event.performed_at)}
+                                                                </time>
+                                                            </div>
+                                                            
+                                                            {event.part_name && (
+                                                                <div className="mb-2 inline-flex items-center rounded-lg bg-[var(--color-bg-primary)]/50 px-2.5 py-1 text-xs">
+                                                                    <span className="font-medium text-[var(--color-text-muted)] mr-1">Pieza:</span>
+                                                                    <span className="font-semibold text-[var(--color-text-primary)]">{event.part_name}</span>
+                                                                </div>
+                                                            )}
+                                                            
+                                                            {event.description && (
+                                                                <p className="text-sm leading-relaxed text-[var(--color-text-secondary)]">{event.description}</p>
+                                                            )}
+                                                            
+                                                            {event.user_name && (
+                                                                <div className="mt-3 flex items-center gap-1.5 text-xs font-medium text-[var(--color-text-muted)] pt-3 border-t border-[var(--color-border)]/50">
+                                                                    <div className="flex items-center justify-center w-5 h-5 rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary)]">
+                                                                        <User className="w-3 h-3" />
+                                                                    </div>
+                                                                    {event.user_name}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
