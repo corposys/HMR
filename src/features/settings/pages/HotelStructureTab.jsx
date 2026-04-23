@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
     Building2, MapPin, Layers, BedDouble, Wrench,
     ChevronRight, ChevronDown, Plus, AlertCircle,
-    Loader2, Trash2, Check
+    Loader2, Trash2, Check, Pencil
 } from 'lucide-react';
 import Button from '@shared/common/Button';
 import { useToast } from '@context/ToastContext';
@@ -75,8 +75,27 @@ const StatCard = ({ icon: Icon, label, value, subtext, colorClass, bgClass }) =>
     </div>
 );
 
-const RoomCard = ({ room, isEditable, onDelete, onToggle }) => {
+const RoomCard = ({ room, isEditable, onSave, onDelete, onToggle }) => {
     const isActive = room.status === 'active';
+
+    const handleEditRoomNumber = async () => {
+        if (!isEditable || !onSave) {
+            return;
+        }
+
+        const currentRoomNumber = String(room.room_number || '');
+        const nextRoomNumber = window.prompt('Nuevo número de habitación', currentRoomNumber);
+        if (nextRoomNumber === null) {
+            return;
+        }
+
+        const trimmedRoomNumber = nextRoomNumber.trim();
+        if (!trimmedRoomNumber || trimmedRoomNumber === currentRoomNumber) {
+            return;
+        }
+
+        await onSave(room.id, { room_number: trimmedRoomNumber });
+    };
 
     return (
         <div className={`group relative flex w-full min-w-0 min-h-[112px] flex-col rounded-xl border p-2 transition-all duration-200 hover:border-[var(--color-primary)] ${isActive ? 'border-[var(--color-border)] bg-[var(--color-bg-secondary)]' : 'border-red-900/20 bg-black/40'}`}>
@@ -89,14 +108,27 @@ const RoomCard = ({ room, isEditable, onDelete, onToggle }) => {
             </div>
 
             {isEditable && (
-                <button
-                    type="button"
-                    onClick={() => onDelete(room.id)}
-                    className="absolute bottom-2 right-2 inline-flex h-6 w-6 items-center justify-center rounded-md border border-[var(--color-border)] bg-transparent text-[var(--color-text-muted)] opacity-0 transition-all duration-200 group-hover:opacity-100 hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-300"
-                    aria-label="Eliminar habitación"
-                >
-                    <Trash2 className="h-3 w-3" />
-                </button>
+                <div className="absolute bottom-2 right-2 inline-flex items-center gap-1 opacity-0 transition-all duration-200 group-hover:opacity-100">
+                    <button
+                        type="button"
+                        onClick={handleEditRoomNumber}
+                        className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-[var(--color-border)] bg-transparent text-[var(--color-text-muted)] transition-all duration-200 hover:border-[var(--color-primary)]/50 hover:bg-[var(--color-primary)]/10 hover:text-[var(--color-primary)]"
+                        aria-label="Editar habitación"
+                        title="Editar habitación"
+                    >
+                        <Pencil className="h-3 w-3" />
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => onDelete(room.id)}
+                        className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-[var(--color-border)] bg-transparent text-[var(--color-text-muted)] transition-all duration-200 hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-300"
+                        aria-label="Eliminar habitación"
+                        title="Eliminar habitación"
+                    >
+                        <Trash2 className="h-3 w-3" />
+                    </button>
+                </div>
             )}
 
             {!isActive && (
@@ -194,6 +226,18 @@ const FloorSection = ({ moduleId, floor, isEditable, onSaveFloor, onDeleteFloor,
                             aria-label="Habitaciones por fila"
                         />
                     </label>
+
+                    {isEditable && (
+                        <button
+                            type="button"
+                            onClick={() => onDeleteFloor(floor.id)}
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-red-500/30 bg-red-500/10 text-red-300 transition-colors hover:border-red-400/60 hover:bg-red-500/20"
+                            aria-label="Eliminar piso"
+                            title="Eliminar piso"
+                        >
+                            <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -381,6 +425,8 @@ const ModuleCard = ({ module, isEditable, onToggleEditMode, onDraftChange, onDel
                     </div>
 
                     <div className="flex items-center gap-2 lg:self-start" data-module-interactive>
+                        <ToggleSwitch checked={module.is_active} onChange={(val) => onToggleModule(module.id, val)} disabled={!isEditable} activeLabel="Operativo" inactiveLabel="Clausurado" />
+
                         <button
                             type="button"
                             onClick={() => onToggleEditMode(module.id)}
@@ -388,8 +434,6 @@ const ModuleCard = ({ module, isEditable, onToggleEditMode, onDraftChange, onDel
                         >
                             {isEditable ? 'Bloquear' : 'Editar'}
                         </button>
-
-                        <ToggleSwitch checked={module.is_active} onChange={(val) => onToggleModule(module.id, val)} disabled={!isEditable} activeLabel="Operativo" inactiveLabel="Clausurado" />
 
                         <button
                             type="button"
@@ -664,8 +708,8 @@ export default function HotelStructureTab() {
             <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
                 <div>
                     <div className="mb-1 flex items-center gap-2 text-[var(--color-primary)]">
-                        <MapPin className="h-5 w-5" />
-                        <h2 className="text-xl font-bold text-[var(--color-text-primary)]">Estructura Física del Complejo</h2>
+                        <MapPin className="h-6 w-6" />
+                        <h2 className="text-xl font-bold text-[var(--color-text-primary)]">Estructura Hotelera</h2>
                     </div>
                 </div>
 
