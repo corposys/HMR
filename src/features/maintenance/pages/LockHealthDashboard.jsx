@@ -5,12 +5,12 @@ import {
     DoorOpen, Loader2, AlertCircle, ChevronRight
 } from 'lucide-react';
 import { formatDate } from '@utils/formatters';
-import { HealthBar } from '@features/maintenance/components/MaintenanceComponents';
-import { useMaintenanceDashboard } from '@features/maintenance/hooks/useMaintenance';
+import { HealthBar } from '@features/maintenance/components/LockSharedComponents';
+import { useLockDashboard } from '@features/maintenance/hooks/useLocks';
 
-export default function MaintenanceDashboard() {
+export default function LockHealthDashboard() {
     const navigate = useNavigate();
-    const { alerts, stats, predictions, loading, fetchDashboardData } = useMaintenanceDashboard();
+    const { alerts, stats, predictions, loading, fetchDashboardData } = useLockDashboard();
 
     useEffect(() => { 
         fetchDashboardData(); 
@@ -36,7 +36,7 @@ export default function MaintenanceDashboard() {
                 <div className="mb-6">
                     <div className="flex items-center gap-3 mb-1">
                         <button
-                            onClick={() => navigate('/maintenance')}
+                            onClick={() => navigate('/maintenance/rooms')}
                             aria-label="Volver al historial"
                             title="Volver al historial"
                             className="p-2.5 rounded-xl bg-[var(--color-primary)]/10 text-[var(--color-primary)] hover:bg-[var(--color-primary)]/20 transition-colors"

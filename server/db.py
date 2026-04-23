@@ -126,9 +126,22 @@ def init_db():
                 );
             """)
             cur.execute("""
+                CREATE TABLE IF NOT EXISTS lock_assets (
+                    id            SERIAL PRIMARY KEY,
+                    room_id       INTEGER NOT NULL UNIQUE REFERENCES rooms(id) ON DELETE CASCADE,
+                    code          VARCHAR(40) UNIQUE,
+                    status        VARCHAR(20) NOT NULL DEFAULT 'operational' CHECK (status IN ('operational', 'preventive', 'failure', 'out_of_service')),
+                    installed_at  DATE,
+                    notes         TEXT,
+                    created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+            """)
+
+            cur.execute("""
                 CREATE TABLE IF NOT EXISTS maintenance_logs (
                     id            SERIAL PRIMARY KEY,
                     room_id       INTEGER NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
+                    lock_asset_id INTEGER REFERENCES lock_assets(id) ON DELETE SET NULL,
                     part_type_id  INTEGER REFERENCES part_types(id) ON DELETE SET NULL,
                     type          VARCHAR(20) NOT NULL CHECK (type IN ('battery', 'mechanical')),
                     description   TEXT,
@@ -138,6 +151,13 @@ def init_db():
                 );
             """)
 
+            # Backward-compatible migrations for existing databases.
+            cur.execute("ALTER TABLE maintenance_logs ADD COLUMN IF NOT EXISTS lock_asset_id INTEGER REFERENCES lock_assets(id) ON DELETE SET NULL")
+            cur.execute("ALTER TABLE lock_assets ADD COLUMN IF NOT EXISTS code VARCHAR(40) UNIQUE")
+            cur.execute("ALTER TABLE lock_assets ADD COLUMN IF NOT EXISTS status VARCHAR(20) NOT NULL DEFAULT 'operational' CHECK (status IN ('operational', 'preventive', 'failure', 'out_of_service'))")
+            cur.execute("ALTER TABLE lock_assets ADD COLUMN IF NOT EXISTS installed_at DATE")
+            cur.execute("ALTER TABLE lock_assets ADD COLUMN IF NOT EXISTS notes TEXT")
+
             conn.commit()
             cur.close()
             release_connection(conn)
@@ -146,6 +166,7 @@ def init_db():
             # Seed defaults
             _seed_hotel_structure()
             _seed_part_types()
+            _seed_lock_assets()
             return
         except psycopg2.OperationalError as e:
             print(f"⏳ Waiting for database (attempt {attempt + 1}/10)... {e}")
@@ -261,4 +282,29 @@ def _seed_part_types():
         conn.rollback()
         release_connection(conn)
         print(f"⚠️  Error seeding part types: {e}")
+
+
+def _seed_lock_assets():
+    """Ensure every room has one lock asset record for lock-centric tracking."""
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO lock_assets (room_id, code, status)
+            SELECT r.id, CONCAT('LOCK-', r.id::text), 'operational'
+            FROM rooms r
+            WHERE NOT EXISTS (
+                SELECT 1 FROM lock_assets la WHERE la.room_id = r.id
+            )
+        """)
+        inserted = cur.rowcount
+        conn.commit()
+        cur.close()
+        release_connection(conn)
+        if inserted > 0:
+            print(f"✅ Lock assets seeded ({inserted} created)")
+    except Exception as e:
+        conn.rollback()
+        release_connection(conn)
+        print(f"⚠️  Error seeding lock assets: {e}")
 

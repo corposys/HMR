@@ -150,17 +150,8 @@ export default function Sidebar() {
                     
                     <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isMaintenanceOpen ? 'max-h-40 opacity-100 mt-1' : 'max-h-0 opacity-0'}`}>
                         <div className="flex flex-col gap-1 py-1">
-                            {/* Habitaciones */}
+                            {/* Cerraduras */}
                             <NavLink to="/maintenance/rooms" className={({ isActive }) => `group flex items-center gap-3 py-2 pl-11 pr-3 text-sm rounded-lg transition-colors ${isActive ? 'text-[var(--color-text-primary)] font-medium bg-[var(--color-bg-tertiary)]/50' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]/30'}`}>
-                                {({ isActive }) => (
-                                    <>
-                                        <div className={`w-1.5 h-1.5 rounded-full transition-colors ${isActive ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-text-muted)] group-hover:bg-[var(--color-text-secondary)]'}`} />
-                                        <span>Habitaciones</span>
-                                    </>
-                                )}
-                            </NavLink>
-                            {/* Cerraduras (Historial) */}
-                            <NavLink to="/maintenance" end className={({ isActive }) => `group flex items-center gap-3 py-2 pl-11 pr-3 text-sm rounded-lg transition-colors ${isActive ? 'text-[var(--color-text-primary)] font-medium bg-[var(--color-bg-tertiary)]/50' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]/30'}`}>
                                 {({ isActive }) => (
                                     <>
                                         <div className={`w-1.5 h-1.5 rounded-full transition-colors ${isActive ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-text-muted)] group-hover:bg-[var(--color-text-secondary)]'}`} />
@@ -168,7 +159,6 @@ export default function Sidebar() {
                                     </>
                                 )}
                             </NavLink>
-
                         </div>
                     </div>
                 </div>

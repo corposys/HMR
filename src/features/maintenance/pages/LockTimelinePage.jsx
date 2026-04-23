@@ -27,7 +27,7 @@ function HealthBar({ score, large }) {
     );
 }
 
-export default function RoomTimeline() {
+export default function LockTimelinePage() {
     const { id } = useParams();
     const navigate = useNavigate();
 
@@ -84,7 +84,7 @@ export default function RoomTimeline() {
                 <div className="mb-6">
                     <div className="flex items-center gap-3 mb-1">
                         <button
-                            onClick={() => navigate('/maintenance')}
+                            onClick={() => navigate('/maintenance/rooms')}
                             aria-label="Volver al historial"
                             title="Volver al historial"
                             className="p-2.5 rounded-xl bg-[var(--color-primary)]/10 text-[var(--color-primary)] hover:bg-[var(--color-primary)]/20 transition-colors"

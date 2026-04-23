@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Wrench, Battery, Cog, Plus, Search, X, Loader2 } from 'lucide-react';
 import CustomDropdown from '@shared/common/CustomDropdown';
 
-export default function CreateMaintenanceModal({ onSave, onCancel, saving }) {
+export default function CreateLockEventModal({ onSave, onCancel, saving, initialRoomId = null, lockRoomSelection = false }) {
     const [rooms, setRooms] = useState([]);
     const [partTypes, setPartTypes] = useState([]);
     const [form, setForm] = useState({
@@ -24,6 +24,23 @@ export default function CreateMaintenanceModal({ onSave, onCancel, saving }) {
         fetch('/api/maintenance/part-types', { headers: { Authorization: `Bearer ${token}` } })
             .then(r => r.json()).then(d => setPartTypes(d.part_types || []));
     }, []);
+
+    useEffect(() => {
+        if (!initialRoomId || rooms.length === 0) {
+            return;
+        }
+
+        const initialRoom = rooms.find((room) => room.id === Number(initialRoomId));
+        if (!initialRoom) {
+            return;
+        }
+
+        setSelectedRoom(initialRoom);
+        setForm((current) => ({ ...current, room_id: initialRoom.id }));
+        setRoomQuery('');
+        setShowSuggestions(false);
+        setActiveIdx(-1);
+    }, [initialRoomId, rooms]);
 
     const filteredParts = partTypes.filter(p => p.category === form.type);
     const partOptions = filteredParts.map((p) => ({ value: String(p.id), label: p.name }));
@@ -103,12 +120,14 @@ export default function CreateMaintenanceModal({ onSave, onCancel, saving }) {
                                         {selectedRoom.module_name} · {selectedRoom.floor_code}
                                     </span>
                                 </div>
-                                <button
-                                    onClick={clearRoom}
-                                    className="p-1 rounded hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
-                                >
-                                    <X className="w-3.5 h-3.5" />
-                                </button>
+                                {!lockRoomSelection && (
+                                    <button
+                                        onClick={clearRoom}
+                                        className="p-1 rounded hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+                                    >
+                                        <X className="w-3.5 h-3.5" />
+                                    </button>
+                                )}
                             </div>
                         ) : (
                             /* Search input + dropdown */
