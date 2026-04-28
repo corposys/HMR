@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { Home, Settings, Wrench, ChevronDown, Shield, BedDouble, Hotel, ServerCog } from 'lucide-react';
 
-export default function Sidebar() {
+export default function Sidebar({ isMobileOpen = false, onCloseMobile }) {
     const location = useLocation();
     const isSystemsActive = location.pathname.startsWith('/signatures');
     const [isSystemsOpen, setIsSystemsOpen] = useState(isSystemsActive);
@@ -40,8 +40,13 @@ export default function Sidebar() {
             setIsReceptionOpen(true);
         }
     }, [isReceptionActive]);
+
+    useEffect(() => {
+        onCloseMobile?.();
+    }, [location.pathname, onCloseMobile]);
+
     return (
-        <aside className="w-64 bg-[var(--color-bg-secondary)] border-r border-[var(--color-border)] hidden md:flex h-full flex-shrink-0 flex-col">
+        <aside className={`fixed inset-y-0 left-0 z-40 w-72 bg-[var(--color-bg-secondary)] border-r border-[var(--color-border)] h-full flex-shrink-0 flex flex-col transition-transform duration-300 ease-out md:static md:z-auto md:w-64 ${isMobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
             <div className="p-4 border-b border-[var(--color-border)] h-16 flex items-center">
                 <h2 className="text-xl font-bold text-[var(--color-text-primary)]">
                     HMR<span className="text-[var(--color-primary)]"> System</span>
@@ -49,7 +54,7 @@ export default function Sidebar() {
             </div>
             <nav className="p-4 flex-1 flex flex-col">
                 <div className="space-y-2">
-                    <NavLink to="/" end className={({ isActive }) => `flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${isActive ? 'bg-[var(--shadow-none)] text-[var(--color-primary)]' : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-primary)]'}`}>
+                    <NavLink to="/" end onClick={onCloseMobile} className={({ isActive }) => `flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${isActive ? 'bg-[var(--shadow-none)] text-[var(--color-primary)]' : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-primary)]'}`}>
                         <Home className="w-5 h-5" />
                         <span>Dashboard</span>
                     </NavLink>
@@ -74,6 +79,7 @@ export default function Sidebar() {
                         <div className="flex flex-col gap-1 py-1">
                             <NavLink
                                 to="/reception/reservas"
+                                onClick={onCloseMobile}
                                 className={({ isActive }) =>
                                     `group flex items-center gap-3 py-2 pl-11 pr-3 text-sm rounded-lg transition-colors ${
                                         isActive
@@ -113,6 +119,7 @@ export default function Sidebar() {
                         <div className="flex flex-col gap-1 py-1">
                             <NavLink
                                 to="/housekeeping/lenceria"
+                                onClick={onCloseMobile}
                                 className={({ isActive }) =>
                                     `group flex items-center gap-3 py-2 pl-11 pr-3 text-sm rounded-lg transition-colors ${
                                         isActive
@@ -151,7 +158,7 @@ export default function Sidebar() {
                     <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isMaintenanceOpen ? 'max-h-40 opacity-100 mt-1' : 'max-h-0 opacity-0'}`}>
                         <div className="flex flex-col gap-1 py-1">
                             {/* Cerraduras */}
-                            <NavLink to="/maintenance/rooms" className={({ isActive }) => `group flex items-center gap-3 py-2 pl-11 pr-3 text-sm rounded-lg transition-colors ${isActive ? 'text-[var(--color-text-primary)] font-medium bg-[var(--color-bg-tertiary)]/50' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]/30'}`}>
+                            <NavLink to="/maintenance/rooms" onClick={onCloseMobile} className={({ isActive }) => `group flex items-center gap-3 py-2 pl-11 pr-3 text-sm rounded-lg transition-colors ${isActive ? 'text-[var(--color-text-primary)] font-medium bg-[var(--color-bg-tertiary)]/50' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]/30'}`}>
                                 {({ isActive }) => (
                                     <>
                                         <div className={`w-1.5 h-1.5 rounded-full transition-colors ${isActive ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-text-muted)] group-hover:bg-[var(--color-text-secondary)]'}`} />
@@ -183,6 +190,7 @@ export default function Sidebar() {
                         <div className="flex flex-col gap-1 py-1">
                             <NavLink
                                 to="/security/vehicle-control"
+                                onClick={onCloseMobile}
                                 className={({ isActive }) =>
                                     `group flex items-center gap-3 py-2 pl-11 pr-3 text-sm rounded-lg transition-colors ${
                                         isActive
@@ -222,6 +230,7 @@ export default function Sidebar() {
                         <div className="flex flex-col gap-1 py-1">
                             <NavLink
                                 to="/signatures"
+                                onClick={onCloseMobile}
                                 className={({ isActive }) =>
                                     `group flex items-center gap-3 py-2 pl-11 pr-3 text-sm rounded-lg transition-colors ${
                                         isActive
@@ -245,6 +254,7 @@ export default function Sidebar() {
                 <div className="mt-auto pt-4">
                     <NavLink
                         to="/settings"
+                        onClick={onCloseMobile}
                         className={({ isActive }) =>
                             `flex items-center gap-3 px-3 py-2 rounded-lg border transition-colors ${
                                 isActive

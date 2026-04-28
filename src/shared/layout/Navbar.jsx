@@ -5,7 +5,9 @@ import {
     ChevronDown,
     Github,
     Activity,
-    Bell
+    Bell,
+    Menu,
+    X
 } from 'lucide-react';
 import { useAuth } from '@context/AuthContext';
 
@@ -13,7 +15,7 @@ import { useAuth } from '@context/AuthContext';
  * Navbar - Barra superior de utilidades (Topbar)
  * Contiene: Buscador, Estado, Notificaciones, Github, Perfil
  */
-export default function Navbar() {
+export default function Navbar({ onMenuClick, isMobileSidebarOpen }) {
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const navigate = useNavigate();
     const { user, logout } = useAuth();
@@ -46,8 +48,19 @@ export default function Navbar() {
 
     return (
         <header className="sticky top-0 z-30 h-16 bg-[var(--color-bg-primary)]/80 backdrop-blur-md border-b border-[var(--color-border)] px-6 flex items-center justify-between">
-            {/* Left Spacer */}
-            <div className="flex-1" />
+            {/* Mobile menu button */}
+            <div className="flex items-center gap-3">
+                <button
+                    type="button"
+                    onClick={onMenuClick}
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] transition-colors hover:border-[var(--color-primary)]/40 hover:text-[var(--color-primary)] md:hidden"
+                    aria-label={isMobileSidebarOpen ? 'Cerrar menú' : 'Abrir menú'}
+                >
+                    {isMobileSidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+                </button>
+
+                <div className="hidden md:block flex-1" />
+            </div>
 
             {/* Right Section: Utilities & Profile */}
             <div className="flex items-center gap-4">

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { DoorOpen, Loader2, Search, Battery, AlertCircle, ShieldAlert, Calendar, User, Plus, RefreshCw, TriangleAlert, ChevronDown, ChevronRight, X, Activity, BatteryFull, MapPin } from 'lucide-react';
+import { DoorOpen, Loader2, Search, Battery, AlertCircle, ShieldAlert, Calendar, User, Plus, RefreshCw, TriangleAlert, ChevronDown, ChevronRight, X, Activity, BatteryFull, MapPin, Settings2 } from 'lucide-react';
 import { useLocksOverview } from '@features/maintenance/hooks/useLocks';
 import CreateLockEventModal from '@features/maintenance/components/CreateLockEventModal';
 
@@ -17,7 +17,25 @@ const LOCK_STATUS_LABELS = {
     out_of_service: 'Fuera de servicio',
 };
 
-const LOCK_CARD_MIN_WIDTH = 200;
+const LOCK_STATUS_DOT_STYLES = {
+    operational: 'bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.45)]',
+    preventive: 'bg-amber-300 shadow-[0_0_10px_rgba(252,211,77,0.45)]',
+    failure: 'bg-red-400 shadow-[0_0_10px_rgba(248,113,113,0.45)]',
+    out_of_service: 'bg-zinc-400 shadow-[0_0_10px_rgba(161,161,170,0.35)]',
+};
+
+const LOCK_CARD_MIN_WIDTH_DENSE = 160;
+const RACK_VIEW_MODES = {
+    structure: 'structure',
+    module: 'module',
+    priority: 'priority',
+};
+
+const RACK_VIEW_LABELS = {
+    structure: 'Estructura hotelera',
+    module: 'Apilado por módulo',
+    priority: 'Prioridad operativa',
+};
 
 const formatShortDate = (value) => {
     if (!value) return '—';
@@ -32,6 +50,120 @@ const getUrgencyScore = (lock, prediction) => {
     return prediction.days_remaining <= 0 ? prediction.days_remaining : Math.min(prediction.days_remaining, 100);
 };
 
+const getRackPriorityScore = (item) => {
+    const statusRank = {
+        failure: 0,
+        out_of_service: 1,
+        preventive: 2,
+        operational: 3,
+    };
+
+    const prediction = item.prediction;
+    const base = statusRank[item.status] ?? 3;
+    const predictionRank = prediction
+        ? (prediction.days_remaining <= 0 ? -2 : prediction.days_remaining <= 15 ? -1 : 0)
+        : 0;
+
+    return base * 100 + predictionRank;
+};
+
+const getModuleLabel = (item) => item.module_name || `Módulo ${item.module_number || item.module_id}`;
+
+const formatFloorCode = (floorCode) => {
+    if (!floorCode) return 'Sin piso';
+    return String(floorCode).toUpperCase();
+};
+
+const LockSummaryCard = ({ item, prediction, onOpen, showModuleBadge = true, showFloorBadge = true }) => {
+    const statusKey = item.status || 'operational';
+    const statusDotClass = LOCK_STATUS_DOT_STYLES[statusKey] || LOCK_STATUS_DOT_STYLES.operational;
+    const healthScore = prediction?.health_score ?? null;
+    const floorLabel = formatFloorCode(item.floor_code);
+    const batteryBarColor = healthScore === null ? 'bg-zinc-600'
+        : healthScore > 60 ? 'bg-emerald-500'
+            : healthScore > 30 ? 'bg-amber-400'
+                : 'bg-red-500';
+    const daysColor = !prediction ? 'text-[var(--color-text-muted)]'
+        : prediction.days_remaining <= 0 ? 'text-red-400'
+            : prediction.days_remaining <= 15 ? 'text-amber-400'
+                : 'text-emerald-400';
+
+    return (
+        <button
+            type="button"
+            onClick={() => onOpen(item.id)}
+            className="group relative rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-primary)]/40 p-2.5 text-left transition-all hover:border-[var(--color-primary)]/50 hover:bg-[var(--color-bg-primary)]/60 hover:shadow-md"
+        >
+            <div className="mb-2 flex items-start justify-between gap-2">
+                <div>
+                    <p className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)]">Hab.</p>
+                    <p className="text-base font-bold leading-tight text-[var(--color-text-primary)]">{item.room_number}</p>
+                </div>
+                <span
+                    className={`mt-0.5 inline-flex h-2.5 w-2.5 rounded-full ${statusDotClass}`}
+                    aria-label={LOCK_STATUS_LABELS[statusKey] || LOCK_STATUS_LABELS.operational}
+                    title={LOCK_STATUS_LABELS[statusKey] || LOCK_STATUS_LABELS.operational}
+                />
+            </div>
+
+            <div className="mb-2 flex flex-wrap items-center gap-1.5">
+                {showModuleBadge && (
+                    <span className="rounded-md border border-[var(--color-border)] bg-[var(--color-bg-secondary)] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">
+                        {getModuleLabel(item)}
+                    </span>
+                )}
+                {showFloorBadge && (
+                    <span className="rounded-md border border-[var(--color-border)] bg-[var(--color-bg-secondary)] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">
+                        {floorLabel}
+                    </span>
+                )}
+            </div>
+
+            <div className="mb-2">
+                <div className="mb-1 flex items-center justify-between">
+                    <span className="flex items-center gap-1 text-[10px] text-[var(--color-text-muted)]">
+                        <Battery className="h-3 w-3" />
+                        Batería
+                    </span>
+                    <span className="text-[10px] font-semibold text-[var(--color-text-secondary)]">
+                        {healthScore !== null ? `${healthScore}%` : '—'}
+                    </span>
+                </div>
+                <div className="h-1 w-full rounded-full bg-[var(--color-border)]">
+                    <div
+                        className={`h-1 rounded-full transition-all ${batteryBarColor}`}
+                        style={{ width: `${healthScore ?? 0}%` }}
+                    />
+                </div>
+            </div>
+
+            <div className={`mb-2 flex items-center gap-1 text-[10px] font-semibold ${daysColor}`}>
+                <ShieldAlert className="h-3 w-3" />
+                {prediction
+                    ? (prediction.days_remaining <= 0
+                        ? `Vencida ${Math.abs(prediction.days_remaining)}d`
+                        : `${prediction.days_remaining}d restantes`)
+                    : 'Sin predicción'}
+            </div>
+
+            <div className="flex items-center justify-between border-t border-[var(--color-border)]/40 pt-2 text-[10px] text-[var(--color-text-muted)]">
+                <span className="flex items-center gap-1">
+                    <Calendar className="h-3 w-3" />
+                    {item.last_maintenance_at ? formatShortDate(item.last_maintenance_at) : 'Sin mant.'}
+                </span>
+                <span className="flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    {item.events_count || 0} ev.
+                </span>
+            </div>
+
+            <div className="absolute right-2.5 top-2.5 opacity-0 transition-opacity group-hover:opacity-100">
+                <ChevronRight className="h-3.5 w-3.5 text-[var(--color-primary)]" />
+            </div>
+        </button>
+    );
+};
+
 export default function LocksRackPage() {
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
@@ -42,17 +174,15 @@ export default function LocksRackPage() {
     const [showCreate, setShowCreate] = useState(false);
     const [showTimelineModal, setShowTimelineModal] = useState(false);
     const [showAlertsDrawer, setShowAlertsDrawer] = useState(false);
+    const [showRackSettings, setShowRackSettings] = useState(false);
+    const [rackViewMode, setRackViewMode] = useState(RACK_VIEW_MODES.structure);
     const [savingEvent, setSavingEvent] = useState(false);
     const [updatingStatus, setUpdatingStatus] = useState(false);
-    const [expandedModules, setExpandedModules] = useState({});
-    const [expandedFloors, setExpandedFloors] = useState({});
     const { locks, predictionsByRoom, loading, error, fetchLocksOverview } = useLocksOverview();
 
     useEffect(() => {
         fetchLocksOverview();
     }, [fetchLocksOverview]);
-
-
 
     const fetchLockDetail = async (lockId) => {
         if (!lockId) {
@@ -85,7 +215,6 @@ export default function LocksRackPage() {
     const filteredLocks = useMemo(() => {
         const q = search.trim().toLowerCase();
         return locks.filter((item) => {
-            // Ocultar habitaciones, pisos o módulos clausurados
             if (item.room_status === 'inactive' || item.module_is_active === false || item.floor_is_active === false) {
                 return false;
             }
@@ -164,35 +293,108 @@ export default function LocksRackPage() {
         }
     };
 
-    const groupedByFloor = useMemo(() => {
-        const groups = {};
+    const groupedLocks = useMemo(() => {
+        return [...filteredLocks]
+            .map((item) => ({
+                ...item,
+                prediction: predictionsByRoom[item.room_id] || null,
+            }))
+            .sort((a, b) => {
+                const priorityA = getRackPriorityScore(a);
+                const priorityB = getRackPriorityScore(b);
+                if (priorityA !== priorityB) {
+                    return priorityA - priorityB;
+                }
+
+                const moduleA = Number(a.module_number) || Number(a.module_id) || 0;
+                const moduleB = Number(b.module_number) || Number(b.module_id) || 0;
+                if (moduleA !== moduleB) {
+                    return moduleA - moduleB;
+                }
+
+                const floorA = String(a.floor_code || '').toUpperCase();
+                const floorB = String(b.floor_code || '').toUpperCase();
+                if (floorA !== floorB) {
+                    if (floorA === 'PB') return -1;
+                    if (floorB === 'PB') return 1;
+                    return floorA.localeCompare(floorB, undefined, { numeric: true });
+                }
+
+                return String(a.room_number).localeCompare(String(b.room_number), undefined, { numeric: true });
+            });
+    }, [filteredLocks, predictionsByRoom]);
+
+    const groupedByModule = useMemo(() => {
+        const modules = {};
         filteredLocks.forEach((item) => {
-            const key = `${item.module_id}-${item.floor_id}`;
-            if (!groups[key]) {
-                groups[key] = {
-                    key,
+            const key = String(item.module_id);
+            if (!modules[key]) {
+                modules[key] = {
                     moduleId: item.module_id,
                     moduleName: item.module_name,
                     moduleNumber: item.module_number,
-                    floorId: item.floor_id,
+                    rooms: [],
+                };
+            }
+            modules[key].rooms.push({
+                ...item,
+                prediction: predictionsByRoom[item.room_id] || null,
+            });
+        });
+
+        return Object.values(modules)
+            .sort((a, b) => a.moduleId - b.moduleId)
+            .map((module) => ({
+                ...module,
+                rooms: module.rooms.sort((a, b) => String(a.room_number).localeCompare(String(b.room_number), undefined, { numeric: true })),
+            }));
+    }, [filteredLocks, predictionsByRoom]);
+
+    const groupedByStructure = useMemo(() => {
+        const modules = {};
+        filteredLocks.forEach((item) => {
+            const moduleKey = String(item.module_id);
+            if (!modules[moduleKey]) {
+                modules[moduleKey] = {
+                    moduleId: item.module_id,
+                    moduleName: item.module_name,
+                    moduleNumber: item.module_number,
+                    floors: {},
+                };
+            }
+
+            const floorKey = String(item.floor_code || '');
+            if (!modules[moduleKey].floors[floorKey]) {
+                modules[moduleKey].floors[floorKey] = {
                     floorCode: item.floor_code,
                     rooms: [],
                 };
             }
-            groups[key].rooms.push(item);
+
+            modules[moduleKey].floors[floorKey].rooms.push({
+                ...item,
+                prediction: predictionsByRoom[item.room_id] || null,
+            });
         });
 
-        return Object.values(groups).sort((a, b) => {
-            if (a.moduleId === b.moduleId) {
-                const codeA = String(a.floorCode).toUpperCase();
-                const codeB = String(b.floorCode).toUpperCase();
-                if (codeA === 'PB') return -1;
-                if (codeB === 'PB') return 1;
-                return codeA.localeCompare(codeB, undefined, { numeric: true });
-            }
-            return a.moduleId - b.moduleId;
-        });
-    }, [filteredLocks]);
+        return Object.values(modules)
+            .sort((a, b) => a.moduleId - b.moduleId)
+            .map((module) => ({
+                ...module,
+                floors: Object.values(module.floors)
+                    .sort((a, b) => {
+                        const codeA = String(a.floorCode || '').toUpperCase();
+                        const codeB = String(b.floorCode || '').toUpperCase();
+                        if (codeA === 'PB') return -1;
+                        if (codeB === 'PB') return 1;
+                        return codeA.localeCompare(codeB, undefined, { numeric: true });
+                    })
+                    .map((floor) => ({
+                        ...floor,
+                        rooms: floor.rooms.sort((a, b) => String(a.room_number).localeCompare(String(b.room_number), undefined, { numeric: true })),
+                    })),
+            }));
+    }, [filteredLocks, predictionsByRoom]);
 
     const operationalSummary = useMemo(() => {
         const total = filteredLocks.length;
@@ -223,88 +425,6 @@ export default function LocksRackPage() {
             .slice(0, 8);
     }, [filteredLocks, predictionsByRoom]);
 
-    const sortedGroupedByModule = useMemo(() => {
-        const floors = groupedByFloor.map((group) => ({
-            ...group,
-            rooms: [...group.rooms]
-                .map((item) => ({ ...item, prediction: predictionsByRoom[item.room_id] || null }))
-                .sort((a, b) => {
-                    return a.room_number.localeCompare(b.room_number, undefined, { numeric: true });
-                }),
-        }));
-
-        const modules = {};
-        floors.forEach((floor) => {
-            const moduleKey = String(floor.moduleId);
-            if (!modules[moduleKey]) {
-                modules[moduleKey] = {
-                    moduleId: floor.moduleId,
-                    moduleName: floor.moduleName,
-                    moduleNumber: floor.moduleNumber,
-                    floors: [],
-                };
-            }
-            modules[moduleKey].floors.push(floor);
-        });
-
-        return Object.values(modules)
-            .sort((a, b) => a.moduleId - b.moduleId)
-            .map((module) => ({
-                ...module,
-                floors: module.floors.sort((a, b) => {
-                    const codeA = String(a.floorCode).toUpperCase();
-                    const codeB = String(b.floorCode).toUpperCase();
-                    if (codeA === 'PB') return -1;
-                    if (codeB === 'PB') return 1;
-                    return codeA.localeCompare(codeB, undefined, { numeric: true });
-                }),
-            }));
-    }, [groupedByFloor, predictionsByRoom]);
-
-    useEffect(() => {
-        if (sortedGroupedByModule.length === 0) {
-            return;
-        }
-
-        setExpandedModules((current) => {
-            const next = { ...current };
-            sortedGroupedByModule.forEach((module) => {
-                const key = String(module.moduleId);
-                if (!(key in next)) {
-                    next[key] = true;
-                }
-            });
-            return next;
-        });
-
-        setExpandedFloors((current) => {
-            const next = { ...current };
-            sortedGroupedByModule.forEach((module) => {
-                module.floors.forEach((floor) => {
-                    if (!(floor.key in next)) {
-                        next[floor.key] = true;
-                    }
-                });
-            });
-            return next;
-        });
-    }, [sortedGroupedByModule]);
-
-    const toggleModuleExpanded = (moduleId) => {
-        const key = String(moduleId);
-        setExpandedModules((current) => ({
-            ...current,
-            [key]: !current[key],
-        }));
-    };
-
-    const toggleFloorExpanded = (floorKey) => {
-        setExpandedFloors((current) => ({
-            ...current,
-            [floorKey]: !current[floorKey],
-        }));
-    };
-
     const openLockDetail = async (lockId) => {
         setSelectedLockId(lockId);
         setShowTimelineModal(true);
@@ -324,24 +444,24 @@ export default function LocksRackPage() {
             <div className="mx-auto max-w-auto space-y-4">
 
                 {/* ── Fila Principal: Título + Filtros (Izquierda) | Stats + Buscador + Alertas (Derecha) ── */}
-                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
 
                     {/* IZQUIERDA: Título y Filtros */}
-                    <div className="flex flex-wrap items-center gap-4">
+                    <div className="flex flex-wrap items-center gap-2 xl:gap-4">
                         <div className="flex items-center gap-2 shrink-0">
                             <div className="rounded-lg bg-[var(--color-primary)]/10 p-1.5">
-                                <DoorOpen className="w-6 h-6 text-[var(--color-primary)]" />
+                                <DoorOpen className="w-5 h-5 xl:w-6 xl:h-6 text-[var(--color-primary)]" />
                             </div>
-                            <h1 className="text-sm font-semibold text-[var(--color-text-primary)] whitespace-nowrap">
+                            <h1 className="hidden xl:block text-sm font-semibold text-[var(--color-text-primary)] whitespace-nowrap">
                                 Control de Cerraduras
                             </h1>
                         </div>
 
                         {/* Divisor */}
-                        <div className="hidden md:block h-4 w-px bg-[var(--color-border)] shrink-0" />
+                        <div className="hidden xl:block h-4 w-px bg-[var(--color-border)] shrink-0" />
 
                         {/* Filtros */}
-                        <div className="flex flex-wrap items-center gap-1.5">
+                        <div className="flex flex-wrap items-center gap-1">
                             {[
                                 { value: 'all', label: 'Todas' },
                                 { value: 'operational', label: 'Operativas' },
@@ -353,7 +473,7 @@ export default function LocksRackPage() {
                                     key={option.value}
                                     type="button"
                                     onClick={() => setStatusFilter(option.value)}
-                                    className={`rounded-md border px-2.5 py-0.5 text-[11px] font-medium transition-colors ${statusFilter === option.value
+                                    className={`rounded-md border px-2 py-0.5 text-[10px] font-medium transition-colors xl:px-2.5 xl:text-[11px] ${statusFilter === option.value
                                         ? 'border-[var(--color-primary)]/40 bg-[var(--color-primary)]/10 text-[var(--color-primary)]'
                                         : 'border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-border-hover)] hover:text-[var(--color-text-primary)]'
                                         }`}
@@ -365,29 +485,29 @@ export default function LocksRackPage() {
                     </div>
 
                     {/* DERECHA: Stats, Buscador y Botón de Alertas */}
-                    <div className="flex flex-wrap items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-2 xl:gap-3">
                         {/* Stats inline */}
-                        <div className="flex items-center gap-1.5 shrink-0">
-                            <span className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)] px-2.5 py-1 text-xs">
-                                <span className="text-[var(--color-text-muted)] uppercase tracking-wider text-[10px] font-semibold">Total</span>
+                        <div className="flex items-center gap-1 shrink-0">
+                            <span className="inline-flex items-center gap-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)] px-2 py-1 text-xs xl:px-2.5">
+                                <span className="text-[var(--color-text-muted)] uppercase tracking-wider text-[9px] xl:text-[10px] font-semibold">Total</span>
                                 <span className="font-bold text-[var(--color-text-primary)]">{operationalSummary.total}</span>
                             </span>
-                            <span className="inline-flex items-center gap-1.5 rounded-lg border border-red-500/20 bg-red-500/8 px-2.5 py-1 text-xs">
-                                <span className="text-red-400/80 uppercase tracking-wider text-[10px] font-semibold">Críticas</span>
+                            <span className="inline-flex items-center gap-1 rounded-lg border border-red-500/20 bg-red-500/8 px-2 py-1 text-xs xl:px-2.5">
+                                <span className="text-red-400/80 uppercase tracking-wider text-[9px] xl:text-[10px] font-semibold">Críticas</span>
                                 <span className="font-bold text-red-400">{operationalSummary.critical}</span>
                             </span>
-                            <span className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/20 bg-amber-500/8 px-2.5 py-1 text-xs">
-                                <span className="text-amber-400/80 uppercase tracking-wider text-[10px] font-semibold">Prev.</span>
+                            <span className="inline-flex items-center gap-1 rounded-lg border border-amber-500/20 bg-amber-500/8 px-2 py-1 text-xs xl:px-2.5">
+                                <span className="text-amber-400/80 uppercase tracking-wider text-[9px] xl:text-[10px] font-semibold">Prev.</span>
                                 <span className="font-bold text-amber-400">{operationalSummary.preventive}</span>
                             </span>
-                            <span className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/20 bg-emerald-500/8 px-2.5 py-1 text-xs">
-                                <span className="text-emerald-400/80 uppercase tracking-wider text-[10px] font-semibold">OK</span>
+                            <span className="inline-flex items-center gap-1 rounded-lg border border-emerald-500/20 bg-emerald-500/8 px-2 py-1 text-xs xl:px-2.5">
+                                <span className="text-emerald-400/80 uppercase tracking-wider text-[9px] xl:text-[10px] font-semibold">OK</span>
                                 <span className="font-bold text-emerald-400">{operationalSummary.healthy}</span>
                             </span>
                         </div>
 
                         {/* Buscador */}
-                        <div className="relative w-full sm:w-56 shrink-0">
+                        <div className="relative w-full sm:w-48 xl:w-56 shrink-0">
                             <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--color-text-muted)]" />
                             <input
                                 value={search}
@@ -395,6 +515,50 @@ export default function LocksRackPage() {
                                 placeholder="Buscar habitación…"
                                 className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)] py-1.5 pl-8 pr-3 text-xs text-[var(--color-text-primary)] focus:border-[var(--color-primary)] focus:outline-none"
                             />
+                        </div>
+
+                        <div className="relative">
+                            <button
+                                type="button"
+                                onClick={() => setShowRackSettings((current) => !current)}
+                                className="relative flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)] text-[var(--color-text-muted)] transition-colors hover:border-[var(--color-primary)]/40 hover:text-[var(--color-primary)] shrink-0"
+                                aria-label="Configuración del rack"
+                                title="Configuración del rack"
+                            >
+                                <Settings2 className="h-3.5 w-3.5" />
+                            </button>
+
+                            {showRackSettings && (
+                                <div className="absolute right-0 top-full z-50 mt-1.5 w-72 overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-primary)] shadow-2xl">
+                                    <div className="border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)] px-3 py-2">
+                                        <div className="text-xs font-semibold text-[var(--color-text-primary)]">Vista del rack</div>
+                                        <p className="mt-0.5 text-[10px] text-[var(--color-text-muted)]">Elige cómo se organiza el listado de cerraduras.</p>
+                                    </div>
+                                    <div className="space-y-1 p-2">
+                                        {[
+                                            { value: RACK_VIEW_MODES.structure, label: RACK_VIEW_LABELS.structure, description: 'Muestra módulos y pisos como la estructura física del hotel.' },
+                                            { value: RACK_VIEW_MODES.module, label: RACK_VIEW_LABELS.module, description: 'Agrupa todas las habitaciones por módulo en una sola banda.' },
+                                            { value: RACK_VIEW_MODES.priority, label: RACK_VIEW_LABELS.priority, description: 'Ordena por estado, batería y vencimientos primero.' },
+                                        ].map((option) => (
+                                            <button
+                                                key={option.value}
+                                                type="button"
+                                                onClick={() => {
+                                                    setRackViewMode(option.value);
+                                                    setShowRackSettings(false);
+                                                }}
+                                                className={`w-full rounded-lg border px-3 py-2 text-left transition-colors ${rackViewMode === option.value
+                                                    ? 'border-[var(--color-primary)]/40 bg-[var(--color-primary)]/10'
+                                                    : 'border-[var(--color-border)] bg-[var(--color-bg-secondary)] hover:border-[var(--color-border-hover)]'
+                                                    }`}
+                                            >
+                                                <div className="text-xs font-semibold text-[var(--color-text-primary)]">{option.label}</div>
+                                                <div className="mt-0.5 text-[10px] text-[var(--color-text-muted)]">{option.description}</div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         {/* Botón de Alertas y Menú Desplegable (Popover) */}
@@ -496,142 +660,81 @@ export default function LocksRackPage() {
 
                 {/* ── Rack ── */}
                 <div className="space-y-2">
-                    {groupedByFloor.length === 0 ? (
+                    {groupedLocks.length === 0 ? (
                         <div className="rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-10 text-center">
                             <p className="text-sm text-[var(--color-text-muted)]">No hay cerraduras para mostrar con los filtros actuales.</p>
                         </div>
                     ) : (
-                        sortedGroupedByModule.map((module) => (
-                            <section key={module.moduleId} className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)]/90">
+                        rackViewMode === RACK_VIEW_MODES.structure ? (
+                            <div className="space-y-3">
+                                {groupedByStructure.map((module) => (
+                                    <section key={module.moduleId} className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)]/90">
+                                        <div className="flex items-center justify-between border-b border-[var(--color-border)]/70 bg-[var(--color-bg-primary)]/45 px-3 py-2">
+                                            <div className="flex items-center gap-1.5 text-xs font-semibold text-[var(--color-text-primary)]">
+                                                <DoorOpen className="h-3 w-3 text-[var(--color-primary)]" />
+                                                <span>{module.moduleName || `Módulo ${module.moduleNumber || module.moduleId}`}</span>
+                                            </div>
+                                            <span className="text-[10px] text-[var(--color-text-muted)]">{module.floors.length} pisos</span>
+                                        </div>
+
+                                        <div className="space-y-2 p-2">
+                                            {module.floors.map((floor) => (
+                                                <article key={`${module.moduleId}-${floor.floorCode}`} className="overflow-hidden rounded-xl border border-[var(--color-border)]/80 bg-[var(--color-bg-primary)]/35">
+                                                    <div className="flex items-center justify-between border-b border-[var(--color-border)]/60 px-2.5 py-1.5">
+                                                        <div className="flex items-center gap-1.5 text-xs font-medium text-[var(--color-text-primary)]">
+                                                            <span className="font-semibold">{formatFloorCode(floor.floorCode)}</span>
+                                                            <span className="text-[var(--color-text-muted)] text-[10px]">·</span>
+                                                            <span className="text-[var(--color-text-secondary)] text-[10px]">{module.moduleName}</span>
+                                                        </div>
+                                                        <span className="text-[10px] text-[var(--color-text-muted)]">{floor.rooms.length} hab.</span>
+                                                    </div>
+                                                    <div className="grid gap-1.5 p-1.5 [grid-template-columns:repeat(auto-fit,minmax(160px,1fr))]">
+                                                        {floor.rooms.map((item) => (
+                                                            <LockSummaryCard key={item.id} item={item} prediction={item.prediction} onOpen={openLockDetail} />
+                                                        ))}
+                                                    </div>
+                                                </article>
+                                            ))}
+                                        </div>
+                                    </section>
+                                ))}
+                            </div>
+                        ) : rackViewMode === RACK_VIEW_MODES.module ? (
+                            <div className="space-y-3">
+                                {groupedByModule.map((module) => (
+                                    <section key={module.moduleId} className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)]/90">
+                                        <div className="flex items-center justify-between border-b border-[var(--color-border)]/70 bg-[var(--color-bg-primary)]/45 px-3 py-2">
+                                            <div className="flex items-center gap-1.5 text-xs font-semibold text-[var(--color-text-primary)]">
+                                                <DoorOpen className="h-3 w-3 text-[var(--color-primary)]" />
+                                                <span>{module.moduleName || `Módulo ${module.moduleNumber || module.moduleId}`}</span>
+                                            </div>
+                                            <span className="text-[10px] text-[var(--color-text-muted)]">{module.rooms.length} hab.</span>
+                                        </div>
+                                        <div className="grid gap-2 p-2 [grid-template-columns:repeat(auto-fit,minmax(160px,1fr))]">
+                                            {module.rooms.map((item) => (
+                                                <LockSummaryCard key={item.id} item={item} prediction={item.prediction} onOpen={openLockDetail} />
+                                            ))}
+                                        </div>
+                                    </section>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)]/90">
                                 <div className="flex items-center justify-between border-b border-[var(--color-border)]/70 bg-[var(--color-bg-primary)]/45 px-3 py-2">
-                                    <button
-                                        type="button"
-                                        onClick={() => toggleModuleExpanded(module.moduleId)}
-                                        className="flex items-center gap-1.5 text-xs font-semibold text-[var(--color-text-primary)] transition-colors hover:text-[var(--color-primary)]"
-                                        aria-expanded={Boolean(expandedModules[String(module.moduleId)])}
-                                        aria-label="Expandir o contraer módulo"
-                                    >
-                                        {expandedModules[String(module.moduleId)] ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                                    <div className="flex items-center gap-1.5 text-xs font-semibold text-[var(--color-text-primary)]">
                                         <DoorOpen className="h-3 w-3 text-[var(--color-primary)]" />
-                                        <span>{module.moduleName || `Módulo ${module.moduleNumber || module.moduleId}`}</span>
-                                    </button>
-                                    <span className="text-[10px] text-[var(--color-text-muted)]">Pisos: {module.floors.length}</span>
+                                        <span>Rack de prioridad</span>
+                                    </div>
+                                    <span className="text-[10px] text-[var(--color-text-muted)]">{groupedLocks.length} hab.</span>
                                 </div>
 
-                                {expandedModules[String(module.moduleId)] && (
-                                    <div className="space-y-2 p-2">
-                                        {module.floors.map((group) => (
-                                            <article key={group.key} className="overflow-hidden rounded-xl border border-[var(--color-border)]/80 bg-[var(--color-bg-primary)]/35">
-                                                <div className="flex items-center justify-between border-b border-[var(--color-border)]/60 px-2.5 py-1.5">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => toggleFloorExpanded(group.key)}
-                                                        className="flex items-center gap-1.5 text-xs font-medium text-[var(--color-text-primary)] transition-colors hover:text-[var(--color-primary)]"
-                                                        aria-expanded={Boolean(expandedFloors[group.key])}
-                                                        aria-label="Expandir o contraer piso"
-                                                    >
-                                                        {expandedFloors[group.key] ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-                                                        <span className="font-semibold">{group.floorCode}</span>
-                                                        <span className="text-[var(--color-text-muted)] text-[10px]">·</span>
-                                                        <span className="text-[var(--color-text-secondary)] text-[10px]">{group.moduleName}</span>
-                                                    </button>
-                                                    <span className="text-[10px] text-[var(--color-text-muted)]">{group.rooms.length} hab.</span>
-                                                </div>
-
-                                                {expandedFloors[group.key] && (
-                                                    <div
-                                                        className="grid gap-1.5 p-1.5"
-                                                        style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${LOCK_CARD_MIN_WIDTH}px, 1fr))` }}
-                                                    >
-                                                        {group.rooms.map((item) => {
-                                                            const prediction = item.prediction;
-                                                            const statusKey = item.status || 'operational';
-                                                            const statusClass = LOCK_STATUS_STYLES[statusKey] || LOCK_STATUS_STYLES.operational;
-                                                            const statusLabel = LOCK_STATUS_LABELS[statusKey] || LOCK_STATUS_LABELS.operational;
-                                                            const healthScore = prediction?.health_score ?? null;
-                                                            const batteryBarColor = healthScore === null ? 'bg-zinc-600'
-                                                                : healthScore > 60 ? 'bg-emerald-500'
-                                                                    : healthScore > 30 ? 'bg-amber-400'
-                                                                        : 'bg-red-500';
-                                                            const daysColor = !prediction ? 'text-[var(--color-text-muted)]'
-                                                                : prediction.days_remaining <= 0 ? 'text-red-400'
-                                                                    : prediction.days_remaining <= 15 ? 'text-amber-400'
-                                                                        : 'text-emerald-400';
-
-                                                            return (
-                                                                <button
-                                                                    key={item.id}
-                                                                    type="button"
-                                                                    onClick={() => openLockDetail(item.id)}
-                                                                    className="group relative rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-primary)]/40 p-3 text-left transition-all hover:border-[var(--color-primary)]/50 hover:bg-[var(--color-bg-primary)]/60 hover:shadow-md"
-                                                                >
-                                                                    {/* Header: room + status */}
-                                                                    <div className="mb-2.5 flex items-start justify-between gap-2">
-                                                                        <div>
-                                                                            <p className="text-xs text-[var(--color-text-muted)]">Hab.</p>
-                                                                            <p className="text-lg font-bold leading-tight text-[var(--color-text-primary)]">{item.room_number}</p>
-                                                                        </div>
-                                                                        <span className={`mt-0.5 rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide ${statusClass}`}>
-                                                                            {statusLabel}
-                                                                        </span>
-                                                                    </div>
-
-                                                                    {/* Battery bar */}
-                                                                    <div className="mb-2">
-                                                                        <div className="mb-1 flex items-center justify-between">
-                                                                            <span className="flex items-center gap-1 text-[10px] text-[var(--color-text-muted)]">
-                                                                                <Battery className="h-3 w-3" />
-                                                                                Batería
-                                                                            </span>
-                                                                            <span className="text-[10px] font-semibold text-[var(--color-text-secondary)]">
-                                                                                {healthScore !== null ? `${healthScore}%` : '—'}
-                                                                            </span>
-                                                                        </div>
-                                                                        <div className="h-1.5 w-full rounded-full bg-[var(--color-border)]">
-                                                                            <div
-                                                                                className={`h-1.5 rounded-full transition-all ${batteryBarColor}`}
-                                                                                style={{ width: `${healthScore ?? 0}%` }}
-                                                                            />
-                                                                        </div>
-                                                                    </div>
-
-                                                                    {/* Days remaining */}
-                                                                    <div className={`mb-2 flex items-center gap-1 text-[10px] font-semibold ${daysColor}`}>
-                                                                        <ShieldAlert className="h-3 w-3" />
-                                                                        {prediction
-                                                                            ? (prediction.days_remaining <= 0
-                                                                                ? `Vencida ${Math.abs(prediction.days_remaining)}d`
-                                                                                : `${prediction.days_remaining}d restantes`)
-                                                                            : 'Sin predicción'}
-                                                                    </div>
-
-                                                                    {/* Footer: last maintenance + events count */}
-                                                                    <div className="flex items-center justify-between border-t border-[var(--color-border)]/40 pt-2 text-[10px] text-[var(--color-text-muted)]">
-                                                                        <span className="flex items-center gap-1">
-                                                                            <Calendar className="h-3 w-3" />
-                                                                            {item.last_maintenance_at ? formatShortDate(item.last_maintenance_at) : 'Sin mant.'}
-                                                                        </span>
-                                                                        <span className="flex items-center gap-1">
-                                                                            <AlertCircle className="h-3 w-3" />
-                                                                            {item.events_count || 0} ev.
-                                                                        </span>
-                                                                    </div>
-
-                                                                    {/* Hover arrow */}
-                                                                    <div className="absolute right-2.5 top-2.5 opacity-0 transition-opacity group-hover:opacity-100">
-                                                                        <ChevronRight className="h-3.5 w-3.5 text-[var(--color-primary)]" />
-                                                                    </div>
-                                                                </button>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                )}
-                                            </article>
-                                        ))}
-                                    </div>
-                                )}
-                            </section>
-                        ))
+                                <div className="grid gap-2 p-2 [grid-template-columns:repeat(auto-fit,minmax(160px,1fr))]">
+                                    {groupedLocks.map((item) => (
+                                        <LockSummaryCard key={item.id} item={item} prediction={item.prediction} onOpen={openLockDetail} />
+                                    ))}
+                                </div>
+                            </div>
+                        )
                     )}
                 </div>
             </div>
