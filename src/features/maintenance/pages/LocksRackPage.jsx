@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { DoorOpen, Loader2, Search, Battery, AlertCircle, ShieldAlert, Calendar, User, Plus, RefreshCw, TriangleAlert, ChevronDown, ChevronRight, X, Activity, BatteryFull, MapPin, Settings2 } from 'lucide-react';
+import { DoorOpen, Loader2, Search, Battery, AlertCircle, ShieldAlert, Calendar, User, Plus, RefreshCw, TriangleAlert, ChevronDown, ChevronRight, X, Activity, BatteryFull, MapPin, CheckCircle2 } from 'lucide-react';
 import { useLocksOverview } from '@features/maintenance/hooks/useLocks';
 import CreateLockEventModal from '@features/maintenance/components/CreateLockEventModal';
 
@@ -74,7 +74,7 @@ const formatFloorCode = (floorCode) => {
     return String(floorCode).toUpperCase();
 };
 
-const LockSummaryCard = ({ item, prediction, onOpen, showModuleBadge = true, showFloorBadge = true }) => {
+const LockSummaryCard = ({ item, prediction, onOpen, showFloorBadge = true }) => {
     const statusKey = item.status || 'operational';
     const statusDotClass = LOCK_STATUS_DOT_STYLES[statusKey] || LOCK_STATUS_DOT_STYLES.operational;
     const healthScore = prediction?.health_score ?? null;
@@ -95,28 +95,26 @@ const LockSummaryCard = ({ item, prediction, onOpen, showModuleBadge = true, sho
             className="group relative rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-primary)]/40 p-2.5 text-left transition-all hover:border-[var(--color-primary)]/50 hover:bg-[var(--color-bg-primary)]/60 hover:shadow-md"
         >
             <div className="mb-2 flex items-start justify-between gap-2">
-                <div>
-                    <p className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)]">Hab.</p>
-                    <p className="text-base font-bold leading-tight text-[var(--color-text-primary)]">{item.room_number}</p>
+                <div className="flex flex-col items-start">
+                    <div className="flex items-center gap-2">
+                        {showFloorBadge && (
+                            <span className="rounded-md border border-[var(--color-border)] bg-[var(--color-bg-secondary)] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">
+                                {floorLabel}
+                            </span>
+                        )}
+                        <p className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)]">Hab.</p>
+                    </div>
+
+                    <div className="mt-1">
+                        <p className="text-base font-bold leading-tight text-[var(--color-text-primary)] text-center">{item.room_number}</p>
+                    </div>
                 </div>
+
                 <span
                     className={`mt-0.5 inline-flex h-2.5 w-2.5 rounded-full ${statusDotClass}`}
                     aria-label={LOCK_STATUS_LABELS[statusKey] || LOCK_STATUS_LABELS.operational}
                     title={LOCK_STATUS_LABELS[statusKey] || LOCK_STATUS_LABELS.operational}
                 />
-            </div>
-
-            <div className="mb-2 flex flex-wrap items-center gap-1.5">
-                {showModuleBadge && (
-                    <span className="rounded-md border border-[var(--color-border)] bg-[var(--color-bg-secondary)] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">
-                        {getModuleLabel(item)}
-                    </span>
-                )}
-                {showFloorBadge && (
-                    <span className="rounded-md border border-[var(--color-border)] bg-[var(--color-bg-secondary)] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">
-                        {floorLabel}
-                    </span>
-                )}
             </div>
 
             <div className="mb-2">
@@ -174,8 +172,7 @@ export default function LocksRackPage() {
     const [showCreate, setShowCreate] = useState(false);
     const [showTimelineModal, setShowTimelineModal] = useState(false);
     const [showAlertsDrawer, setShowAlertsDrawer] = useState(false);
-    const [showRackSettings, setShowRackSettings] = useState(false);
-    const [rackViewMode, setRackViewMode] = useState(RACK_VIEW_MODES.structure);
+    const [rackViewMode, setRackViewMode] = useState(RACK_VIEW_MODES.priority);
     const [savingEvent, setSavingEvent] = useState(false);
     const [updatingStatus, setUpdatingStatus] = useState(false);
     const { locks, predictionsByRoom, loading, error, fetchLocksOverview } = useLocksOverview();
@@ -324,6 +321,26 @@ export default function LocksRackPage() {
             });
     }, [filteredLocks, predictionsByRoom]);
 
+    const groupedPriorityByModule = useMemo(() => {
+        // Build modules preserving priority order inside each module and ordering modules by their most urgent room
+        const modules = {};
+        filteredLocks.forEach((item) => {
+            const key = String(item.module_id || 'nomodule');
+            if (!modules[key]) modules[key] = { moduleId: item.module_id, moduleName: item.module_name, moduleNumber: item.module_number, rooms: [] };
+            modules[key].rooms.push({ ...item, prediction: predictionsByRoom[item.room_id] || null });
+        });
+
+        const moduleArray = Object.values(modules).map((m) => {
+            const rooms = m.rooms.sort((a, b) => getRackPriorityScore(a) - getRackPriorityScore(b));
+            const urgency = rooms.reduce((acc, r) => Math.min(acc, getUrgencyScore(r, r.prediction)), Infinity);
+            return { ...m, rooms, urgency };
+        });
+
+        moduleArray.sort((a, b) => (a.urgency - b.urgency) || ((a.moduleId || 0) - (b.moduleId || 0)));
+
+        return moduleArray;
+    }, [filteredLocks, predictionsByRoom]);
+
     const groupedByModule = useMemo(() => {
         const modules = {};
         filteredLocks.forEach((item) => {
@@ -446,8 +463,8 @@ export default function LocksRackPage() {
                 {/* ── Fila Principal: Título + Filtros (Izquierda) | Stats + Buscador + Alertas (Derecha) ── */}
                 <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
 
-                    {/* IZQUIERDA: Título y Filtros */}
-                    <div className="flex flex-wrap items-center gap-2 xl:gap-4">
+                    {/* IZQUIERDA: Título + botones unificados */}
+                    <div className="flex flex-wrap items-center gap-2 xl:gap-3">
                         <div className="flex items-center gap-2 shrink-0">
                             <div className="rounded-lg bg-[var(--color-primary)]/10 p-1.5">
                                 <DoorOpen className="w-5 h-5 xl:w-6 xl:h-6 text-[var(--color-primary)]" />
@@ -457,56 +474,69 @@ export default function LocksRackPage() {
                             </h1>
                         </div>
 
-                        {/* Divisor */}
                         <div className="hidden xl:block h-4 w-px bg-[var(--color-border)] shrink-0" />
 
-                        {/* Filtros */}
-                        <div className="flex flex-wrap items-center gap-1">
+                        <div className="flex flex-wrap items-center gap-1.5">
                             {[
-                                { value: 'all', label: 'Todas' },
-                                { value: 'operational', label: 'Operativas' },
-                                { value: 'preventive', label: 'Preventivas' },
-                                { value: 'failure', label: 'Falla' },
-                                { value: 'out_of_service', label: 'Fuera de servicio' },
-                            ].map((option) => (
-                                <button
-                                    key={option.value}
-                                    type="button"
-                                    onClick={() => setStatusFilter(option.value)}
-                                    className={`rounded-md border px-2 py-0.5 text-[10px] font-medium transition-colors xl:px-2.5 xl:text-[11px] ${statusFilter === option.value
-                                        ? 'border-[var(--color-primary)]/40 bg-[var(--color-primary)]/10 text-[var(--color-primary)]'
-                                        : 'border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-border-hover)] hover:text-[var(--color-text-primary)]'
-                                        }`}
-                                >
-                                    {option.label}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
+                                {
+                                    value: 'all',
+                                    label: 'Todas',
+                                    icon: Activity,
+                                    count: operationalSummary.total,
+                                    tone: 'border-cyan-500/30 bg-cyan-500/10 text-cyan-300',
+                                },
+                                {
+                                    value: 'operational',
+                                    label: 'Operativas',
+                                    icon: CheckCircle2,
+                                    count: operationalSummary.healthy,
+                                    tone: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300',
+                                },
+                                {
+                                    value: 'preventive',
+                                    label: 'Preventivas',
+                                    icon: ShieldAlert,
+                                    count: operationalSummary.preventive,
+                                    tone: 'border-amber-500/30 bg-amber-500/10 text-amber-300',
+                                },
+                                {
+                                    value: 'failure',
+                                    label: 'Falla',
+                                    icon: TriangleAlert,
+                                    count: filteredLocks.filter((item) => item.status === 'failure').length,
+                                    tone: 'border-red-500/30 bg-red-500/10 text-red-300',
+                                },
+                                {
+                                    value: 'out_of_service',
+                                    label: 'Fuera de servicio',
+                                    icon: X,
+                                    count: filteredLocks.filter((item) => item.status === 'out_of_service').length,
+                                    tone: 'border-zinc-500/30 bg-zinc-500/10 text-zinc-300',
+                                },
+                            ].map((option) => {
+                                const isActive = statusFilter === option.value;
+                                const Icon = option.icon;
 
-                    {/* DERECHA: Stats, Buscador y Botón de Alertas */}
-                    <div className="flex flex-wrap items-center gap-2 xl:gap-3">
-                        {/* Stats inline */}
-                        <div className="flex items-center gap-1 shrink-0">
-                            <span className="inline-flex items-center gap-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)] px-2 py-1 text-xs xl:px-2.5">
-                                <span className="text-[var(--color-text-muted)] uppercase tracking-wider text-[9px] xl:text-[10px] font-semibold">Total</span>
-                                <span className="font-bold text-[var(--color-text-primary)]">{operationalSummary.total}</span>
-                            </span>
-                            <span className="inline-flex items-center gap-1 rounded-lg border border-red-500/20 bg-red-500/8 px-2 py-1 text-xs xl:px-2.5">
-                                <span className="text-red-400/80 uppercase tracking-wider text-[9px] xl:text-[10px] font-semibold">Críticas</span>
-                                <span className="font-bold text-red-400">{operationalSummary.critical}</span>
-                            </span>
-                            <span className="inline-flex items-center gap-1 rounded-lg border border-amber-500/20 bg-amber-500/8 px-2 py-1 text-xs xl:px-2.5">
-                                <span className="text-amber-400/80 uppercase tracking-wider text-[9px] xl:text-[10px] font-semibold">Prev.</span>
-                                <span className="font-bold text-amber-400">{operationalSummary.preventive}</span>
-                            </span>
-                            <span className="inline-flex items-center gap-1 rounded-lg border border-emerald-500/20 bg-emerald-500/8 px-2 py-1 text-xs xl:px-2.5">
-                                <span className="text-emerald-400/80 uppercase tracking-wider text-[9px] xl:text-[10px] font-semibold">OK</span>
-                                <span className="font-bold text-emerald-400">{operationalSummary.healthy}</span>
-                            </span>
+                                return (
+                                    <button
+                                        key={option.value}
+                                        type="button"
+                                        onClick={() => setStatusFilter(option.value)}
+                                        className={`relative flex h-8 items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold transition-colors ${isActive
+                                            ? `${option.tone} shadow-sm`
+                                            : 'border-[var(--color-border)] bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] hover:border-[var(--color-border-hover)] hover:text-[var(--color-text-primary)]'
+                                            }`}
+                                    >
+                                        <Icon className="h-3.5 w-3.5 shrink-0" />
+                                        <span>{option.label}</span>
+                                        <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${isActive ? 'bg-white/10 text-current' : 'bg-[var(--color-bg-primary)]/80 text-[var(--color-text-muted)]'}`}>
+                                            {option.count}
+                                        </span>
+                                    </button>
+                                );
+                            })}
                         </div>
 
-                        {/* Buscador */}
                         <div className="relative w-full sm:w-48 xl:w-56 shrink-0">
                             <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--color-text-muted)]" />
                             <input
@@ -516,50 +546,10 @@ export default function LocksRackPage() {
                                 className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)] py-1.5 pl-8 pr-3 text-xs text-[var(--color-text-primary)] focus:border-[var(--color-primary)] focus:outline-none"
                             />
                         </div>
+                    </div>
 
-                        <div className="relative">
-                            <button
-                                type="button"
-                                onClick={() => setShowRackSettings((current) => !current)}
-                                className="relative flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)] text-[var(--color-text-muted)] transition-colors hover:border-[var(--color-primary)]/40 hover:text-[var(--color-primary)] shrink-0"
-                                aria-label="Configuración del rack"
-                                title="Configuración del rack"
-                            >
-                                <Settings2 className="h-3.5 w-3.5" />
-                            </button>
-
-                            {showRackSettings && (
-                                <div className="absolute right-0 top-full z-50 mt-1.5 w-72 overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-primary)] shadow-2xl">
-                                    <div className="border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)] px-3 py-2">
-                                        <div className="text-xs font-semibold text-[var(--color-text-primary)]">Vista del rack</div>
-                                        <p className="mt-0.5 text-[10px] text-[var(--color-text-muted)]">Elige cómo se organiza el listado de cerraduras.</p>
-                                    </div>
-                                    <div className="space-y-1 p-2">
-                                        {[
-                                            { value: RACK_VIEW_MODES.structure, label: RACK_VIEW_LABELS.structure, description: 'Muestra módulos y pisos como la estructura física del hotel.' },
-                                            { value: RACK_VIEW_MODES.module, label: RACK_VIEW_LABELS.module, description: 'Agrupa todas las habitaciones por módulo en una sola banda.' },
-                                            { value: RACK_VIEW_MODES.priority, label: RACK_VIEW_LABELS.priority, description: 'Ordena por estado, batería y vencimientos primero.' },
-                                        ].map((option) => (
-                                            <button
-                                                key={option.value}
-                                                type="button"
-                                                onClick={() => {
-                                                    setRackViewMode(option.value);
-                                                    setShowRackSettings(false);
-                                                }}
-                                                className={`w-full rounded-lg border px-3 py-2 text-left transition-colors ${rackViewMode === option.value
-                                                    ? 'border-[var(--color-primary)]/40 bg-[var(--color-primary)]/10'
-                                                    : 'border-[var(--color-border)] bg-[var(--color-bg-secondary)] hover:border-[var(--color-border-hover)]'
-                                                    }`}
-                                            >
-                                                <div className="text-xs font-semibold text-[var(--color-text-primary)]">{option.label}</div>
-                                                <div className="mt-0.5 text-[10px] text-[var(--color-text-muted)]">{option.description}</div>
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
+                    {/* DERECHA: Alertas */}
+                    <div className="flex flex-wrap items-center gap-2 xl:gap-3">
 
                         {/* Botón de Alertas y Menú Desplegable (Popover) */}
                         <div 
@@ -721,18 +711,38 @@ export default function LocksRackPage() {
                         ) : (
                             <div className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)]/90">
                                 <div className="flex items-center justify-between border-b border-[var(--color-border)]/70 bg-[var(--color-bg-primary)]/45 px-3 py-2">
-                                    <div className="flex items-center gap-1.5 text-xs font-semibold text-[var(--color-text-primary)]">
-                                        <DoorOpen className="h-3 w-3 text-[var(--color-primary)]" />
-                                        <span>Rack de prioridad</span>
-                                    </div>
-                                    <span className="text-[10px] text-[var(--color-text-muted)]">{groupedLocks.length} hab.</span>
+                                            <div className="flex items-center gap-2">
+                                                <div className="flex items-center gap-1.5 text-xs font-semibold text-[var(--color-text-primary)]">
+                                                    <DoorOpen className="h-3 w-3 text-[var(--color-primary)]" />
+                                                    <span>Rack de prioridad</span>
+                                                </div>
+
+                                                {/* Inline filtros: Vista + Hab/fila */}
+                                                {/* controls moved to the right side */}
+
+                                            </div>
+                                            <span className="text-[10px] text-[var(--color-text-muted)]">{groupedPriorityByModule.reduce((total, module) => total + module.rooms.length, 0)} hab.</span>
                                 </div>
 
-                                <div className="grid gap-2 p-2 [grid-template-columns:repeat(auto-fit,minmax(160px,1fr))]">
-                                    {groupedLocks.map((item) => (
-                                        <LockSummaryCard key={item.id} item={item} prediction={item.prediction} onOpen={openLockDetail} />
-                                    ))}
-                                </div>
+                                        <div className="space-y-3 p-2">
+                                            {groupedPriorityByModule.map((module) => (
+                                                <section key={module.moduleId || module.moduleName} className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)]/90">
+                                                    <div className="flex items-center justify-between border-b border-[var(--color-border)]/70 bg-[var(--color-bg-primary)]/45 px-3 py-2">
+                                                        <div className="flex items-center gap-1.5 text-xs font-semibold text-[var(--color-text-primary)]">
+                                                            <DoorOpen className="h-3 w-3 text-[var(--color-primary)]" />
+                                                            <span>{module.moduleName || `Módulo ${module.moduleNumber || module.moduleId}`}</span>
+                                                        </div>
+                                                        <span className="text-[10px] text-[var(--color-text-muted)]">{module.rooms.length} hab.</span>
+                                                    </div>
+
+                                                    <div className="grid gap-2 p-2 [grid-template-columns:repeat(auto-fit,minmax(160px,1fr))]">
+                                                        {module.rooms.map((item) => (
+                                                            <LockSummaryCard key={item.id} item={item} prediction={item.prediction} onOpen={openLockDetail} />
+                                                        ))}
+                                                    </div>
+                                                </section>
+                                            ))}
+                                        </div>
                             </div>
                         )
                     )}
@@ -752,31 +762,31 @@ export default function LocksRackPage() {
             {showTimelineModal && selectedLock && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
                     <div className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onClick={() => setShowTimelineModal(false)} />
-                    <div className="relative z-10 w-full max-w-6xl flex max-h-[90vh] flex-col overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] shadow-2xl">
+                    <div className="relative z-10 w-full max-w-5xl flex max-h-[88vh] flex-col overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] shadow-2xl">
 
                         {/* Header */}
-                        <div className="flex flex-shrink-0 items-center justify-between gap-4 border-b border-[var(--color-border)] bg-[var(--color-bg-primary)]/30 px-5 py-4">
-                            <div className="flex items-center gap-3">
-                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--color-primary)]/10 text-[var(--color-primary)]">
-                                    <DoorOpen className="h-5 w-5" />
+                        <div className="flex flex-shrink-0 items-center justify-between gap-3 border-b border-[var(--color-border)] bg-[var(--color-bg-primary)]/30 px-4 py-3">
+                            <div className="flex items-center gap-2.5">
+                                <div className="flex h-8.5 w-8.5 shrink-0 items-center justify-center rounded-xl bg-[var(--color-primary)]/10 text-[var(--color-primary)]">
+                                    <DoorOpen className="h-4 w-4" />
                                 </div>
                                 <div>
-                                    <h3 className="flex items-center gap-2 text-base font-bold tracking-tight text-[var(--color-text-primary)]">
+                                    <h3 className="flex items-center gap-2 text-[13px] font-bold tracking-tight text-[var(--color-text-primary)] sm:text-sm">
                                         Hab. {selectedLock.room_number}
-                                        <span className="text-sm font-normal opacity-40 text-[var(--color-text-muted)]">|</span>
-                                        <span className="text-xs font-medium text-[var(--color-text-muted)]">{selectedLock.module_name} – {selectedLock.floor_code}</span>
-                                        <span className={`rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide ${LOCK_STATUS_STYLES[selectedLock.status] || LOCK_STATUS_STYLES.operational}`}>
+                                        <span className="text-xs font-normal opacity-40 text-[var(--color-text-muted)]">|</span>
+                                        <span className="text-[9px] font-medium text-[var(--color-text-muted)] sm:text-[10px]">{selectedLock.module_name} – {selectedLock.floor_code}</span>
+                                        <span className={`rounded-full border px-1.5 py-0.5 text-[7px] font-bold uppercase tracking-wide sm:text-[8px] ${LOCK_STATUS_STYLES[selectedLock.status] || LOCK_STATUS_STYLES.operational}`}>
                                             {LOCK_STATUS_LABELS[selectedLock.status] || 'Operativa'}
                                         </span>
                                     </h3>
-                                    <p className="mt-0.5 text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] opacity-75">{selectedLock.code}</p>
+                                    <p className="mt-0.5 text-[9px] uppercase tracking-wider text-[var(--color-text-muted)] opacity-75">{selectedLock.code}</p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-2">
                                 <button
                                     type="button"
                                     onClick={() => { setShowTimelineModal(false); setShowCreate(true); }}
-                                    className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-primary)]/30 bg-[var(--color-primary)]/10 px-3 py-1.5 text-xs font-semibold text-[var(--color-primary)] transition-all hover:bg-[var(--color-primary)]/20 hover:border-[var(--color-primary)]/50"
+                                    className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-primary)]/30 bg-[var(--color-primary)]/10 px-3 py-1.5 text-[10px] font-semibold text-[var(--color-primary)] transition-all hover:bg-[var(--color-primary)]/20 hover:border-[var(--color-primary)]/50"
                                 >
                                     <Plus className="h-3.5 w-3.5" />
                                     Registrar evento
@@ -806,19 +816,78 @@ export default function LocksRackPage() {
                                 <Loader2 className="h-8 w-8 animate-spin text-[var(--color-primary)]" />
                             </div>
                         ) : (
-                            <div className="flex-1 overflow-y-auto p-5 custom-scrollbar">
-                                <div className="grid gap-5 lg:grid-cols-[1fr_1fr_2fr]">
+                            <div className="flex-1 overflow-y-auto p-4 custom-scrollbar sm:p-5">
+                                <div className="grid gap-4 lg:grid-cols-[1.55fr_0.95fr]">
 
-                                    {/* Col 1 — Batería */}
-                                    <div className="space-y-4">
-                                        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-primary)]/40 p-4">
-                                            <h4 className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-[var(--color-text-primary)]" style={{ marginBottom: '14px' }}>
-                                                <BatteryFull className="h-3.5 w-3.5 text-[var(--color-primary)]" />
+                                    {/* Historial completo */}
+                                    <div className="flex flex-col overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-primary)]/40">
+                                        <div className="flex items-center justify-between border-b border-[var(--color-border)]/50 bg-[var(--color-bg-primary)]/20 px-4 py-3">
+                                            <h4 className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wider text-[var(--color-text-primary)] sm:text-[10px]">
+                                                <ShieldAlert className="h-3 w-3 text-[var(--color-primary)]" />
+                                                Historial completo
+                                            </h4>
+                                            <span className="rounded-full bg-[var(--color-primary)]/10 px-2.5 py-0.5 text-[8px] font-bold text-[var(--color-primary)] sm:text-[9px]">
+                                                {events.length} {events.length === 1 ? 'registro' : 'registros'}
+                                            </span>
+                                        </div>
+                                        <div className="flex-1 overflow-y-auto p-3.5 custom-scrollbar">
+                                            {events.length === 0 ? (
+                                                <div className="flex min-h-[310px] flex-col items-center justify-center gap-2 text-center opacity-60">
+                                                    <Calendar className="h-10 w-10 text-[var(--color-text-muted)] opacity-50" />
+                                                    <p className="text-[10px] font-medium text-[var(--color-text-muted)] sm:text-[11px]">Esta cerradura aún no tiene eventos registrados.</p>
+                                                </div>
+                                            ) : (
+                                                <div className="relative space-y-3 before:absolute before:inset-0 before:ml-4 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-[var(--color-border)] before:to-transparent">
+                                                    {events.map((event) => (
+                                                        <div key={event.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
+                                                            <div className="flex h-10 w-10 items-center justify-center rounded-full border-4 border-[var(--color-bg-secondary)] bg-[var(--color-bg-primary)] shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow-sm z-10">
+                                                                {event.type === 'battery' ? <Battery className="h-4 w-4 text-emerald-400" /> : <ShieldAlert className="h-4 w-4 text-amber-400" />}
+                                                            </div>
+                                                            <div className="w-[calc(100%-3.5rem)] md:w-[calc(50%-2rem)] p-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] shadow-sm transition-all hover:shadow-md hover:border-[var(--color-border-hover)]">
+                                                                <div className="mb-2 flex items-center justify-between">
+                                                                    <span className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider ${event.type === 'battery' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'}`}>
+                                                                        {event.type === 'battery' ? 'Batería' : 'Mecánico'}
+                                                                    </span>
+                                                                    <time className="flex items-center gap-1 text-[9px] font-bold text-[var(--color-text-muted)]">
+                                                                        <Calendar className="h-3 w-3" />
+                                                                        {formatShortDate(event.performed_at)}
+                                                                    </time>
+                                                                </div>
+                                                                {event.part_name && (
+                                                                    <div className="mb-2 inline-flex items-center rounded-lg bg-[var(--color-bg-primary)]/50 px-2 py-1 text-[10px]">
+                                                                        <span className="font-medium text-[var(--color-text-muted)] mr-1">Pieza:</span>
+                                                                        <span className="font-semibold text-[var(--color-text-primary)]">{event.part_name}</span>
+                                                                    </div>
+                                                                )}
+                                                                {event.description && (
+                                                                    <p className="text-[10px] leading-relaxed text-[var(--color-text-secondary)] sm:text-[11px]">{event.description}</p>
+                                                                )}
+                                                                {event.user_name && (
+                                                                    <div className="mt-2.5 flex items-center gap-1.5 border-t border-[var(--color-border)]/50 pt-2.5 text-[10px] font-medium text-[var(--color-text-muted)]">
+                                                                        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary)]">
+                                                                            <User className="h-3 w-3" />
+                                                                        </div>
+                                                                        {event.user_name}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Columna derecha — Predicción + Estado + resumen */}
+                                    <div className="space-y-3.5">
+                                        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-primary)]/40 p-3.5">
+                                            <h4 className="mb-2.5 flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wider text-[var(--color-text-primary)] sm:text-[10px]">
+                                                <BatteryFull className="h-3 w-3 text-[var(--color-primary)]" />
                                                 Predicción de batería
                                             </h4>
-                                            <div className="space-y-3">
+                                            <div className="space-y-2.5">
                                                 <div className="rounded-xl border border-[var(--color-border)]/70 bg-[var(--color-bg-primary)]/35 p-3">
-                                                    <div className="mb-1.5 flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
+                                                    <div className="mb-1.5 flex items-center justify-between text-[8px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)] sm:text-[9px]">
                                                         <span className="flex items-center gap-1"><BatteryFull className="h-3 w-3" />Salud</span>
                                                         <span className="text-[var(--color-text-primary)]">{selectedPrediction ? `${selectedPrediction.health_score}%` : 'N/A'}</span>
                                                     </div>
@@ -830,10 +899,10 @@ export default function LocksRackPage() {
                                                     </div>
                                                 </div>
                                                 <div className="rounded-xl border border-[var(--color-border)]/70 bg-[var(--color-bg-primary)]/35 p-3">
-                                                    <div className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)] mb-1 flex items-center gap-1">
+                                                    <div className="mb-1 flex items-center gap-1 text-[8px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)] sm:text-[9px]">
                                                         <Calendar className="h-3 w-3" />Próximo cambio
                                                     </div>
-                                                    <div className="text-base font-bold text-[var(--color-text-primary)]">
+                                                    <div className="text-[13px] font-bold text-[var(--color-text-primary)] sm:text-sm">
                                                         {selectedPrediction
                                                             ? (selectedPrediction.days_remaining <= 0
                                                                 ? <span className="text-red-400">{Math.abs(selectedPrediction.days_remaining)}d vencida</span>
@@ -843,16 +912,13 @@ export default function LocksRackPage() {
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
 
-                                    {/* Col 2 — Estado + Resumen */}
-                                    <div className="space-y-4">
-                                        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-primary)]/40 p-4">
-                                            <h4 className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-[var(--color-text-primary)]" style={{ marginBottom: '14px' }}>
-                                                <AlertCircle className="h-3.5 w-3.5 text-[var(--color-primary)]" />
+                                        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-primary)]/40 p-3.5">
+                                            <div className="mb-2.5 flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wider text-[var(--color-text-primary)] sm:text-[10px]">
+                                                <AlertCircle className="h-3 w-3 text-[var(--color-primary)]" />
                                                 Estado actual
-                                            </h4>
-                                            <div className="flex flex-wrap gap-2">
+                                            </div>
+                                            <div className="flex flex-wrap gap-1.5">
                                                 {Object.entries(LOCK_STATUS_LABELS).map(([value, label]) => {
                                                     const active = selectedLock.status === value;
                                                     return (
@@ -861,7 +927,7 @@ export default function LocksRackPage() {
                                                             type="button"
                                                             onClick={() => handleUpdateLockStatus(value)}
                                                             disabled={updatingStatus}
-                                                            className={`rounded-lg border px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide transition-all ${active
+                                                            className={`rounded-lg border px-2.5 py-1.5 text-[9px] font-semibold uppercase tracking-wide transition-all sm:text-[10px] ${active
                                                                 ? `${LOCK_STATUS_STYLES[value]} ring-1 ring-inset ring-current/20 shadow-sm`
                                                                 : 'border-[var(--color-border)] bg-[var(--color-bg-primary)]/30 text-[var(--color-text-secondary)] hover:border-[var(--color-border-hover)] hover:bg-[var(--color-bg-primary)]'
                                                                 }`}
@@ -871,89 +937,31 @@ export default function LocksRackPage() {
                                                     );
                                                 })}
                                             </div>
-                                        </div>
-                                        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-primary)]/40 p-4">
-                                            <h4 className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-[var(--color-text-primary)]" style={{ marginBottom: '14px' }}>
-                                                <ShieldAlert className="h-3.5 w-3.5 text-[var(--color-primary)]" />
-                                                Resumen
-                                            </h4>
-                                            <div className="space-y-2">
-                                                <div className="flex items-center justify-between rounded-lg bg-[var(--color-bg-secondary)] px-3 py-2 border border-[var(--color-border)]/50">
-                                                    <span className="text-[11px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]">Total eventos</span>
-                                                    <span className="text-sm font-bold text-[var(--color-text-primary)]">{events.length}</span>
+
+                                            <div className="mt-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-primary)]/35 p-3.5">
+                                                <div className="mb-2 flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wider text-[var(--color-text-primary)] sm:text-[10px]">
+                                                    <ShieldAlert className="h-3 w-3 text-[var(--color-primary)]" />
+                                                    Resumen
                                                 </div>
-                                                <div className="flex items-center justify-between rounded-lg bg-[var(--color-bg-secondary)] px-3 py-2 border border-[var(--color-border)]/50">
-                                                    <span className="text-[11px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]">Último evento</span>
-                                                    <span className="text-xs font-bold text-[var(--color-text-primary)]">{events.length > 0 ? formatShortDate(events[0].performed_at) : '—'}</span>
-                                                </div>
-                                                <div className="flex items-center justify-between rounded-lg bg-[var(--color-bg-secondary)] px-3 py-2 border border-[var(--color-border)]/50">
-                                                    <span className="text-[11px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]">Últ. mantenimiento</span>
-                                                    <span className="text-xs font-bold text-[var(--color-text-primary)]">{formatShortDate(selectedLock.last_maintenance_at)}</span>
-                                                </div>
-                                                <div className="flex items-center justify-between rounded-lg bg-[var(--color-bg-secondary)] px-3 py-2 border border-[var(--color-border)]/50">
-                                                    <span className="text-[11px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]">Últ. tipo</span>
-                                                    <span className="text-xs font-bold text-[var(--color-text-primary)]">{selectedLock.last_maintenance_type || '—'}</span>
+                                                <div className="grid gap-1.5 sm:grid-cols-2">
+                                                    <div className="flex items-center justify-between rounded-lg bg-[var(--color-bg-secondary)] px-3 py-2 border border-[var(--color-border)]/50 sm:col-span-2">
+                                                        <span className="text-[9px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]">Total eventos</span>
+                                                        <span className="text-sm font-bold text-[var(--color-text-primary)]">{events.length}</span>
+                                                    </div>
+                                                    <div className="flex items-center justify-between rounded-lg bg-[var(--color-bg-secondary)] px-3 py-2 border border-[var(--color-border)]/50">
+                                                        <span className="text-[9px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]">Último evento</span>
+                                                        <span className="text-[10px] font-bold text-[var(--color-text-primary)]">{events.length > 0 ? formatShortDate(events[0].performed_at) : '—'}</span>
+                                                    </div>
+                                                    <div className="flex items-center justify-between rounded-lg bg-[var(--color-bg-secondary)] px-3 py-2 border border-[var(--color-border)]/50">
+                                                        <span className="text-[9px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]">Últ. mant.</span>
+                                                        <span className="text-[10px] font-bold text-[var(--color-text-primary)]">{formatShortDate(selectedLock.last_maintenance_at)}</span>
+                                                    </div>
+                                                    <div className="flex items-center justify-between rounded-lg bg-[var(--color-bg-secondary)] px-3 py-2 border border-[var(--color-border)]/50 sm:col-span-2">
+                                                        <span className="text-[9px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]">Últ. tipo</span>
+                                                        <span className="text-[10px] font-bold text-[var(--color-text-primary)]">{selectedLock.last_maintenance_type || '—'}</span>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Col 3 — Historial completo */}
-                                    <div className="flex flex-col overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-primary)]/40">
-                                        <div className="flex items-center justify-between border-b border-[var(--color-border)]/50 bg-[var(--color-bg-primary)]/20 px-4 py-3.5">
-                                            <h4 className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-[var(--color-text-primary)]">
-                                                <ShieldAlert className="h-3.5 w-3.5 text-[var(--color-primary)]" />
-                                                Historial completo
-                                            </h4>
-                                            <span className="rounded-full bg-[var(--color-primary)]/10 px-2.5 py-0.5 text-[10px] font-bold text-[var(--color-primary)]">
-                                                {events.length} {events.length === 1 ? 'registro' : 'registros'}
-                                            </span>
-                                        </div>
-                                        <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
-                                            {events.length === 0 ? (
-                                                <div className="flex min-h-[250px] flex-col items-center justify-center gap-2.5 text-center opacity-60">
-                                                    <Calendar className="h-10 w-10 text-[var(--color-text-muted)] opacity-50" />
-                                                    <p className="text-xs font-medium text-[var(--color-text-muted)]">Esta cerradura aún no tiene eventos registrados.</p>
-                                                </div>
-                                            ) : (
-                                                <div className="relative space-y-4 before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-[var(--color-border)] before:to-transparent">
-                                                    {events.map((event) => (
-                                                        <div key={event.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
-                                                            <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-[var(--color-bg-secondary)] bg-[var(--color-bg-primary)] shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow-sm z-10">
-                                                                {event.type === 'battery' ? <Battery className="w-4 h-4 text-emerald-400" /> : <ShieldAlert className="w-4 h-4 text-amber-400" />}
-                                                            </div>
-                                                            <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] shadow-sm transition-all hover:shadow-md hover:border-[var(--color-border-hover)]">
-                                                                <div className="flex items-center justify-between mb-2">
-                                                                    <span className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${event.type === 'battery' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'}`}>
-                                                                        {event.type === 'battery' ? 'Batería' : 'Mecánico'}
-                                                                    </span>
-                                                                    <time className="text-[11px] font-bold text-[var(--color-text-muted)] flex items-center gap-1">
-                                                                        <Calendar className="w-3 h-3" />
-                                                                        {formatShortDate(event.performed_at)}
-                                                                    </time>
-                                                                </div>
-                                                                {event.part_name && (
-                                                                    <div className="mb-2 inline-flex items-center rounded-lg bg-[var(--color-bg-primary)]/50 px-2.5 py-1 text-xs">
-                                                                        <span className="font-medium text-[var(--color-text-muted)] mr-1">Pieza:</span>
-                                                                        <span className="font-semibold text-[var(--color-text-primary)]">{event.part_name}</span>
-                                                                    </div>
-                                                                )}
-                                                                {event.description && (
-                                                                    <p className="text-sm leading-relaxed text-[var(--color-text-secondary)]">{event.description}</p>
-                                                                )}
-                                                                {event.user_name && (
-                                                                    <div className="mt-3 flex items-center gap-1.5 text-xs font-medium text-[var(--color-text-muted)] pt-3 border-t border-[var(--color-border)]/50">
-                                                                        <div className="flex items-center justify-center w-5 h-5 rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary)]">
-                                                                            <User className="w-3 h-3" />
-                                                                        </div>
-                                                                        {event.user_name}
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
                                         </div>
                                     </div>
 
