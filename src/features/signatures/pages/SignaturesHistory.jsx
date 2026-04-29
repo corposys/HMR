@@ -244,19 +244,13 @@ export default function SignaturesHistory() {
     });
 
     return (
-        <div className="py-6 px-4 lg:px-8 w-full">
+        <div className="py-4 px-4 lg:px-8 w-full">
             <div className="mx-auto max-w-auto">
 
                 {/* ── Header ── */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                     <div>
                         <div className="flex items-center gap-3 mb-1">
-                            <div className="p-2.5 rounded-xl bg-[var(--color-primary)]/10">
-                                <FileSignature className="w-6 h-6 text-[var(--color-primary)]" />
-                            </div>
-                            <h1 className="text-2xl font-semibold text-[var(--color-text-primary)]">
-                                Firmas Corporativas
-                            </h1>
                         </div>
                     </div>
 

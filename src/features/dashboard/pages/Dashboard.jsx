@@ -121,22 +121,10 @@ export default function Dashboard() {
         <div className="py-6 w-full px-4 lg:px-8">
             <div className="mx-auto max-w-auto">
                 {/* Header Section */}
-                <div className="mb-4">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                        <div>
-                            <div className="flex items-center gap-3 mb-2">
-                                <div className="p-2.5 rounded-xl bg-[var(--color-primary)]/10">
-                                    <LayoutDashboard className="w-6 h-6 text-[var(--color-primary)]" />
-                                </div>
-                                <h1 className="font-semibold">Dashboard HMR</h1>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                            <Button variant="secondary" icon={Hotel}>
-                                Reporte Diario
-                            </Button>
-                        </div>
-                    </div>
+                <div className="mb-4 flex justify-end">
+                    <Button variant="secondary" icon={Hotel}>
+                        Reporte Diario
+                    </Button>
                 </div>
 
                 {/* Stats Grid - Simétrico 4 columnas */}

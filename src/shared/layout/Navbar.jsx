@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
     LogOut,
     ChevronDown,
@@ -7,7 +7,13 @@ import {
     Activity,
     Bell,
     Menu,
-    X
+    X,
+    LayoutDashboard,
+    Hotel,
+    DoorOpen,
+    Shield,
+    FileSignature,
+    SettingsIcon
 } from 'lucide-react';
 import { useAuth } from '@context/AuthContext';
 
@@ -18,6 +24,7 @@ import { useAuth } from '@context/AuthContext';
 export default function Navbar({ onMenuClick, isMobileSidebarOpen }) {
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const navigate = useNavigate();
+    const location = useLocation();
     const { user, logout } = useAuth();
     const dropdownRef = useRef(null);
 
@@ -28,6 +35,40 @@ export default function Navbar({ onMenuClick, isMobileSidebarOpen }) {
         logout();
         navigate('/login');
     };
+
+    const pageMeta = {
+        '/': {
+            title: 'Dashboard HMR',
+            icon: LayoutDashboard,
+        },
+        '/reception/reservas': {
+            title: 'Recepción',
+            icon: Hotel,
+        },
+        '/housekeeping/lenceria': {
+            title: 'Lencería',
+            icon: Hotel,
+        },
+        '/maintenance/rooms': {
+            title: 'Control de Cerraduras',
+            icon: DoorOpen,
+        },
+        '/security/vehicle-control': {
+            title: 'Control de Vehículos',
+            icon: Shield,
+        },
+        '/signatures': {
+            title: 'Firmas Corporativas',
+            icon: FileSignature,
+        },
+        '/settings': {
+            title: 'Configuración',
+            icon: SettingsIcon,
+        },
+        
+    };
+
+    const currentPage = pageMeta[location.pathname] || null;
 
     // Close dropdown when clicking outside
     useEffect(() => {
@@ -49,7 +90,7 @@ export default function Navbar({ onMenuClick, isMobileSidebarOpen }) {
     return (
         <header className="sticky top-0 z-30 h-16 bg-[var(--color-bg-primary)]/80 backdrop-blur-md border-b border-[var(--color-border)] px-6 flex items-center justify-between">
             {/* Mobile menu button */}
-            <div className="flex items-center gap-3">
+            <div className="flex min-w-0 items-center gap-3">
                 <button
                     type="button"
                     onClick={onMenuClick}
@@ -59,7 +100,16 @@ export default function Navbar({ onMenuClick, isMobileSidebarOpen }) {
                     {isMobileSidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
                 </button>
 
-                <div className="hidden md:block flex-1" />
+                {currentPage && (
+                    <div className="flex min-w-0 items-center gap-2 sm:-ml-3">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-primary)]/10 text-[var(--color-primary)] shrink-0">
+                            <currentPage.icon className="h-4 w-4" />
+                        </div>
+                        <p className="truncate text-sm font-semibold leading-none text-[var(--color-text-primary)] sm:text-base lg:text-lg">
+                            {currentPage.title}
+                        </p>
+                    </div>
+                )}
             </div>
 
             {/* Right Section: Utilities & Profile */}

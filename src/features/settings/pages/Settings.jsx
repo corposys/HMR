@@ -44,17 +44,8 @@ export default function Settings() {
     ];
 
     return (
-        <div className="py-6 w-full px-4 lg:px-8">
+        <div className="py-4 w-full px-4 lg:px-8">
             <div className="mx-auto max-w-auto">
-                {/* Header */}
-                <div className="mb-4">
-                    <div className="flex items-center gap-3 mb-2">
-                        <div className="p-2.5 rounded-xl bg-[var(--color-primary)]/10">
-                            <SettingsIcon className="w-6 h-6 text-[var(--color-primary)]" />
-                        </div>
-                        <h1 className="text-xl font-semibold text-[var(--color-text-primary)]">Configuración</h1>
-                    </div>
-                </div>
             </div>
 
             <div className="bg-[var(--color-bg-secondary)] rounded-xl border border-[var(--color-border)] shadow-sm overflow-hidden">

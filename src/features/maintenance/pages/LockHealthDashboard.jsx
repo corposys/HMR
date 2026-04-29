@@ -46,9 +46,6 @@ export default function LockHealthDashboard() {
                         <div className="p-2.5 rounded-xl bg-[var(--color-primary)]/10">
                             <Activity className="w-6 h-6 text-[var(--color-primary)]" />
                         </div>
-                        <h1 className="text-2xl font-semibold text-[var(--color-text-primary)]">
-                            Dashboard Predictivo
-                        </h1>
                     </div>
                 </div>
 
