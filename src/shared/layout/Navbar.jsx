@@ -68,7 +68,17 @@ export default function Navbar({ onMenuClick, isMobileSidebarOpen }) {
         
     };
 
-    const currentPage = pageMeta[location.pathname] || null;
+    const currentPage = (() => {
+        if (pageMeta[location.pathname]) {
+            return pageMeta[location.pathname];
+        }
+
+        if (location.pathname.startsWith('/maintenance/room/')) {
+            return pageMeta['/maintenance/rooms'];
+        }
+
+        return null;
+    })();
 
     // Close dropdown when clicking outside
     useEffect(() => {

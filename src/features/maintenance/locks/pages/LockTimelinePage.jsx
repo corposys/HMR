@@ -1,28 +1,90 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
-    ArrowLeft, Battery, Cog, Calendar, DoorOpen,
-    Loader2, AlertCircle, Clock, User, Wrench, Plus
+    ArrowLeft,
+    Battery,
+    Calendar,
+    DoorOpen,
+    Loader2,
+    ShieldAlert,
+    User,
+    Plus,
+    RefreshCw,
+    AlertCircle,
+    Wrench,
+    BatteryFull,
+    Activity,
+    Clock3,
+    MapPin,
+    Hash,
 } from 'lucide-react';
+import CreateLockEventModal from '@features/maintenance/locks/components/CreateLockEventModal';
 
-function formatDate(iso) {
-    if (!iso) return '—';
-    return new Date(iso).toLocaleDateString('es-VE', { day: '2-digit', month: 'short', year: 'numeric' });
+const LOCK_STATUS_STYLES = {
+    operational: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400',
+    preventive: 'border-amber-500/30 bg-amber-500/10 text-amber-400',
+    failure: 'border-red-500/30 bg-red-500/10 text-red-400',
+    out_of_service: 'border-zinc-500/30 bg-zinc-500/10 text-zinc-300',
+};
+
+const LOCK_STATUS_LABELS = {
+    operational: 'Operativa',
+    preventive: 'Preventiva',
+    failure: 'Falla',
+    out_of_service: 'Fuera de servicio',
+};
+
+function formatDate(value) {
+    if (!value) return '—';
+    return new Date(value).toLocaleDateString('es-VE', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+    });
 }
 
-function HealthBar({ score, large }) {
-    const color = score >= 70 ? 'bg-green-500' : score >= 40 ? 'bg-yellow-500' : 'bg-red-500';
-    const label = score >= 70 ? 'Saludable' : score >= 40 ? 'Precaución' : 'Crítica';
-    const textColor = score >= 70 ? 'text-green-500' : score >= 40 ? 'text-yellow-500' : 'text-red-500';
+function HealthBar({ score }) {
+    const normalized = Number.isFinite(score) ? Math.max(0, Math.min(score, 100)) : 0;
+    const tone = !Number.isFinite(score)
+        ? 'bg-zinc-600'
+        : normalized >= 70
+            ? 'bg-emerald-500'
+            : normalized >= 40
+                ? 'bg-amber-400'
+                : 'bg-red-500';
+
     return (
-        <div>
-            <div className="flex items-center justify-between mb-1">
-                <span className={`text-xs font-medium ${textColor}`}>{label}</span>
-                <span className={`text-xs font-bold ${textColor}`}>{score}%</span>
+        <div className="flex items-center gap-3">
+            <div className="h-2 w-full flex-1 rounded-full bg-[var(--color-border)] overflow-hidden">
+                <div className={`h-full rounded-full transition-all duration-500 ${tone}`} style={{ width: `${normalized}%` }} />
             </div>
-            <div className={`${large ? 'h-3' : 'h-2'} bg-[var(--color-bg-tertiary)] rounded-full overflow-hidden`}>
-                <div className={`h-full rounded-full transition-all ${color}`} style={{ width: `${score}%` }} />
+            <div className={`w-9 text-right text-xs font-bold ${Number.isFinite(score) ? 'text-[var(--color-text-primary)]' : 'text-[var(--color-text-muted)]'}`}>
+                {Number.isFinite(score) ? `${normalized}%` : 'N/A'}
             </div>
+        </div>
+    );
+}
+
+function DetailMetric({ label, value, icon: Icon, tone = 'text-[var(--color-text-primary)]' }) {
+    return (
+        <div className="flex flex-col justify-center rounded-lg border border-[var(--color-border)]/60 bg-[var(--color-bg-primary)]/20 px-2.5 py-2 transition-colors hover:bg-[var(--color-bg-primary)]/40">
+            <div className="mb-1 flex items-center gap-1.5 text-[9px] uppercase tracking-wider text-[var(--color-text-muted)]">
+                <Icon className="h-3 w-3" />
+                <span className="truncate">{label}</span>
+            </div>
+            <div className={`text-xs font-medium truncate ${tone}`}>{value}</div>
+        </div>
+    );
+}
+
+function SectionTitle({ icon: Icon, title, rightElement }) {
+    return (
+        <div className="flex items-center justify-between border-b border-[var(--color-border)]/60 px-3 py-2.5 bg-[var(--color-bg-primary)]/10">
+            <div className="flex items-center gap-2">
+                <Icon className="h-4 w-4 text-[var(--color-primary)]" />
+                <h3 className="text-xs font-semibold text-[var(--color-text-primary)]">{title}</h3>
+            </div>
+            {rightElement && <div>{rightElement}</div>}
         </div>
     );
 }
@@ -31,43 +93,142 @@ export default function LockTimelinePage() {
     const { id } = useParams();
     const navigate = useNavigate();
 
-    const [room, setRoom] = useState(null);
-    const [logs, setLogs] = useState([]);
+    const [lock, setLock] = useState(null);
+    const [events, setEvents] = useState([]);
     const [prediction, setPrediction] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
+    const [showCreate, setShowCreate] = useState(false);
+    const [savingEvent, setSavingEvent] = useState(false);
+    const [updatingStatus, setUpdatingStatus] = useState(false);
 
-    const fetchData = useCallback(async () => {
+    const roomId = Number(id);
+
+    const fetchDetail = useCallback(async () => {
+        if (!Number.isFinite(roomId)) {
+            setError('Habitación inválida');
+            setLoading(false);
+            return;
+        }
+
         setLoading(true);
+        setError('');
         try {
             const token = localStorage.getItem('token');
             const headers = { Authorization: `Bearer ${token}` };
 
-            // Fetch logs for this room
-            const logsRes = await fetch(`/api/maintenance?room_id=${id}`, { headers });
-            const logsData = await logsRes.json();
-            setLogs(logsData.logs || []);
+            const [locksRes, predRes] = await Promise.all([
+                fetch('/api/maintenance/locks', { headers }),
+                fetch('/api/maintenance/predictions', { headers }),
+            ]);
 
-            // Get room info from first log or separate call
-            if (logsData.logs && logsData.logs.length > 0) {
-                const first = logsData.logs[0];
-                setRoom({
-                    room_number: first.room_number,
-                    module_name: first.module_name,
-                    floor_code: first.floor_code,
-                    module_number: first.module_number,
-                });
+            if (!locksRes.ok || !predRes.ok) {
+                throw new Error('No se pudo cargar el detalle de la cerradura');
             }
 
-            // Get prediction
-            const predRes = await fetch('/api/maintenance/predictions', { headers });
+            const locksData = await locksRes.json();
             const predData = await predRes.json();
-            const matched = (predData.predictions || []).find(p => p.room_id === parseInt(id));
-            setPrediction(matched || null);
-        } catch { }
-        finally { setLoading(false); }
-    }, [id]);
 
-    useEffect(() => { fetchData(); }, [fetchData]);
+            const foundLock = (locksData.locks || []).find((item) => Number(item.room_id) === roomId) || null;
+            setLock(foundLock);
+
+            const foundPrediction = (predData.predictions || []).find((item) => Number(item.room_id) === roomId) || null;
+            setPrediction(foundPrediction);
+
+            if (foundLock?.id) {
+                const eventsRes = await fetch(`/api/maintenance/locks/${foundLock.id}/events`, { headers });
+                if (!eventsRes.ok) {
+                    throw new Error('No se pudo cargar el historial');
+                }
+                const eventsData = await eventsRes.json();
+                setEvents(eventsData.events || []);
+            } else {
+                const fallbackRes = await fetch(`/api/maintenance?room_id=${roomId}`, { headers });
+                if (!fallbackRes.ok) {
+                    throw new Error('No se encontró cerradura para la habitación');
+                }
+                const fallbackData = await fallbackRes.json();
+                setEvents(fallbackData.logs || []);
+            }
+        } catch (err) {
+            setError(err.message || 'Error cargando detalle');
+            setEvents([]);
+            setPrediction(null);
+        } finally {
+            setLoading(false);
+        }
+    }, [roomId]);
+
+    useEffect(() => {
+        fetchDetail();
+    }, [fetchDetail]);
+
+    const orderedEvents = useMemo(() => {
+        return [...events].sort((a, b) => new Date(b.performed_at) - new Date(a.performed_at));
+    }, [events]);
+
+    const lastEvent = orderedEvents[0] || null;
+
+    const handleCreateEvent = async (data) => {
+        setSavingEvent(true);
+        try {
+            const token = localStorage.getItem('token');
+            const payload = {
+                ...data,
+                room_id: Number(data.room_id || roomId),
+                part_type_id: data.part_type_id ? Number(data.part_type_id) : null,
+            };
+
+            const response = await fetch('/api/maintenance', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify(payload),
+            });
+
+            if (!response.ok) {
+                throw new Error('No se pudo registrar el evento');
+            }
+
+            setShowCreate(false);
+            await fetchDetail();
+        } catch {
+            // Keep current view state if save fails.
+        } finally {
+            setSavingEvent(false);
+        }
+    };
+
+    const handleUpdateLockStatus = async (status) => {
+        if (!lock?.id || lock.status === status) {
+            return;
+        }
+
+        setUpdatingStatus(true);
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch(`/api/maintenance/locks/${lock.id}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({ status }),
+            });
+
+            if (!response.ok) {
+                throw new Error('No se pudo actualizar el estado');
+            }
+
+            await fetchDetail();
+        } catch {
+            // Keep current status rendered if request fails.
+        } finally {
+            setUpdatingStatus(false);
+        }
+    };
 
     if (loading) {
         return (
@@ -78,128 +239,208 @@ export default function LockTimelinePage() {
     }
 
     return (
-        <div className="py-6 px-4 lg:px-8 w-full">
-            <div className="mx-auto max-w-3xl">
-                {/* Header */}
-                <div className="mb-6">
-                    <div className="flex items-center gap-3 mb-1">
+        <div className="py-4 w-full px-4 lg:px-8">
+            <div className="w-full space-y-4">
+                <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
                         <button
+                            type="button"
                             onClick={() => navigate('/maintenance/rooms')}
-                            aria-label="Volver al historial"
-                            title="Volver al historial"
+                            aria-label="Volver al rack"
+                            title="Volver al rack"
                             className="p-2.5 rounded-xl bg-[var(--color-primary)]/10 text-[var(--color-primary)] hover:bg-[var(--color-primary)]/20 transition-colors"
                         >
-                            <ArrowLeft className="w-6 h-6" />
+                            <ArrowLeft className="w-5 h-5" />
                         </button>
-                        <div className="p-2.5 rounded-xl bg-[var(--color-primary)]/10">
-                            <DoorOpen className="w-6 h-6 text-[var(--color-primary)]" />
-                        </div>
                         <div>
-                            <h1 className="text-2xl font-semibold text-[var(--color-text-primary)]">
-                                Habitación {room?.room_number || id}
+                            <p className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)]">Cerradura</p>
+                            <h1 className="text-xl font-bold text-[var(--color-text-primary)]">
+                                Hab. {lock?.room_number || roomId}
                             </h1>
-                            {room && (
-                                <p className="text-sm text-[var(--color-text-secondary)]">
-                                    {room.module_name} · {room.floor_code}
-                                </p>
-                            )}
                         </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={() => setShowCreate(true)}
+                            className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[var(--color-primary)]/30 bg-[var(--color-primary)]/10 px-3 text-xs font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-primary)]/20"
+                        >
+                            <Plus className="h-3.5 w-3.5" />
+                            Registrar evento
+                        </button>
+                        <button
+                            type="button"
+                            onClick={fetchDetail}
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)] text-[var(--color-text-muted)] transition-colors hover:border-[var(--color-primary)]/40 hover:text-[var(--color-primary)]"
+                            title="Recargar"
+                        >
+                            <RefreshCw className="h-3.5 w-3.5" />
+                        </button>
                     </div>
                 </div>
 
-                {/* Prediction card */}
-                {prediction && (
-                    <div className="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl p-5 mb-6">
-                        <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-3 flex items-center gap-2">
-                            <Battery className="w-4 h-4 text-green-500" />
-                            Predicción de Batería
-                        </h3>
-                        <div className="grid grid-cols-3 gap-4 mb-4">
-                            <div>
-                                <p className="text-xs text-[var(--color-text-muted)] mb-0.5">Último cambio</p>
-                                <p className="text-sm font-medium text-[var(--color-text-primary)]">{formatDate(prediction.last_battery_change)}</p>
-                            </div>
-                            <div>
-                                <p className="text-xs text-[var(--color-text-muted)] mb-0.5">Próximo estimado</p>
-                                <p className={`text-sm font-bold ${prediction.days_remaining <= 10 ? 'text-red-500' : prediction.days_remaining <= 30 ? 'text-yellow-500' : 'text-green-500'}`}>
-                                    {formatDate(prediction.estimated_next_change)}
-                                </p>
-                            </div>
-                            <div>
-                                <p className="text-xs text-[var(--color-text-muted)] mb-0.5">Promedio entre cambios</p>
-                                <p className="text-sm font-medium text-[var(--color-text-primary)]">{prediction.avg_days_between_changes} días</p>
-                            </div>
-                        </div>
-                        <HealthBar score={prediction.health_score} large />
+                {error && (
+                    <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-300">
+                        {error}
                     </div>
                 )}
 
-                {/* Timeline */}
-                <div className="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl overflow-hidden">
-                    <div className="p-4 border-b border-[var(--color-border)] flex items-center justify-between">
-                        <div>
-                            <h3 className="font-semibold text-[var(--color-text-primary)]">Historial de Mantenimiento</h3>
-                            <p className="text-xs text-[var(--color-text-muted)] mt-0.5">{logs.length} {logs.length === 1 ? 'registro' : 'registros'}</p>
-                        </div>
-                    </div>
-
-                    {logs.length === 0 ? (
-                        <div className="p-12 text-center">
-                            <Wrench className="w-10 h-10 text-[var(--color-text-muted)] mx-auto mb-3" />
-                            <p className="text-sm text-[var(--color-text-secondary)]">Sin registros de mantenimiento para esta habitación</p>
-                        </div>
-                    ) : (
-                        <div className="relative">
-                            {/* Timeline line */}
-                            <div className="absolute left-7 top-0 bottom-0 w-px bg-[var(--color-border)]" />
-
-                            {logs.map((log, idx) => {
-                                const isBattery = log.type === 'battery';
-                                return (
-                                    <div key={log.id} className="relative flex gap-4 px-4 py-4 hover:bg-[var(--color-bg-tertiary)] transition-colors">
-                                        {/* Dot */}
-                                        <div className={`relative z-10 w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${isBattery ? 'bg-green-500/15' : 'bg-orange-500/15'
-                                            }`}>
-                                            {isBattery
-                                                ? <Battery className="w-3.5 h-3.5 text-green-600" />
-                                                : <Cog className="w-3.5 h-3.5 text-orange-600" />
-                                            }
-                                        </div>
-
-                                        {/* Content */}
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-2 flex-wrap">
-                                                <span className={`text-xs font-medium px-2 py-0.5 rounded-md border ${isBattery
-                                                        ? 'bg-green-500/10 text-green-600 border-green-500/20'
-                                                        : 'bg-orange-500/10 text-orange-600 border-orange-500/20'
-                                                    }`}>
-                                                    {isBattery ? 'Cambio de Batería' : 'Reparación Mecánica'}
-                                                </span>
-                                                {log.part_name && (
-                                                    <span className="text-xs text-[var(--color-text-muted)]">· {log.part_name}</span>
-                                                )}
-                                            </div>
-                                            {log.description && (
-                                                <p className="text-sm text-[var(--color-text-secondary)] mt-1">{log.description}</p>
-                                            )}
-                                            <div className="flex items-center gap-4 mt-1.5">
-                                                <span className="text-xs text-[var(--color-text-muted)] flex items-center gap-1">
-                                                    <Calendar className="w-3 h-3" /> {formatDate(log.performed_at)}
-                                                </span>
-                                                {log.user_name && (
-                                                    <span className="text-xs text-[var(--color-text-muted)] flex items-center gap-1">
-                                                        <User className="w-3 h-3" /> {log.user_name}
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </div>
+                <div className="grid gap-4 lg:grid-cols-[0.85fr_1.65fr] items-start">
+                    <aside className="space-y-4">
+                        <section className="overflow-hidden rounded-xl border border-[var(--color-border)]/80 bg-[var(--color-bg-secondary)] shadow-sm">
+                            <SectionTitle icon={BatteryFull} title="Predicción de batería" />
+                            <div className="p-3 space-y-3">
+                                <div className="rounded-lg border border-[var(--color-border)]/60 bg-[var(--color-bg-primary)]/30 p-2.5">
+                                    <div className="mb-2 flex items-center justify-between text-[10px] uppercase tracking-wider text-[var(--color-text-muted)]">
+                                        <span className="inline-flex items-center gap-1.5"><Activity className="h-3 w-3" />Salud de batería</span>
                                     </div>
-                                );
-                            })}
+                                    <HealthBar score={prediction?.health_score} />
+                                </div>
+
+                                <div className="grid gap-2 grid-cols-2">
+                                    <DetailMetric label="Últ. cambio" value={formatDate(prediction?.last_battery_change)} icon={Calendar} />
+                                    <DetailMetric
+                                        label="Próx. estimado"
+                                        value={prediction ? `${formatDate(prediction.estimated_next_change)}` : 'Sin datos'}
+                                        icon={Clock3}
+                                        tone={prediction?.days_remaining <= 0 ? 'text-red-400' : prediction?.days_remaining <= 15 ? 'text-amber-400' : 'text-[var(--color-text-primary)]'}
+                                    />
+                                    <DetailMetric label="Promedio" value={prediction?.avg_days_between_changes ? `${prediction.avg_days_between_changes} d` : '—'} icon={Activity} />
+                                    <DetailMetric label="Restantes" value={prediction ? `${prediction.days_remaining} días` : '—'} icon={AlertCircle} tone={prediction?.days_remaining <= 0 ? 'text-red-400' : 'text-[var(--color-text-primary)]'} />
+                                </div>
+                            </div>
+                        </section>
+
+                        <section className="overflow-hidden rounded-xl border border-[var(--color-border)]/80 bg-[var(--color-bg-secondary)] shadow-sm">
+                            <SectionTitle icon={ShieldAlert} title="Estado y resumen" />
+                            <div className="p-3 space-y-3">
+                                <div className="rounded-lg border border-[var(--color-border)]/60 bg-[var(--color-bg-primary)]/30 p-2.5">
+                                    <div className="mb-2 flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-[var(--color-text-muted)]">
+                                        <Activity className="h-3 w-3" />
+                                        <span>Estado actual</span>
+                                    </div>
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {Object.entries(LOCK_STATUS_LABELS).map(([value, label]) => {
+                                            const active = lock?.status === value;
+                                            return (
+                                                <button
+                                                    key={value}
+                                                    type="button"
+                                                    onClick={() => handleUpdateLockStatus(value)}
+                                                    disabled={!lock?.id || updatingStatus}
+                                                    className={`rounded-md border px-2 py-1 text-[10px] uppercase tracking-wide font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${active
+                                                        ? `${LOCK_STATUS_STYLES[value]}`
+                                                        : 'border-[var(--color-border)]/60 bg-[var(--color-bg-primary)]/30 text-[var(--color-text-secondary)] hover:border-[var(--color-border-hover)] hover:text-[var(--color-text-primary)]'
+                                                        }`}
+                                                >
+                                                    {label}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                <div className="grid gap-2 grid-cols-2 sm:grid-cols-3">
+                                    <DetailMetric label="Módulo" value={lock?.module_name || '—'} icon={DoorOpen} />
+                                    <DetailMetric label="Piso" value={lock?.floor_code || '—'} icon={MapPin} />
+                                    <DetailMetric label="Código" value={lock?.code || `ROOM-${roomId}`} icon={Hash} />
+                                    <DetailMetric label="Últ. mant." value={formatDate(lock?.last_maintenance_at)} icon={Calendar} />
+                                    <DetailMetric label="Eventos" value={orderedEvents.length} icon={Activity} />
+                                    <DetailMetric label="Últ. tipo" value={lastEvent?.type === 'battery' ? 'Batería' : lastEvent?.type === 'mechanical' ? 'Mecánico' : '—'} icon={Wrench} />
+                                </div>
+                            </div>
+                        </section>
+                    </aside>
+
+                    <section className="overflow-hidden rounded-xl border border-[var(--color-border)]/80 bg-[var(--color-bg-secondary)] shadow-sm flex flex-col">
+                        <SectionTitle
+                            icon={Clock3}
+                            title="Historial de mantenimiento"
+                            rightElement={
+                                <span className="text-[10px] font-medium text-[var(--color-text-muted)] bg-[var(--color-bg-primary)]/50 px-2 py-0.5 rounded-full border border-[var(--color-border)]/50">
+                                    {orderedEvents.length} eventos
+                                </span>
+                            }
+                        />
+
+                        <div className="p-4 flex-1">
+                            {orderedEvents.length === 0 ? (
+                                <div className="flex h-full min-h-[300px] flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-[var(--color-border)]/80 bg-[var(--color-bg-primary)]/20 text-center">
+                                    <Calendar className="h-8 w-8 text-[var(--color-text-muted)] opacity-50" />
+                                    <p className="text-xs text-[var(--color-text-secondary)]">Esta cerradura aún no tiene eventos registrados.</p>
+                                </div>
+                            ) : (
+                                <div className="relative space-y-0 before:absolute before:inset-y-0 before:left-4 before:w-px before:border-l before:border-dashed before:border-[var(--color-border)]/60">
+                                    {orderedEvents.map((event, index) => {
+                                        const isBattery = event.type === 'battery';
+                                        const isLast = index === orderedEvents.length - 1;
+
+                                        return (
+                                            <div key={event.id} className={`relative flex gap-4 ${isLast ? '' : 'pb-5'}`}>
+                                                <div className={`relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border bg-[var(--color-bg-secondary)] shadow-sm ${isBattery ? 'border-emerald-500/30' : 'border-amber-500/30'}`}>
+                                                    <div className={`flex h-5 w-5 items-center justify-center rounded-full ${isBattery ? 'bg-emerald-500/15' : 'bg-amber-500/15'}`}>
+                                                        {isBattery ? <Battery className="h-2.5 w-2.5 text-emerald-400" /> : <Wrench className="h-2.5 w-2.5 text-amber-400" />}
+                                                    </div>
+                                                </div>
+
+                                                <div className="group flex-1 overflow-hidden rounded-lg border border-[var(--color-border)]/50 bg-gradient-to-br from-[var(--color-bg-primary)]/30 to-[var(--color-bg-secondary)]/10 transition-all hover:border-[var(--color-primary)]/30 hover:bg-[var(--color-bg-primary)]/40 hover:shadow-sm">
+                                                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--color-border)]/30 px-3 py-1.5 bg-[var(--color-bg-primary)]/20">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className={`text-[11px] font-semibold uppercase tracking-wider ${isBattery ? 'text-emerald-400' : 'text-amber-400'}`}>
+                                                                {isBattery ? 'Batería' : 'Mecánico'}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex items-center gap-1 text-[10px] text-[var(--color-text-muted)] font-medium">
+                                                            <Calendar className="h-3 w-3" />
+                                                            {formatDate(event.performed_at)}
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <div className="px-3 py-2">
+                                                        {event.description ? (
+                                                            <p className="text-xs leading-relaxed text-[var(--color-text-primary)]/90">
+                                                                {event.description}
+                                                            </p>
+                                                        ) : (
+                                                            <p className="text-xs italic text-[var(--color-text-muted)]">Sin descripción</p>
+                                                        )}
+                                                        
+                                                        <div className="mt-2.5 flex flex-wrap gap-2">
+                                                            {event.part_name && (
+                                                                <div className="flex items-center gap-1 rounded-md bg-[var(--color-bg-primary)]/40 px-1.5 py-0.5 border border-[var(--color-border)]/40">
+                                                                    <DoorOpen className="h-[10px] w-[10px] text-[var(--color-primary)]/70" />
+                                                                    <span className="text-[10px] font-medium text-[var(--color-text-secondary)]">{event.part_name}</span>
+                                                                </div>
+                                                            )}
+                                                            {event.user_name && (
+                                                                <div className="flex items-center gap-1 rounded-md bg-[var(--color-bg-primary)]/40 px-1.5 py-0.5 border border-[var(--color-border)]/40">
+                                                                    <User className="h-[10px] w-[10px] text-[var(--color-primary)]/70" />
+                                                                    <span className="text-[10px] font-medium text-[var(--color-text-secondary)]">{event.user_name}</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
                         </div>
-                    )}
+                    </section>
                 </div>
             </div>
+
+            {showCreate && (
+                <CreateLockEventModal
+                    onSave={handleCreateEvent}
+                    onCancel={() => setShowCreate(false)}
+                    saving={savingEvent}
+                    initialRoomId={roomId}
+                    lockRoomSelection
+                />
+            )}
         </div>
     );
 }
