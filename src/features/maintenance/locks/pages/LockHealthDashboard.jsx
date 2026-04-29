@@ -5,8 +5,8 @@ import {
     DoorOpen, Loader2, AlertCircle, ChevronRight
 } from 'lucide-react';
 import { formatDate } from '@utils/formatters';
-import { HealthBar } from '@features/maintenance/components/LockSharedComponents';
-import { useLockDashboard } from '@features/maintenance/hooks/useLocks';
+import { HealthBar } from '@features/maintenance/locks/components/LockSharedComponents';
+import { useLockDashboard } from '@features/maintenance/locks/hooks/useLocks';
 
 export default function LockHealthDashboard() {
     const navigate = useNavigate();

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { DoorOpen, Loader2, Search, Battery, AlertCircle, ShieldAlert, Calendar, User, Plus, RefreshCw, TriangleAlert, ChevronDown, ChevronRight, X, Activity, BatteryFull, MapPin, CheckCircle2 } from 'lucide-react';
-import { useLocksOverview } from '@features/maintenance/hooks/useLocks';
-import CreateLockEventModal from '@features/maintenance/components/CreateLockEventModal';
+import { useLocksOverview } from '@features/maintenance/locks/hooks/useLocks';
+import CreateLockEventModal from '@features/maintenance/locks/components/CreateLockEventModal';
 
 const LOCK_STATUS_STYLES = {
     operational: 'border-emerald-500/25 bg-emerald-500/10 text-emerald-400',
@@ -465,11 +465,6 @@ export default function LocksRackPage() {
 
                     {/* IZQUIERDA: Título + botones unificados */}
                     <div className="flex flex-wrap items-center gap-2 xl:gap-3">
-                        <div className="flex items-center gap-2 shrink-0">
-                            <h1 className="hidden xl:block text-sm font-semibold text-[var(--color-text-primary)] whitespace-nowrap">
-                                Control de Cerraduras
-                            </h1>
-                        </div>
 
                         <div className="hidden xl:block h-4 w-px bg-[var(--color-border)] shrink-0" />
 
