@@ -118,8 +118,8 @@ export default function Dashboard() {
     };
 
     return (
-        <div className="py-6 w-full px-4 lg:px-8">
-            <div className="mx-auto max-w-auto">
+        <div className="py-5 w-full px-5">
+            <div className="mx-auto max-w-auto space-y-4">
                 {/* Header Section */}
                 <div className="mb-4 flex justify-end">
                     <Button variant="secondary" icon={Hotel}>

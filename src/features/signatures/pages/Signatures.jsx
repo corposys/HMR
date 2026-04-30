@@ -169,8 +169,8 @@ export default function Signatures() {
     };
 
     return (
-        <div className="py-6 w-full px-4 lg:px-8">
-            <div className="mx-auto max-w-auto">
+        <div className="py-5 w-full px-5">
+            <div className="mx-auto max-w-auto space-y-4">
                 {/* Header */}
                 <div className="mb-4">
                     <div className="flex items-center gap-3 mb-2">

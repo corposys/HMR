@@ -44,10 +44,8 @@ export default function Settings() {
     ];
 
     return (
-        <div className="py-4 w-full px-4 lg:px-8">
-            <div className="mx-auto max-w-auto">
-            </div>
-
+        <div className="py-5 w-full px-5">
+            <div className="mx-auto max-w-auto space-y-4">
             <div className="bg-[var(--color-bg-secondary)] rounded-xl border border-[var(--color-border)] shadow-sm overflow-hidden">
                 <div className="border-b border-[var(--color-border)]">
                     <nav className="flex overflow-x-auto" aria-label="Tabs">
@@ -79,6 +77,7 @@ export default function Settings() {
                         return ActiveComponent ? <ActiveComponent /> : <div className="p-4 text-center">Componente no encontrado</div>;
                     })()}
                 </div>
+            </div>
             </div>
         </div>
     );

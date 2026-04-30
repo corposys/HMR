@@ -174,7 +174,7 @@ export default function LockTimelinePage() {
 
     return (
         <div className="py-5 w-full px-5">
-            <div className="w-full space-y-4">
+            <div className="mx-auto max-w-auto space-y-4">
                 <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
                         <button

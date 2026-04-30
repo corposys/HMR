@@ -244,8 +244,8 @@ export default function SignaturesHistory() {
     });
 
     return (
-        <div className="py-4 px-4 lg:px-8 w-full">
-            <div className="mx-auto max-w-auto">
+        <div className="py-5 w-full px-5">
+            <div className="mx-auto max-w-auto space-y-4">
 
                 {/* ── Header ── */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
