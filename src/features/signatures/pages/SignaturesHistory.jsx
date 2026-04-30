@@ -5,8 +5,6 @@ import {
     Mail, Phone, Briefcase, Calendar, Users,
     TrendingUp, AlertCircle, Loader2, X, ChevronRight
 } from 'lucide-react';
-import { useAuth } from '@context/AuthContext';
-import Button from '@shared/common/Button';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -38,15 +36,21 @@ const AVATAR_COLORS = [
 
 // ── Sub-componentes ───────────────────────────────────────────────────────────
 
-function StatCard({ icon: Icon, label, value, color }) {
+function StatCard({ icon: StatIcon, label, value, color }) {
     return (
-        <div className="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl p-5 flex items-center gap-4 shadow-sm">
-            <div className="p-3 rounded-xl" style={{ background: `${color}18` }}>
-                <Icon className="w-6 h-6" style={{ color }} />
-            </div>
-            <div>
-                <p className="text-2xl font-bold text-[var(--color-text-primary)] leading-none">{value}</p>
-                <p className="text-sm text-[var(--color-text-secondary)] mt-1">{label}</p>
+        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] px-4 py-3 shadow-sm">
+            <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                    <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-[var(--color-text-muted)]">
+                        {label}
+                    </p>
+                    <p className="mt-1 text-2xl font-semibold leading-none text-[var(--color-text-primary)]">
+                        {value}
+                    </p>
+                </div>
+                <div className="rounded-xl p-2.5" style={{ background: `${color}16` }}>
+                    <StatIcon className="h-5 w-5" style={{ color }} />
+                </div>
             </div>
         </div>
     );
@@ -54,15 +58,21 @@ function StatCard({ icon: Icon, label, value, color }) {
 
 function EmptyState({ onNew }) {
     return (
-        <div className="flex flex-col items-center justify-center py-24 gap-5">
-            <div className="w-20 h-20 rounded-2xl bg-[var(--color-bg-secondary)] border border-[var(--color-border)] flex items-center justify-center shadow-inner">
-                <FileSignature className="w-10 h-10 text-[var(--color-text-muted)]" />
+        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] px-6 py-14 text-center shadow-sm">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--color-bg-tertiary)] border border-[var(--color-border)]">
+                <FileSignature className="h-8 w-8 text-[var(--color-text-muted)]" />
             </div>
-            <div className="text-center">
-                <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-1">
-                    No hay firmas guardadas
-                </h3>
-            </div>
+            <h3 className="mt-5 text-lg font-semibold text-[var(--color-text-primary)]">No hay firmas guardadas</h3>
+            <p className="mx-auto mt-2 max-w-md text-sm text-[var(--color-text-secondary)]">
+                Crea la primera firma para empezar a usar el historial y reutilizar datos en futuras ediciones.
+            </p>
+            <button
+                onClick={onNew}
+                className="mt-6 inline-flex items-center gap-2 rounded-xl bg-[var(--color-primary)] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[var(--color-primary-light)]"
+            >
+                <Plus className="h-4 w-4" />
+                Nueva firma
+            </button>
         </div>
     );
 }
@@ -71,16 +81,16 @@ function DeleteModal({ signature, onConfirm, onCancel, loading }) {
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onCancel} />
-            <div className="relative bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-2xl shadow-2xl p-6 w-full max-w-sm z-10">
-                <button onClick={onCancel} className="absolute top-4 right-4 p-1.5 rounded-lg hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)]">
-                    <X className="w-4 h-4" />
+            <div className="relative z-10 w-full max-w-sm rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-6 shadow-2xl">
+                <button onClick={onCancel} className="absolute right-4 top-4 rounded-lg p-1.5 text-[var(--color-text-muted)] hover:bg-[var(--color-bg-tertiary)]">
+                    <X className="h-4 w-4" />
                 </button>
-                <div className="flex items-start gap-4 mb-5">
-                    <div className="p-3 bg-red-500/10 rounded-xl shrink-0">
-                        <Trash2 className="w-5 h-5 text-red-500" />
+                <div className="mb-5 flex items-start gap-4">
+                    <div className="shrink-0 rounded-xl bg-red-500/10 p-3">
+                        <Trash2 className="h-5 w-5 text-red-500" />
                     </div>
                     <div>
-                        <h3 className="font-semibold text-[var(--color-text-primary)] mb-1">Eliminar firma</h3>
+                        <h3 className="mb-1 font-semibold text-[var(--color-text-primary)]">Eliminar firma</h3>
                         <p className="text-sm text-[var(--color-text-secondary)]">
                             ¿Eliminar la firma de <strong>{signature?.full_name}</strong>? Esta acción no se puede deshacer.
                         </p>
@@ -89,16 +99,16 @@ function DeleteModal({ signature, onConfirm, onCancel, loading }) {
                 <div className="flex gap-3">
                     <button
                         onClick={onCancel}
-                        className="flex-1 py-2 text-sm rounded-xl border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)] transition-colors"
+                        className="flex-1 rounded-xl border border-[var(--color-border)] py-2 text-sm text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-bg-tertiary)]"
                     >
                         Cancelar
                     </button>
                     <button
                         onClick={onConfirm}
                         disabled={loading}
-                        className="flex-1 py-2 text-sm rounded-xl bg-red-500 hover:bg-red-600 text-white font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
+                        className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-red-500 py-2 text-sm font-medium text-white transition-colors hover:bg-red-600 disabled:opacity-60"
                     >
-                        {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                        {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                         Eliminar
                     </button>
                 </div>
@@ -106,59 +116,80 @@ function DeleteModal({ signature, onConfirm, onCancel, loading }) {
         </div>
     );
 }
+function SignatureCard({ signature, colorData, onEdit, onDelete }) {
+    const hasMobilePhone = Boolean(signature.mobile_phone);
 
-function SignatureRow({ signature, colorData, onEdit, onDelete }) {
     return (
-        <tr className="group border-b border-[var(--color-border)] hover:bg-[var(--color-bg-tertiary)]/50 transition-colors">
-            {/* Avatar */}
-            <td className="py-2 pl-3 pr-2 w-10">
-                <div
-                    className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold shrink-0"
-                    style={{ background: colorData.bg, color: colorData.text }}
-                >
-                    {getInitials(signature.full_name)}
+        <article className="group overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-[var(--color-primary)]/30 hover:shadow-md">
+            <div className="h-0.5 w-full" style={{ background: `linear-gradient(90deg, ${colorData.bg}, transparent)` }} />
+
+            <div className="p-4">
+                <div className="flex items-start gap-3">
+                    <div
+                        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-sm font-bold shadow-sm"
+                        style={{ background: colorData.bg, color: colorData.text }}
+                    >
+                        {getInitials(signature.full_name)}
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                            <div className="min-w-0">
+                                <h3 className="truncate text-sm font-semibold text-[var(--color-text-primary)]">
+                                    {signature.full_name}
+                                </h3>
+                                <p className="mt-0.5 truncate text-xs text-[var(--color-text-secondary)]">
+                                    {signature.job_title}
+                                </p>
+                            </div>
+
+                            <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-[var(--color-bg-tertiary)] px-2.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)]">
+                                <Calendar className="h-3 w-3 text-[var(--color-text-muted)]" />
+                                {formatDate(signature.created_at)}
+                            </span>
+                        </div>
+
+                        <div className="mt-3 grid gap-1.5 text-xs text-[var(--color-text-secondary)]">
+                            <div className="flex items-center gap-2 rounded-lg bg-[var(--color-bg-tertiary)]/60 px-2.5 py-1.5">
+                                <Mail className="h-3.5 w-3.5 shrink-0 text-[var(--color-text-muted)]" />
+                                <span className="truncate">{signature.email}</span>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2">
+                                <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-[var(--color-bg-primary)] px-2.5 py-1 text-[11px] text-[var(--color-text-secondary)]">
+                                    <Phone className="h-3 w-3 text-[var(--color-text-muted)]" />
+                                    {hasMobilePhone ? signature.mobile_phone : 'Sin móvil registrado'}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="mt-3 flex items-center justify-between gap-3">
+                            <p className="text-[11px] text-[var(--color-text-muted)]">
+                                #{signature.id}
+                            </p>
+
+                            <div className="flex items-center gap-2 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
+                                <button
+                                    onClick={() => onEdit(signature)}
+                                    className="inline-flex items-center justify-center rounded-lg border border-[var(--color-primary)]/20 bg-[var(--color-primary)]/10 p-2 text-[var(--color-primary)] transition-colors hover:bg-[var(--color-primary)]/20"
+                                    aria-label="Editar firma"
+                                    title="Editar firma"
+                                >
+                                    <Edit3 className="h-3.5 w-3.5" />
+                                </button>
+                                <button
+                                    onClick={() => onDelete(signature)}
+                                    className="inline-flex items-center justify-center rounded-lg border border-red-500/20 bg-red-500/10 p-2 text-red-400 transition-colors hover:bg-red-500/15 hover:text-red-300"
+                                    aria-label="Eliminar firma"
+                                    title="Eliminar firma"
+                                >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            </td>
-            {/* Name */}
-            <td className="py-2 px-2 whitespace-nowrap">
-                <p className="text-sm font-semibold text-[var(--color-text-primary)] leading-tight">{signature.full_name}</p>
-            </td>
-            {/* Job title */}
-            <td className="py-2 px-2">
-                <span className="text-xs text-[var(--color-text-secondary)] flex items-center gap-1">
-                    <Briefcase className="w-3 h-3 shrink-0 text-[var(--color-text-muted)]" />{signature.job_title}
-                </span>
-            </td>
-            {/* Email */}
-            <td className="py-2 px-2">
-                <span className="text-xs text-[var(--color-text-secondary)] flex items-center gap-1">
-                    <Mail className="w-3 h-3 shrink-0 text-[var(--color-text-muted)]" />{signature.email}
-                </span>
-            </td>
-            {/* Date */}
-            <td className="py-2 px-2 whitespace-nowrap">
-                <span className="text-xs text-[var(--color-text-muted)] flex items-center gap-1">
-                    <Calendar className="w-3 h-3 shrink-0" />{formatDate(signature.created_at)}
-                </span>
-            </td>
-            {/* Actions */}
-            <td className="py-2 pl-2 pr-3 w-20">
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity justify-end">
-                    <button onClick={() => onEdit(signature)} title="Abrir generador"
-                        className="p-1.5 rounded-md hover:bg-[var(--color-primary)]/10 hover:text-[var(--color-primary)] text-[var(--color-text-muted)] transition-colors flex items-center gap-1 text-xs font-medium">
-                        <ChevronRight className="w-3.5 h-3.5" />
-                    </button>
-                    <button onClick={() => onEdit(signature)} title="Editar"
-                        className="p-1.5 rounded-md hover:bg-[var(--color-primary)]/10 hover:text-[var(--color-primary)] text-[var(--color-text-muted)] transition-colors">
-                        <Edit3 className="w-3.5 h-3.5" />
-                    </button>
-                    <button onClick={() => onDelete(signature)} title="Eliminar"
-                        className="p-1.5 rounded-md hover:bg-red-500/10 hover:text-red-500 text-[var(--color-text-muted)] transition-colors">
-                        <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                </div>
-            </td>
-        </tr>
+            </div>
+        </article>
     );
 }
 
@@ -166,7 +197,6 @@ function SignatureRow({ signature, colorData, onEdit, onDelete }) {
 
 export default function SignaturesHistory() {
     const navigate = useNavigate();
-    const { user } = useAuth();
 
     const [signatures, setSignatures] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -233,6 +263,8 @@ export default function SignaturesHistory() {
         return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
     }).length;
 
+    const withMobilePhone = signatures.filter(s => Boolean(s.mobile_phone)).length;
+
     // Filtered list
     const filtered = signatures.filter(s => {
         const q = search.toLowerCase();
@@ -243,54 +275,51 @@ export default function SignaturesHistory() {
         );
     });
 
+    const visibleSignatures = [...filtered].sort((a, b) => {
+        const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return dateB - dateA;
+    });
+
     return (
         <div className="py-5 w-full px-5">
             <div className="mx-auto max-w-auto space-y-4">
+                <section className="overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] shadow-sm">
+                    <div className="flex flex-col gap-4 p-4 lg:flex-row lg:items-center lg:justify-between">
+                        <div className="grid w-full grid-cols-3 gap-2 lg:flex-1">
+                                <StatCard icon={Users} label="Firmas totales" value={signatures.length} color="#009098" />
+                                <StatCard icon={TrendingUp} label="Este mes" value={thisMonth} color="#0f7681" />
+                                <StatCard icon={Phone} label="Con móvil" value={withMobilePhone} color="#1a5f7a" />
+                        </div>
 
-                {/* ── Header ── */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-                    <div>
-                        <div className="flex items-center gap-3 mb-1">
+                        <div className="flex w-full items-center gap-3 lg:w-auto lg:shrink-0">
+                            {signatures.length > 0 && (
+                                <div className="relative w-full sm:w-72">
+                                    <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-muted)]" />
+                                    <input
+                                        type="text"
+                                        value={search}
+                                        onChange={e => setSearch(e.target.value)}
+                                        placeholder="Buscar por nombre, cargo..."
+                                        className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-primary)] py-2.5 pl-10 pr-10 text-sm text-[var(--color-text-primary)] transition-colors focus:border-[var(--color-primary)] focus:outline-none"
+                                    />
+                                    {search && (
+                                        <button onClick={() => setSearch('')} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text-primary)]">
+                                            <X className="h-4 w-4" />
+                                        </button>
+                                    )}
+                                </div>
+                            )}
+                            <button
+                                onClick={() => navigate('/signatures/new')}
+                                className="inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--color-primary)] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[var(--color-primary-light)]"
+                            >
+                                <Plus className="h-4 w-4" />
+                                Nueva firma
+                            </button>
                         </div>
                     </div>
-
-                    {/* Right: Search & Action */}
-                    <div className="flex items-center gap-3">
-                        {signatures.length > 0 && (
-                            <div className="relative flex-1 sm:w-64">
-                                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-text-muted)]" />
-                                <input
-                                    type="text"
-                                    value={search}
-                                    onChange={e => setSearch(e.target.value)}
-                                    placeholder="Buscar por nombre, cargo..."
-                                    className="w-full pl-10 pr-10 py-2.5 text-sm bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl text-[var(--color-text-primary)] focus:border-[var(--color-primary)] focus:outline-none transition-colors"
-                                />
-                                {search && (
-                                    <button onClick={() => setSearch('')} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors">
-                                        <X className="w-4 h-4" />
-                                    </button>
-                                )}
-                            </div>
-                        )}
-                        <Button
-                            onClick={() => navigate('/signatures/new')}
-                            variant="register"
-                            icon={Plus}
-                            className="shrink-0"
-                        >
-                            Nueva Firma
-                        </Button>
-                    </div>
-                </div>
-
-                {/* ── Stats ── */}
-                <div className="grid grid-cols-2 sm:grid-cols-2 gap-3 mb-6">
-                    <StatCard icon={Users} label="Firmas totales" value={signatures.length} color="#009098" />
-                    <StatCard icon={TrendingUp} label="Este mes" value={thisMonth} color="#0f7681" />
-                </div>
-
-
+                </section>
 
                 {/* ── Content ── */}
                 {loading ? (
@@ -308,37 +337,21 @@ export default function SignaturesHistory() {
                 ) : signatures.length === 0 ? (
                     <EmptyState onNew={() => navigate('/signatures/new')} />
                 ) : filtered.length === 0 ? (
-                    <div className="text-center py-16 text-[var(--color-text-secondary)] text-sm">
+                    <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] px-6 py-16 text-center text-sm text-[var(--color-text-secondary)] shadow-sm">
                         Sin resultados para <strong>"{search}"</strong>
                     </div>
                 ) : (
-                    <>
-                        <div className="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl overflow-hidden">
-                            <table className="w-full">
-                                <thead>
-                                    <tr className="border-b border-[var(--color-border)] bg-[var(--color-bg-tertiary)]">
-                                        <th className="py-2 pl-3 pr-2 w-10"></th>
-                                        <th className="py-2 px-2 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wide">Nombre y Apellido</th>
-                                        <th className="py-2 px-2 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wide">Departamento / Cargo</th>
-                                        <th className="py-2 px-2 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wide">Correo</th>
-                                        <th className="py-2 px-2 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wide">Fecha</th>
-                                        <th className="py-2 pl-2 pr-3 w-20"></th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {filtered.map((sig, idx) => (
-                                        <SignatureRow
-                                            key={sig.id}
-                                            signature={sig}
-                                            colorData={AVATAR_COLORS[idx % AVATAR_COLORS.length]}
-                                            onEdit={handleEdit}
-                                            onDelete={setToDelete}
-                                        />
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </>
+                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                        {visibleSignatures.map((sig, idx) => (
+                            <SignatureCard
+                                key={sig.id}
+                                signature={sig}
+                                colorData={AVATAR_COLORS[idx % AVATAR_COLORS.length]}
+                                onEdit={handleEdit}
+                                onDelete={setToDelete}
+                            />
+                        ))}
+                    </div>
                 )}
             </div>
 

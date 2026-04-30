@@ -1,7 +1,9 @@
 import React from 'react';
-import { User, Settings as SettingsIcon, Mail, Smartphone, PhoneCall, Globe, Eraser } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { ArrowLeft, User, Settings as SettingsIcon, Mail, Smartphone, PhoneCall, Globe, Eraser } from 'lucide-react';
 
 export default function SignatureForm({ formData, setFormData, handleClear, fixedData }) {
+    const navigate = useNavigate();
     const handleInputChange = (e) => {
         const { name, value } = e.target;
 
@@ -44,6 +46,14 @@ export default function SignatureForm({ formData, setFormData, handleClear, fixe
         <div className="lg:col-span-1 bg-[var(--color-bg-secondary)] rounded-xl border border-[var(--color-border)] shadow-sm p-6 overflow-y-auto">
             <div className="flex justify-between items-center pb-4">
                 <h2 className="text-lg font-medium text-[var(--color-text-primary)] flex items-center gap-2 m-0">
+                    <button
+                        onClick={() => navigate('/signatures')}
+                        aria-label="Volver al historial"
+                        title="Volver al historial"
+                        className="p-2.5 rounded-xl bg-[var(--color-primary)]/10 text-[var(--color-primary)] hover:bg-[var(--color-primary)]/20 transition-colors"
+                    >
+                        <ArrowLeft className="w-5 h-5" />
+                    </button>
                     <User className="w-7 h-7 text-[var(--color-primary)]" />
                     Datos del Usuario
                 </h2>

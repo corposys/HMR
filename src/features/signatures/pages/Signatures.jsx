@@ -1,6 +1,5 @@
 import React, { useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { FileSignature, ArrowLeft } from 'lucide-react';
 import html2canvas from 'html2canvas';
 
 import SignatureForm from '@features/signatures/components/SignatureForm';
@@ -169,31 +168,12 @@ export default function Signatures() {
     };
 
     return (
-        <div className="py-5 w-full px-5">
-            <div className="mx-auto max-w-auto space-y-4">
-                {/* Header */}
-                <div className="mb-4">
-                    <div className="flex items-center gap-3 mb-2">
-                        <button
-                            onClick={() => navigate('/signatures')}
-                            aria-label="Volver al historial"
-                            title="Volver al historial"
-                            className="p-2.5 rounded-xl bg-[var(--color-primary)]/10 text-[var(--color-primary)] hover:bg-[var(--color-primary)]/20 transition-colors"
-                        >
-                            <ArrowLeft className="w-6 h-6" />
-                        </button>
-                        <div className="p-2.5 rounded-xl bg-[var(--color-primary)]/10">
-                            <FileSignature className="w-6 h-6 text-[var(--color-primary)]" />
-                        </div>
-                        <h1 className="text-2xl font-semibold text-[var(--color-text-primary)]">
-                            {currentId ? 'Editar Firma' : 'Nueva Firma'}
-                        </h1>
-                    </div>
-                </div>
-
+        <div className="w-full px-5 py-5">
+            <div className="mx-auto max-w-auto">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                     {/* COLUMNA IZQUIERDA: Formulario */}
                     <SignatureForm 
+                        navigate={navigate}
                         formData={formData} 
                         setFormData={setFormData} 
                         handleClear={handleClear} 

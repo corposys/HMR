@@ -77,6 +77,10 @@ export default function Navbar({ onMenuClick, isMobileSidebarOpen }) {
             return pageMeta['/maintenance/rooms'];
         }
 
+        if (location.pathname.startsWith('/signatures/')) {
+            return pageMeta['/signatures'];
+        }
+
         return null;
     })();
 
