@@ -4,9 +4,9 @@ import { Home, Settings, Wrench, ChevronDown, Shield, BedDouble, Hotel, ServerCo
 
 export default function Sidebar({ isMobileOpen = false, onCloseMobile }) {
     const location = useLocation();
-    const isSystemsActive = location.pathname.startsWith('/signatures');
+    const isSystemsActive = location.pathname.startsWith('/signatures') || location.pathname === '/maintenance/rooms' || location.pathname.startsWith('/maintenance/room/');
     const [isSystemsOpen, setIsSystemsOpen] = useState(isSystemsActive);
-    const isMaintenanceActive = location.pathname.startsWith('/maintenance');
+    const isMaintenanceActive = location.pathname === '/maintenance' || location.pathname.startsWith('/maintenance/habitaciones');
     const [isMaintenanceOpen, setIsMaintenanceOpen] = useState(isMaintenanceActive);
     const isSecurityActive = location.pathname.startsWith('/security');
     const [isSecurityOpen, setIsSecurityOpen] = useState(isSecurityActive);
@@ -15,7 +15,7 @@ export default function Sidebar({ isMobileOpen = false, onCloseMobile }) {
     const isReceptionActive = location.pathname.startsWith('/reception');
     const [isReceptionOpen, setIsReceptionOpen] = useState(isReceptionActive);
 
-    const isLocksActive = location.pathname === '/maintenance/rooms' || location.pathname === '/maintenance' || location.pathname.startsWith('/maintenance/room/');
+    const isLocksActive = location.pathname === '/maintenance/rooms' || location.pathname.startsWith('/maintenance/room/');
 
     useEffect(() => {
         if (isSystemsActive) {
@@ -100,6 +100,46 @@ export default function Sidebar({ isMobileOpen = false, onCloseMobile }) {
                         </div>
                     </div>
                 </div>
+                {/* Dropdown Mantenimiento */}
+                <div>
+                    <button
+                        onClick={() => setIsMaintenanceOpen(!isMaintenanceOpen)}
+                        className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-colors ${
+                            isMaintenanceActive
+                                ? 'bg-[var(--color-bg-tertiary)] text-[var(--color-primary)]'
+                                : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-primary)]'
+                        }`}
+                    >
+                        <div className="flex items-center gap-3">
+                            <Wrench className="w-5 h-5" />
+                            <span>Mantenimiento</span>
+                        </div>
+                        <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isMaintenanceOpen ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isMaintenanceOpen ? 'max-h-40 opacity-100 mt-1' : 'max-h-0 opacity-0'}`}>
+                        <div className="flex flex-col gap-1 py-1">
+                            <NavLink
+                                to="/maintenance/habitaciones"
+                                onClick={onCloseMobile}
+                                className={({ isActive }) =>
+                                    `group flex items-center gap-3 py-2 pl-11 pr-3 text-sm rounded-lg transition-colors ${
+                                        isActive
+                                            ? 'text-[var(--color-text-primary)] font-medium bg-[var(--color-bg-tertiary)]/50'
+                                            : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]/30'
+                                    }`
+                                }
+                            >
+                                {({ isActive }) => (
+                                    <>
+                                        <div className={`w-1.5 h-1.5 rounded-full transition-colors ${isActive ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-text-muted)] group-hover:bg-[var(--color-text-secondary)]'}`} />
+                                        <span>Habitaciones</span>
+                                    </>
+                                )}
+                            </NavLink>
+                        </div>
+                    </div>
+                </div>
                 {/* Dropdown Housekeeping */}
                 <div>
                     <button
@@ -136,33 +176,6 @@ export default function Sidebar({ isMobileOpen = false, onCloseMobile }) {
                                         <span>Lenceria</span>
                                     </>
                                 )}
-                            </NavLink>
-                        </div>
-                    </div>
-                </div>
-                {/* Dropdown Mantenimiento */}
-                <div>
-                    <button 
-                        onClick={() => setIsMaintenanceOpen(!isMaintenanceOpen)}
-                        className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-colors ${
-                            isMaintenanceActive
-                                ? 'bg-[var(--color-bg-tertiary)] text-[var(--color-primary)]' 
-                                : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-primary)]'
-                        }`}
-                    >
-                        <div className="flex items-center gap-3">
-                            <Wrench className="w-5 h-5" />
-                            <span>Mantenimiento</span>
-                        </div>
-                        <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isMaintenanceOpen ? 'rotate-180' : ''}`} />
-                    </button>
-                    
-                    <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isMaintenanceOpen ? 'max-h-40 opacity-100 mt-1' : 'max-h-0 opacity-0'}`}>
-                        <div className="flex flex-col gap-1 py-1">
-                            {/* Cerraduras */}
-                            <NavLink to="/maintenance/rooms" onClick={onCloseMobile} className={`group flex items-center gap-3 py-2 pl-11 pr-3 text-sm rounded-lg transition-colors ${isLocksActive ? 'text-[var(--color-text-primary)] font-medium bg-[var(--color-bg-tertiary)]/50' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]/30'}`}>
-                                <div className={`w-1.5 h-1.5 rounded-full transition-colors ${isLocksActive ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-text-muted)] group-hover:bg-[var(--color-text-secondary)]'}`} />
-                                <span>Cerraduras</span>
                             </NavLink>
                         </div>
                     </div>
@@ -241,6 +254,24 @@ export default function Sidebar({ isMobileOpen = false, onCloseMobile }) {
                                     <>
                                         <div className={`w-1.5 h-1.5 rounded-full transition-colors ${isActive ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-text-muted)] group-hover:bg-[var(--color-text-secondary)]'}`} />
                                         <span>Firmas</span>
+                                    </>
+                                )}
+                            </NavLink>
+                            <NavLink
+                                to="/maintenance/rooms"
+                                onClick={onCloseMobile}
+                                className={({ isActive }) =>
+                                    `group flex items-center gap-3 py-2 pl-11 pr-3 text-sm rounded-lg transition-colors ${
+                                        isActive
+                                            ? 'text-[var(--color-text-primary)] font-medium bg-[var(--color-bg-tertiary)]/50'
+                                            : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]/30'
+                                    }`
+                                }
+                            >
+                                {({ isActive }) => (
+                                    <>
+                                        <div className={`w-1.5 h-1.5 rounded-full transition-colors ${isLocksActive ? 'bg-[var(--color-primary)]' : isActive ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-text-muted)] group-hover:bg-[var(--color-text-secondary)]'}`} />
+                                        <span>Cerraduras</span>
                                     </>
                                 )}
                             </NavLink>

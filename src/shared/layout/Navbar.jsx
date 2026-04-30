@@ -13,7 +13,8 @@ import {
     DoorOpen,
     Shield,
     FileSignature,
-    SettingsIcon
+    SettingsIcon,
+    BedDouble
 } from 'lucide-react';
 import { useAuth } from '@context/AuthContext';
 
@@ -53,6 +54,14 @@ export default function Navbar({ onMenuClick, isMobileSidebarOpen }) {
             title: 'Control de Cerraduras',
             icon: DoorOpen,
         },
+        '/maintenance': {
+            title: 'Habitaciones',
+            icon: BedDouble,
+        },
+        '/maintenance/habitaciones': {
+            title: 'Habitaciones',
+            icon: BedDouble,
+        },
         '/security/vehicle-control': {
             title: 'Control de Vehículos',
             icon: Shield,
@@ -75,6 +84,10 @@ export default function Navbar({ onMenuClick, isMobileSidebarOpen }) {
 
         if (location.pathname.startsWith('/maintenance/room/')) {
             return pageMeta['/maintenance/rooms'];
+        }
+
+        if (location.pathname.startsWith('/maintenance/habitaciones')) {
+            return pageMeta['/maintenance/habitaciones'];
         }
 
         if (location.pathname.startsWith('/signatures/')) {
