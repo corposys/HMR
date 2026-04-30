@@ -19,75 +19,9 @@ import {
     Hash,
 } from 'lucide-react';
 import CreateLockEventModal from '@features/maintenance/locks/components/CreateLockEventModal';
-
-const LOCK_STATUS_STYLES = {
-    operational: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400',
-    preventive: 'border-amber-500/30 bg-amber-500/10 text-amber-400',
-    failure: 'border-red-500/30 bg-red-500/10 text-red-400',
-    out_of_service: 'border-zinc-500/30 bg-zinc-500/10 text-zinc-300',
-};
-
-const LOCK_STATUS_LABELS = {
-    operational: 'Operativa',
-    preventive: 'Preventiva',
-    failure: 'Falla',
-    out_of_service: 'Fuera de servicio',
-};
-
-function formatDate(value) {
-    if (!value) return '—';
-    return new Date(value).toLocaleDateString('es-VE', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-    });
-}
-
-function HealthBar({ score }) {
-    const normalized = Number.isFinite(score) ? Math.max(0, Math.min(score, 100)) : 0;
-    const tone = !Number.isFinite(score)
-        ? 'bg-zinc-600'
-        : normalized >= 70
-            ? 'bg-emerald-500'
-            : normalized >= 40
-                ? 'bg-amber-400'
-                : 'bg-red-500';
-
-    return (
-        <div className="flex items-center gap-3">
-            <div className="h-2 w-full flex-1 rounded-full bg-[var(--color-border)] overflow-hidden">
-                <div className={`h-full rounded-full transition-all duration-500 ${tone}`} style={{ width: `${normalized}%` }} />
-            </div>
-            <div className={`w-9 text-right text-xs font-bold ${Number.isFinite(score) ? 'text-[var(--color-text-primary)]' : 'text-[var(--color-text-muted)]'}`}>
-                {Number.isFinite(score) ? `${normalized}%` : 'N/A'}
-            </div>
-        </div>
-    );
-}
-
-function DetailMetric({ label, value, icon: Icon, tone = 'text-[var(--color-text-primary)]' }) {
-    return (
-        <div className="flex flex-col justify-center rounded-lg border border-[var(--color-border)]/60 bg-[var(--color-bg-primary)]/20 px-2.5 py-2 transition-colors hover:bg-[var(--color-bg-primary)]/40">
-            <div className="mb-1 flex items-center gap-1.5 text-[9px] uppercase tracking-wider text-[var(--color-text-muted)]">
-                <Icon className="h-3 w-3" />
-                <span className="truncate">{label}</span>
-            </div>
-            <div className={`text-xs font-medium truncate ${tone}`}>{value}</div>
-        </div>
-    );
-}
-
-function SectionTitle({ icon: Icon, title, rightElement }) {
-    return (
-        <div className="flex items-center justify-between border-b border-[var(--color-border)]/60 px-3 py-2.5 bg-[var(--color-bg-primary)]/10">
-            <div className="flex items-center gap-2">
-                <Icon className="h-4 w-4 text-[var(--color-primary)]" />
-                <h3 className="text-xs font-semibold text-[var(--color-text-primary)]">{title}</h3>
-            </div>
-            {rightElement && <div>{rightElement}</div>}
-        </div>
-    );
-}
+import { LOCK_STATUS_STYLES, LOCK_STATUS_LABELS } from '@features/maintenance/locks/utils/lockConstants';
+import { formatDate } from '@features/maintenance/locks/utils/lockHelpers';
+import { HealthBar, DetailMetric, SectionTitle } from '@features/maintenance/locks/components/LockSharedComponents';
 
 export default function LockTimelinePage() {
     const { id } = useParams();
@@ -232,14 +166,14 @@ export default function LockTimelinePage() {
 
     if (loading) {
         return (
-            <div className="py-6 px-4 lg:px-8 w-full flex items-center justify-center min-h-[50vh]">
+            <div className="py-5 px-5 w-full flex items-center justify-center min-h-[50vh]">
                 <Loader2 className="w-8 h-8 animate-spin text-[var(--color-primary)]" />
             </div>
         );
     }
 
     return (
-        <div className="py-4 w-full px-4 lg:px-8">
+        <div className="py-5 w-full px-5">
             <div className="w-full space-y-4">
                 <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
@@ -396,7 +330,7 @@ export default function LockTimelinePage() {
                                                             {formatDate(event.performed_at)}
                                                         </div>
                                                     </div>
-                                                    
+
                                                     <div className="px-3 py-2">
                                                         {event.description ? (
                                                             <p className="text-xs leading-relaxed text-[var(--color-text-primary)]/90">
@@ -405,7 +339,7 @@ export default function LockTimelinePage() {
                                                         ) : (
                                                             <p className="text-xs italic text-[var(--color-text-muted)]">Sin descripción</p>
                                                         )}
-                                                        
+
                                                         <div className="mt-2.5 flex flex-wrap gap-2">
                                                             {event.part_name && (
                                                                 <div className="flex items-center gap-1 rounded-md bg-[var(--color-bg-primary)]/40 px-1.5 py-0.5 border border-[var(--color-border)]/40">

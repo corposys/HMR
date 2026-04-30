@@ -4,7 +4,7 @@ import {
     ArrowLeft, AlertTriangle, Battery, Shield, Activity,
     DoorOpen, Loader2, AlertCircle, ChevronRight
 } from 'lucide-react';
-import { formatDate } from '@utils/formatters';
+import { formatDate } from '@features/maintenance/locks/utils/lockHelpers';
 import { HealthBar } from '@features/maintenance/locks/components/LockSharedComponents';
 import { useLockDashboard } from '@features/maintenance/locks/hooks/useLocks';
 
