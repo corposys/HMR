@@ -1,50 +1,64 @@
 # AGENTS.md — HMR (Hotel Margarita Real)
 
-## Project overview
+## Stack
 
-Full-stack hotel management system: **React 19 + Vite 7** frontend, **FastAPI (Python)** backend, **PostgreSQL 15** database. All three services run via Docker Compose.
+React 19 + Vite 7 frontend, FastAPI (Python) backend, PostgreSQL 15. Docker Compose runs all three services.
 
-## Developer commands
+## Commands
 
 | Command | What it does |
 |---|---|
-| `docker compose up -d --build` | Start dev environment (Vite hot-reload on :5173, FastAPI on :8000, Postgres on :15432) |
+| `docker compose up -d --build` | Dev environment (Vite :5173, FastAPI :8000, Postgres :15432) |
 | `docker compose down` | Stop dev environment |
-| `docker compose -f docker-compose.prod.yml up -d --build` | Production mode (Nginx serves frontend on :80) |
-| `docker compose -f docker-compose.prod.yml down` | Stop production environment |
-| `npm run dev` | Frontend only (requires backend running separately via Docker) |
+| `docker compose -f docker-compose.prod.yml up -d --build` | Production build (Nginx :80) |
+| `npm run dev` | Frontend only — **requires backend containers running** (see proxy note below) |
 | `npm run build` | Production Vite build → `dist/` |
 | `npm run lint` | ESLint (flat config) |
-| `npm run preview` | Preview production build locally |
 
-**There is no test framework configured.** Do not try to run `npm test` or `pytest`.
+**No test framework.** Do not run `npm test` or `pytest`.
 
-## Architecture boundaries
+## Vite proxy gotcha
+
+`vite.config.js` proxies `/api` to `http://hmr-backend:8000`. This hostname resolves inside Docker but **not** on the host. When running `npm run dev` natively, either:
+- Run `docker compose up -d postgres hmr-backend` for the backend containers, then change the proxy target to `http://localhost:8000`, or
+- Work exclusively inside Docker (`docker compose up`)
+
+## Architecture
 
 ### Frontend (`src/`)
 
-| Directory | Purpose |
-|---|---|
-| `src/features/<domain>/` | Feature modules (auth, dashboard, housekeeping, maintenance, reception, security, settings, signatures) |
-| `src/shared/` | Reusable components (`common/`) and shell layout (`layout/`) |
-| `src/app/routes/` | Route definitions — `publicRoutes.jsx`, `protectedRoutes.jsx`, `fallbackRoute.jsx`, barrel `index.jsx` |
-| `src/context/` | `AuthContext.jsx` (JWT state), `ToastContext.jsx` |
-| `src/utils/` | `formatters.js` |
-| `src/main.jsx` | React entrypoint |
-| `src/App.jsx` | Router root — wraps protected routes in `Layout` and `ProtectedRoute` |
+- **Feature modules** in `src/features/<domain>/` — each has `pages/` and `components/` subdirectories
+- Domains: `auth`, `dashboard`, `housekeeping`, `maintenance`, `reception`, `security`, `settings`, `signatures`
+- **Shared** in `src/shared/` — `common/` (Button, Card, CustomDropdown, ProtectedRoute, StatCard) and `layout/` (Layout, Sidebar, Navbar, Footer)
+- **Routes** defined in `src/app/routes/` — `publicRoutes.jsx`, `protectedRoutes.jsx`, `fallbackRoute.jsx`, barrel `index.jsx`
+  - All page components are **lazy-loaded** with `React.lazy()`
+  - Protected routes are nested under `ProtectedRoute` + `Layout`
+- **Contexts** in `src/context/` — `AuthContext.jsx` (JWT auth state + `useAuth()` hook), `ToastContext.jsx`
+- **Design system** — dark theme with CSS custom properties defined via Tailwind v4 `@theme` block in `src/index.css`. Utility classes: `.card`, `.card-elevated`, `.btn-primary`, `.btn-secondary`, `.btn-ghost`, `.input`, `.table`, `.badge-*`, `.stat-card`. Use these before creating new ones.
 
 ### Backend (`server/`)
 
-| File/Directory | Purpose |
-|---|---|
-| `server/main.py` | FastAPI entrypoint, mounts 4 routers |
-| `server/db.py` | psycopg2 connection pool, `init_db()` creates tables + seeds data on startup |
-| `server/routes/` | `auth.py`, `signatures.py`, `structure.py`, `maintenance.py` |
-| `server/requirements.txt` | Python deps (no ORM — raw SQL with psycopg2) |
+- **Entrypoint**: `server/main.py` — FastAPI app, CORS for localhost:5173, 4 routers mounted at startup
+- **Routers**: `routes/auth.py` (`/api/auth`), `routes/signatures.py`, `routes/structure.py`, `routes/maintenance.py` — all prefixed with `/api`
+- **Auth**: JWT via `middleware/auth.py` — `create_token()`, `verify_token()`, `get_current_user` (FastAPI Depends). Bearer token in Authorization header. Token stored in localStorage on frontend.
+- **DB access pattern** (no ORM):
+  ```python
+  conn = get_connection()
+  try:
+      cur = conn.cursor()
+      cur.execute("SELECT ...")
+      # manual commit/rollback
+      conn.commit()
+  finally:
+      cur.close()
+      release_connection(conn)
+  ```
+- **DB init**: `db.py` `init_db()` runs on startup — `CREATE TABLE IF NOT EXISTS` + inline `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` migrations. Also seeds: property, 6 modules, 24 floors, 96 rooms, 5 part types, lock assets.
+- **Error messages are in Spanish** (e.g., `"Credenciales inválidas"`, `"Todos los campos son requeridos"`)
 
 ## Import aliases
 
-Configured in both `vite.config.js` and `jsconfig.json`:
+Configured in `vite.config.js` and `jsconfig.json`:
 
 - `@/` → `src/`
 - `@app/` → `src/app/`
@@ -53,20 +67,35 @@ Configured in both `vite.config.js` and `jsconfig.json`:
 - `@context/` → `src/context/`
 - `@utils/` → `src/utils/`
 
-Use these aliases — do not write relative imports like `../../../components`.
+**Always use aliases.** Never write relative imports like `../../../components`.
 
-## Key conventions
+## Conventions
 
-- **No TypeScript** — `.jsx`/`.js` only, validated via ESLint (flat config)
-- **Tailwind CSS v4** — uses `@tailwindcss/vite` plugin (no separate `tailwind.config.js`)
-- **No ORM** — backend uses raw SQL via psycopg2 with a connection pool
-- **DB auto-initializes** — tables created + seed data (property, modules, floors, rooms, part types, lock assets) on FastAPI startup
-- **Vite dev proxy** — `/api` requests proxied to `http://hmr-backend:8000` inside Docker. Running `npm run dev` natively requires backend containers for API calls
-- **ESLint rule** — unused vars starting with uppercase (`^[A-Z_]`) are ignored (e.g. unused React component names)
+- **No TypeScript** — `.jsx`/`.js` only
+- **Tailwind CSS v4** — `@tailwindcss/vite` plugin, no `tailwind.config.js`. Theme vars in `src/index.css` `@theme` block
+- **No ORM** — raw SQL via psycopg2 connection pool (`db.py`)
+- **ESLint** — `no-unused-vars` rule ignores vars matching `^[A-Z_]` (unused React component names are fine)
+- **Backend volumes** — `docker-compose.yml` mounts `./server:/app` so backend code edits trigger uvicorn `--reload`
+
+## Environment variables
+
+Defaults are in `docker-compose.yml` / `docker-compose.prod.yml`:
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `DB_HOST` | `postgres` | Postgres host (container name) |
+| `DB_PORT` | `5432` | Postgres port (internal) |
+| `DB_USER` | `hmr` | Postgres user |
+| `DB_PASSWORD` | `hmr_secret` | Postgres password |
+| `DB_NAME` | `hmr_db` | Database name |
+| `JWT_SECRET` | `hmr-jwt-secret-change-in-production` | JWT signing key |
+| `VITE_PORT` | `5173` | Vite dev server port |
+
+`.env` is gitignored. Override defaults via `.env` file or environment.
 
 ## CI / Deploy
 
-- Self-hosted GitHub Actions runner
-- Triggered on push to `main`
-- Deploys via `docker-compose.prod.yml` (production build, Nginx on port 80)
+- Self-hosted GitHub Actions runner, triggers on push to `main`
+- Runs `docker compose -f docker-compose.prod.yml up -d --build --remove-orphans`
 - Prunes old Docker images after deploy
+- Production: Nginx serves frontend on :80, proxies `/api` to FastAPI backend
