@@ -207,8 +207,11 @@ def init_db():
             _seed_part_types()
             _seed_lock_assets()
             return
-        except psycopg2.OperationalError as e:
+        except (psycopg2.OperationalError, psycopg2.InterfaceError) as e:
             logger.warning(f"Waiting for database (attempt {attempt + 1}/10)... {e}")
+            time.sleep(2)
+        except Exception as e:
+            logger.error(f"Database initialization error (attempt {attempt + 1}/10): {type(e).__name__}: {e}")
             time.sleep(2)
 
     raise Exception("Could not connect to database after 10 attempts")

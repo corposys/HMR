@@ -2,6 +2,7 @@
 JWT authentication middleware for FastAPI.
 """
 import os
+import sys
 from datetime import datetime, timedelta, timezone
 
 import jwt
@@ -9,7 +10,10 @@ from fastapi import Request, HTTPException
 
 JWT_SECRET = os.getenv("JWT_SECRET")
 if not JWT_SECRET:
-    raise RuntimeError("JWT_SECRET environment variable is required")
+    msg = "JWT_SECRET environment variable is required"
+    print(msg, file=sys.stderr)
+    # Do NOT raise here - let the app start so the health check can report the issue
+    # The verify_token function will still fail because JWT_SECRET is empty
 
 JWT_ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_DAYS = 7

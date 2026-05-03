@@ -1,20 +1,15 @@
 # Production Dockerfile for HMR Backend
-# Multi-stage build with optimized Python runtime
+# Multi-stage build using virtualenv for reliable dependency management
 
 # Stage 1: Builder
 FROM python:3.11-slim AS builder
 
 WORKDIR /app
 
-# Install build dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install Python dependencies
+# Create virtualenv and install dependencies
 COPY requirements.txt .
-RUN pip install --no-cache-dir --user -r requirements.txt
+RUN python -m venv /opt/venv && \
+    /opt/venv/bin/pip install --no-cache-dir -r requirements.txt
 
 # Stage 2: Runtime
 FROM python:3.11-slim
@@ -22,33 +17,23 @@ FROM python:3.11-slim
 # Create non-root user
 RUN groupadd -r appuser && useradd -r -g appuser appuser
 
-# Install runtime dependencies only (libpq5 for psycopg2, curl for healthcheck)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libpq5 \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
-
-# Set working directory
 WORKDIR /app
 
-# Copy Python packages from builder
-COPY --from=builder /root/.local /home/appuser/.local
+# Copy virtualenv from builder
+COPY --from=builder /opt/venv /opt/venv
 
 # Copy application code
 COPY . .
 
-# Change ownership to non-root user
-RUN chown -R appuser:appuser /app /home/appuser/.local
+# Change ownership
+RUN chown -R appuser:appuser /app /opt/venv
 
-# Switch to non-root user
+# Use virtualenv python
+ENV PATH=/opt/venv/bin:$PATH
+
 USER appuser
 
-# Ensure Python can find packages
-ENV PATH=/home/appuser/.local/bin:$PATH
-
-# Expose port
 EXPOSE 8000
 
-# Run with multiple workers (no reload in production)
-# init_db() already retries PostgreSQL connection 10 times with 2s intervals
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
+# Single worker, init_db() retries PostgreSQL 10x with 2s intervals
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

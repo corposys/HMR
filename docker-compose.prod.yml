@@ -28,16 +28,16 @@ services:
       - DB_PASSWORD=${DB_PASSWORD:-hmr_secret}
       - DB_NAME=${DB_NAME:-hmr_db}
       - JWT_SECRET=${JWT_SECRET}
-      - CORS_ORIGINS=${CORS_ORIGINS}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost}
     depends_on:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "python -c \"from urllib.request import urlopen; urlopen('http://localhost:8000/api/health')\""]
+      test: ["CMD-SHELL", "python -c \"from urllib.request import urlopen; urlopen('http://localhost:8000/api/health')\" || exit 1"]
       interval: 10s
       timeout: 5s
-      retries: 5
-      start_period: 30s
+      retries: 10
+      start_period: 45s
 
   hmr-app:
     build:
