@@ -10,7 +10,8 @@ class ErrorBoundary extends Component {
         this.state = { hasError: false, error: null, errorInfo: null };
     }
 
-    static getDerivedStateFromError(error) {
+    // eslint-disable-next-line no-unused-vars
+    static getDerivedStateFromError(_error) {
         // Update state so the next render will show the fallback UI
         return { hasError: true };
     }
@@ -38,7 +39,7 @@ class ErrorBoundary extends Component {
                         >
                             Recargar página
                         </button>
-                        {process.env.NODE_ENV === 'development' && this.state.error && (
+                        {import.meta.env?.DEV && this.state.error && (
                             <details className="mt-6 text-left">
                                 <summary className="cursor-pointer text-[var(--color-text-muted)] text-sm">
                                     Ver detalles del error (solo desarrollo)

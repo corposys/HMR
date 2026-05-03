@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     ArrowLeft, AlertTriangle, Battery, Shield, Activity,
@@ -11,7 +11,7 @@ import { useLockDashboard } from '@features/maintenance/locks/hooks/useLocks';
 
 export default function LockHealthDashboard() {
     const navigate = useNavigate();
-    const { alerts, stats, predictions, loading, fetchDashboardData } = useLockDashboard();
+    const { alerts, predictions, loading, fetchDashboardData } = useLockDashboard();
 
     useEffect(() => { 
         fetchDashboardData(); 

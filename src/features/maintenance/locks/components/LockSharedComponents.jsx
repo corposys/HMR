@@ -25,6 +25,7 @@ export function HealthBar({ score }) {
     );
 }
 
+// eslint-disable-next-line no-unused-vars
 export function DetailMetric({ label, value, icon: Icon, tone = 'text-[var(--color-text-primary)]' }) {
     return (
         <div className="flex flex-col justify-center rounded-lg border border-[var(--color-border)]/60 bg-[var(--color-bg-primary)]/20 px-2.5 py-2 transition-colors hover:bg-[var(--color-bg-primary)]/40">
@@ -37,6 +38,7 @@ export function DetailMetric({ label, value, icon: Icon, tone = 'text-[var(--col
     );
 }
 
+// eslint-disable-next-line no-unused-vars
 export function SectionTitle({ icon: Icon, title, rightElement }) {
     return (
         <div className="flex items-center justify-between border-b border-[var(--color-border)]/60 px-3 py-2.5 bg-[var(--color-bg-primary)]/10">

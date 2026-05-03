@@ -121,11 +121,6 @@ export default function LocksRackPage() {
         navigate(`/maintenance/room/${roomId}`);
     };
 
-    const openLockModal = (roomId) => {
-        setSelectedLockId(roomId);
-        setShowTimelineModal(true);
-    };
-
     if (loading) {
         return <LoadingSpinner />;
     }

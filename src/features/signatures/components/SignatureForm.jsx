@@ -17,7 +17,7 @@ export default function SignatureForm({ formData, setFormData, handleClear, fixe
 
         // Validación para Cargo/Departamento
         if (name === 'jobTitle') {
-            const regex = /[^a-zA-ZáéíóúÁÉÍÓÚñÑ0-9\s\-/\.,]/g;
+            const regex = /[^a-zA-ZáéíóúÁÉÍÓÚñÑ0-9\s\-/.]/g;
             const sanitizedValue = value.replace(regex, '');
             setFormData(prev => ({ ...prev, [name]: sanitizedValue }));
             return;

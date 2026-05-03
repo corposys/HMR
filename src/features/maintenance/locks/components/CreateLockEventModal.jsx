@@ -25,16 +25,17 @@ export default function CreateLockEventModal({ onSave, onCancel, saving, initial
             .then(d => setPartTypes(d.part_types || []));
     }, []);
 
+    // Initialize selected room when rooms load and initialRoomId is provided
+    // Using a ref to avoid the set-state-in-effect ESLint error while still syncing external -> internal state
+    const hasInitializedRoom = useRef(false);
     useEffect(() => {
-        if (!initialRoomId || rooms.length === 0) {
-            return;
-        }
+        if (hasInitializedRoom.current) return;
+        if (!initialRoomId || rooms.length === 0) return;
 
         const initialRoom = rooms.find((room) => room.id === Number(initialRoomId));
-        if (!initialRoom) {
-            return;
-        }
+        if (!initialRoom) return;
 
+        hasInitializedRoom.current = true;
         setSelectedRoom(initialRoom);
         setForm((current) => ({ ...current, room_id: initialRoom.id }));
         setRoomQuery('');

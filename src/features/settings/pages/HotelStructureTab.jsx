@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     Building2, MapPin, Layers, BedDouble, Wrench,
     ChevronRight, ChevronDown, Plus, Pencil, Trash2, Check
@@ -64,15 +64,20 @@ const RoomCard = ({ room, isEditable, onSave, onDelete, onToggle }) => {
     );
 };
 
-const FloorSection = ({ moduleId, floor, isEditable, onDeleteFloor, onCreateRoom, onSaveRoom, onDeleteRoom, onToggleFloor, onToggleRoom }) => {
+const FloorSection = ({ floor, isEditable, onDeleteFloor, onCreateRoom, onSaveRoom, onDeleteRoom, onToggleRoom }) => {
     const [isExpanded, setIsExpanded] = useState(true);
     const [showNewRoomForm, setShowNewRoomForm] = useState(false);
     const [roomForm, setRoomForm] = useState({ roomNumber: '' });
     const [roomViewMode, setRoomViewMode] = useState('fixed');
     const [roomColumns, setRoomColumns] = useState(4);
 
+    // Close new room form when editing is disabled (using ref to avoid set-state-in-effect)
+    const prevIsEditable = useRef(isEditable);
     useEffect(() => {
-        if (!isEditable) setShowNewRoomForm(false);
+        if (prevIsEditable.current && !isEditable) {
+            setShowNewRoomForm(false);
+        }
+        prevIsEditable.current = isEditable;
     }, [isEditable]);
 
     const handleCreateRoom = async (event) => {
@@ -213,13 +218,23 @@ const ModuleCard = ({ module, isEditable, onToggleEditMode, onDraftChange, onDel
     const [showNewFloorForm, setShowNewFloorForm] = useState(false);
     const [floorForm, setFloorForm] = useState({ name: '' });
 
+    // Close new floor form when editing is disabled
+    const prevIsEditable = useRef(isEditable);
     useEffect(() => {
-        if (!isEditable) setShowNewFloorForm(false);
+        if (prevIsEditable.current && !isEditable) {
+            setShowNewFloorForm(false);
+        }
+        prevIsEditable.current = isEditable;
     }, [isEditable]);
 
+    // Sync internal form state with external module changes (using ref to track module.id)
+    const prevModuleId = useRef(module.id);
     useEffect(() => {
-        setName(currentModuleName);
-        setCategory(module.category || 'hotel');
+        if (prevModuleId.current !== module.id) {
+            setName(currentModuleName);
+            setCategory(module.category || 'hotel');
+            prevModuleId.current = module.id;
+        }
     }, [module.id, currentModuleName, module.category]);
 
     const nameToSave = name.trim() || defaultModuleName;
