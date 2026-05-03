@@ -1,10 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 
-/**
- * AuthContext - Contexto de autenticación global
- * Conecta con el backend FastAPI para login, registro y verificación de sesión.
- */
-
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
@@ -12,7 +7,6 @@ export function AuthProvider({ children }) {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    // Verificar sesión al cargar (re-validar JWT con el backend)
     useEffect(() => {
         const verifySession = async () => {
             const token = localStorage.getItem('token');
@@ -28,16 +22,19 @@ export function AuthProvider({ children }) {
 
                 if (res.ok) {
                     const data = await res.json();
-                    setUser(data.user);
-                    localStorage.setItem('user', JSON.stringify(data.user));
+                    const userData = {
+                        ...data.user,
+                        role_id: data.user.role_id || data.user_role_id,
+                        permissions: data.user.permissions || data.user.permissions || {},
+                    };
+                    setUser(userData);
+                    localStorage.setItem('user', JSON.stringify(userData));
                 } else {
-                    // Token inválido o expirado
                     localStorage.removeItem('token');
                     localStorage.removeItem('user');
                     setUser(null);
                 }
             } catch {
-                // Backend no disponible, usar datos locales como fallback
                 const savedUser = localStorage.getItem('user');
                 if (savedUser) {
                     try {
@@ -55,9 +52,6 @@ export function AuthProvider({ children }) {
         verifySession();
     }, []);
 
-    /**
-     * Iniciar sesión vía API
-     */
     const login = async (email, password) => {
         setError(null);
         setIsLoading(true);
@@ -81,9 +75,14 @@ export function AuthProvider({ children }) {
                 throw new Error(data.detail || 'Error al iniciar sesión');
             }
 
+            const userData = {
+                ...data.user,
+                role_id: data.user.role_id,
+                permissions: data.user.permissions || {},
+            };
             localStorage.setItem('token', data.token);
-            localStorage.setItem('user', JSON.stringify(data.user));
-            setUser(data.user);
+            localStorage.setItem('user', JSON.stringify(userData));
+            setUser(userData);
 
             return { success: true };
         } catch (err) {
@@ -95,9 +94,6 @@ export function AuthProvider({ children }) {
         }
     };
 
-    /**
-     * Registrar nuevo usuario vía API
-     */
     const register = async (fullName, email, password) => {
         setError(null);
         setIsLoading(true);
@@ -121,9 +117,14 @@ export function AuthProvider({ children }) {
                 throw new Error(data.detail || 'Error al registrar usuario');
             }
 
+            const userData = {
+                ...data.user,
+                role_id: data.user.role_id,
+                permissions: data.user.permissions || {},
+            };
             localStorage.setItem('token', data.token);
-            localStorage.setItem('user', JSON.stringify(data.user));
-            setUser(data.user);
+            localStorage.setItem('user', JSON.stringify(userData));
+            setUser(userData);
 
             return { success: true };
         } catch (err) {
@@ -135,26 +136,17 @@ export function AuthProvider({ children }) {
         }
     };
 
-    /**
-     * Cerrar sesión
-     */
     const logout = () => {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         setUser(null);
     };
 
-    /**
-     * Get authentication headers for API requests
-     */
     const getAuthHeaders = () => {
         const token = localStorage.getItem('token');
         return token ? { 'Authorization': `Bearer ${token}` } : {};
     };
 
-    /**
-     * Make authenticated API request
-     */
     const apiFetch = async (url, options = {}) => {
         const token = localStorage.getItem('token');
         const headers = {
@@ -162,17 +154,16 @@ export function AuthProvider({ children }) {
             ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
             ...options.headers,
         };
-        
+
         const response = await fetch(url, {
             ...options,
             headers,
         });
-        
-        // Handle 401 by logging out
+
         if (response.status === 401) {
             logout();
         }
-        
+
         return response;
     };
 
@@ -196,9 +187,6 @@ export function AuthProvider({ children }) {
     );
 }
 
-/**
- * Hook para usar el contexto de autenticación
- */
 // eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
     const context = useContext(AuthContext);
@@ -207,5 +195,3 @@ export function useAuth() {
     }
     return context;
 }
-
-// AuthContext is not exported directly - use useAuth() hook instead
