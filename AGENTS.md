@@ -11,9 +11,6 @@ React 19 + Vite 7 frontend, FastAPI (Python) backend, PostgreSQL 15. Docker Comp
 | `docker compose up -d --build` | Dev environment (Vite :5173, FastAPI :8000, Postgres :15432) |
 | `docker compose down` | Stop dev environment |
 | `docker compose -f docker-compose.prod.yml up -d --build` | Production build (Nginx :80) |
-| `npm run dev` | Frontend only — **requires backend containers running** (see proxy note below) |
-| `npm run build` | Production Vite build → `dist/` |
-| `npm run lint` | ESLint (flat config) |
 
 **No test framework.** Do not run `npm test` or `pytest`.
 
