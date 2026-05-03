@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Shield, Github, ExternalLink } from 'lucide-react';
+import { Shield, Github } from 'lucide-react';
 
 /**
  * Footer - Pie de página minimalista
@@ -8,10 +8,10 @@ export default function Footer() {
     const currentYear = new Date().getFullYear();
 
     const footerLinks = [
-        { name: 'Documentación', href: '/docs' },
-        { name: 'Política de Privacidad', href: '/privacy' },
-        { name: 'Código de Conducta', href: '/conduct' },
-        { name: 'Seguridad', href: '/security' },
+        // { name: 'Documentación', href: '/docs' },
+        // { name: 'Política de Privacidad', href: '/privacy' },
+        // { name: 'Código de Conducta', href: '/conduct' },
+        // { name: 'Seguridad', href: '/security' },
     ];
 
     return (
@@ -41,15 +41,19 @@ export default function Footer() {
                 {/* Sección inferior con enlaces */}
                 <div className="py-4 flex flex-wrap items-center justify-between gap-4 text-sm">
                     <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-                        {footerLinks.map((link) => (
-                            <Link
-                                key={link.name}
-                                to={link.href}
-                                className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
-                            >
-                                {link.name}
-                            </Link>
-                        ))}
+                        {footerLinks.length > 0 ? (
+                            footerLinks.map((link) => (
+                                <Link
+                                    key={link.name}
+                                    to={link.href}
+                                    className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+                                >
+                                    {link.name}
+                                </Link>
+                            ))
+                        ) : (
+                            <span className="text-[var(--color-text-muted)]">HMR System v1.0</span>
+                        )}
                     </div>
 
                     <div className="flex items-center gap-2 text-[var(--color-text-muted)]">

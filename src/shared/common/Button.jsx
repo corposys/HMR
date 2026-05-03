@@ -9,6 +9,7 @@ export default function Button({
     icon: Icon,
     iconPosition = 'left',
     className = '',
+    type = 'button',
     ...props
 }) {
     const baseStyles = 'btn inline-flex items-center justify-center gap-2 font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed';
@@ -31,6 +32,7 @@ export default function Button({
 
     return (
         <button
+            type={type}
             className={`${baseStyles} ${variants[variant] || variants.primary} ${sizes[size]} ${className}`}
             {...props}
         >

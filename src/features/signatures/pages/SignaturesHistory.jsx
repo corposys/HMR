@@ -5,6 +5,8 @@ import {
     Mail, Phone, Briefcase, Calendar, Users,
     TrendingUp, AlertCircle, Loader2, X, ChevronRight
 } from 'lucide-react';
+import { useToast } from '@context/ToastContext';
+import { formatDate } from '@utils/formatters';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -17,12 +19,7 @@ function getInitials(name) {
         .toUpperCase();
 }
 
-function formatDate(iso) {
-    if (!iso) return '—';
-    return new Date(iso).toLocaleDateString('es-VE', {
-        day: '2-digit', month: 'short', year: 'numeric',
-    });
-}
+// formatDate now imported from @utils/formatters
 
 // Paleta de colores del avatar según índice (cíclica)
 const AVATAR_COLORS = [
@@ -36,7 +33,7 @@ const AVATAR_COLORS = [
 
 // ── Sub-componentes ───────────────────────────────────────────────────────────
 
-function StatCard({ icon: StatIcon, label, value, color }) {
+function SignatureStatCard({ icon: StatIcon, label, value, color }) {
     return (
         <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] px-4 py-3 shadow-sm">
             <div className="flex items-center justify-between gap-3">
@@ -197,6 +194,7 @@ function SignatureCard({ signature, colorData, onEdit, onDelete }) {
 
 export default function SignaturesHistory() {
     const navigate = useNavigate();
+    const { showToast } = useToast();
 
     const [signatures, setSignatures] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -237,7 +235,11 @@ export default function SignaturesHistory() {
             setSignatures(prev => prev.filter(s => s.id !== toDelete.id));
             setToDelete(null);
         } catch {
-            // mantener modal abierto en caso de error
+            showToast({
+                title: 'Error',
+                message: 'No se pudo eliminar la firma',
+                type: 'error',
+            });
         } finally {
             setDeleting(false);
         }
@@ -287,9 +289,9 @@ export default function SignaturesHistory() {
                 <section className="overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] shadow-sm">
                     <div className="flex flex-col gap-4 p-4 lg:flex-row lg:items-center lg:justify-between">
                         <div className="grid w-full grid-cols-3 gap-2 lg:flex-1">
-                                <StatCard icon={Users} label="Firmas totales" value={signatures.length} color="#009098" />
-                                <StatCard icon={TrendingUp} label="Este mes" value={thisMonth} color="#0f7681" />
-                                <StatCard icon={Phone} label="Con móvil" value={withMobilePhone} color="#1a5f7a" />
+                                <SignatureStatCard icon={Users} label="Firmas totales" value={signatures.length} color="#009098" />
+                                <SignatureStatCard icon={TrendingUp} label="Este mes" value={thisMonth} color="#0f7681" />
+                                <SignatureStatCard icon={Phone} label="Con móvil" value={withMobilePhone} color="#1a5f7a" />
                         </div>
 
                         <div className="flex w-full items-center gap-3 lg:w-auto lg:shrink-0">

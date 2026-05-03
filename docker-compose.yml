@@ -12,6 +12,12 @@ services:
       POSTGRES_DB: ${DB_NAME:-hmr_db}
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-hmr} -d ${DB_NAME:-hmr_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   # === FastAPI Backend ===
   hmr-backend:
@@ -34,7 +40,14 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
   # === React Frontend (Vite) ===
   hmr-app:
@@ -52,7 +65,8 @@ services:
       - VITE_PORT=5173
       - CHOKIDAR_USEPOLLING=true
     depends_on:
-      - hmr-backend
+      hmr-backend:
+        condition: service_healthy
 
 volumes:
   pgdata:

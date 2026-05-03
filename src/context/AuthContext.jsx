@@ -144,6 +144,38 @@ export function AuthProvider({ children }) {
         setUser(null);
     };
 
+    /**
+     * Get authentication headers for API requests
+     */
+    const getAuthHeaders = () => {
+        const token = localStorage.getItem('token');
+        return token ? { 'Authorization': `Bearer ${token}` } : {};
+    };
+
+    /**
+     * Make authenticated API request
+     */
+    const apiFetch = async (url, options = {}) => {
+        const token = localStorage.getItem('token');
+        const headers = {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+            ...options.headers,
+        };
+        
+        const response = await fetch(url, {
+            ...options,
+            headers,
+        });
+        
+        // Handle 401 by logging out
+        if (response.status === 401) {
+            logout();
+        }
+        
+        return response;
+    };
+
     const value = {
         user,
         isLoading,
@@ -152,6 +184,8 @@ export function AuthProvider({ children }) {
         login,
         register,
         logout,
+        getAuthHeaders,
+        apiFetch,
         clearError: () => setError(null),
     };
 

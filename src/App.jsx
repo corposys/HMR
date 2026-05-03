@@ -3,6 +3,7 @@ import { Suspense } from 'react';
 import { AuthProvider } from '@context/AuthContext';
 import { ToastProvider } from '@context/ToastContext';
 import ProtectedRoute from '@shared/common/ProtectedRoute';
+import ErrorBoundary from '@shared/common/ErrorBoundary';
 import Layout from '@shared/layout/Layout';
 import { publicRoutes, protectedRoutes, fallbackRoute } from '@app/routes';
 
@@ -21,37 +22,39 @@ function RouteFallback() {
  */
 function App() {
     return (
-        <BrowserRouter>
-            <ToastProvider>
-                <AuthProvider>
-                    <Suspense fallback={<RouteFallback />}>
-                        <Routes>
-                            {publicRoutes.map((route) => (
-                                <Route key={route.path} path={route.path} element={route.element} />
-                            ))}
-
-                            {/* Rutas protegidas */}
-                            <Route
-                                path="/"
-                                element={
-                                    <ProtectedRoute>
-                                        <Layout />
-                                    </ProtectedRoute>
-                                }
-                            >
-                                {protectedRoutes.map((route) => (
-                                    route.index
-                                        ? <Route key="index" index element={route.element} />
-                                        : <Route key={route.path} path={route.path} element={route.element} />
+        <ErrorBoundary>
+            <BrowserRouter>
+                <ToastProvider>
+                    <AuthProvider>
+                        <Suspense fallback={<RouteFallback />}>
+                            <Routes>
+                                {publicRoutes.map((route) => (
+                                    <Route key={route.path} path={route.path} element={route.element} />
                                 ))}
-                            </Route>
 
-                            <Route path={fallbackRoute.path} element={fallbackRoute.element} />
-                        </Routes>
-                    </Suspense>
-                </AuthProvider>
-            </ToastProvider>
-        </BrowserRouter>
+                                {/* Rutas protegidas */}
+                                <Route
+                                    path="/"
+                                    element={
+                                        <ProtectedRoute>
+                                            <Layout />
+                                        </ProtectedRoute>
+                                    }
+                                >
+                                    {protectedRoutes.map((route) => (
+                                        route.index
+                                            ? <Route key="index" index element={route.element} />
+                                            : <Route key={route.path} path={route.path} element={route.element} />
+                                    ))}
+                                </Route>
+
+                                <Route path={fallbackRoute.path} element={fallbackRoute.element} />
+                            </Routes>
+                        </Suspense>
+                    </AuthProvider>
+                </ToastProvider>
+            </BrowserRouter>
+        </ErrorBoundary>
     );
 }
 

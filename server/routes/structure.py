@@ -4,7 +4,7 @@ Provides the shared structure used by all HMR modules (maintenance, housekeeping
 """
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, Literal
 
 from db import get_connection, release_connection
 from middleware.auth import get_current_user
@@ -18,11 +18,11 @@ class ModuleCreate(BaseModel):
     property_id: int
     number: int
     name: Optional[str] = None
-    category: str = "hotel"
+    category: Literal["hotel", "owner"] = "hotel"
 
 class ModuleUpdate(BaseModel):
     name: Optional[str] = None
-    category: Optional[str] = None
+    category: Optional[Literal["hotel", "owner"]] = None
     is_active: Optional[bool] = None
 
 class FloorCreate(BaseModel):
@@ -37,12 +37,12 @@ class FloorUpdate(BaseModel):
 class RoomCreate(BaseModel):
     floor_id: int
     room_number: str
-    category: str = "hotel"
+    category: Literal["hotel", "owner"] = "hotel"
 
 class RoomUpdate(BaseModel):
     room_number: Optional[str] = None
-    status: Optional[str] = None
-    category: Optional[str] = None
+    status: Optional[Literal["active", "inactive"]] = None
+    category: Optional[Literal["hotel", "owner"]] = None
 
 
 # ── Tree ─────────────────────────────────────────────────────────────────────
@@ -275,12 +275,7 @@ async def delete_module(module_id: int, current_user: dict = Depends(get_current
         if not cur.fetchone():
             raise HTTPException(status_code=404, detail="Módulo no encontrado")
 
-        cur.execute("SELECT id FROM floors WHERE module_id = %s", (module_id,))
-        floor_ids = [row[0] for row in cur.fetchall()]
-        if floor_ids:
-            cur.execute("DELETE FROM rooms WHERE floor_id = ANY(%s)", (floor_ids,))
-            cur.execute("DELETE FROM floors WHERE module_id = %s", (module_id,))
-
+        # CASCADE will handle floors and rooms automatically
         cur.execute("DELETE FROM modules WHERE id = %s", (module_id,))
         conn.commit()
         return {"success": True}
@@ -357,7 +352,7 @@ async def delete_floor(floor_id: int, current_user: dict = Depends(get_current_u
         if not cur.fetchone():
             raise HTTPException(status_code=404, detail="Piso no encontrado")
 
-        cur.execute("DELETE FROM rooms WHERE floor_id = %s", (floor_id,))
+        # CASCADE will handle rooms automatically
         cur.execute("DELETE FROM floors WHERE id = %s", (floor_id,))
         conn.commit()
         return {"success": True}

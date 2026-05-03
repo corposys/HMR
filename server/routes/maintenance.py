@@ -5,7 +5,7 @@ Handles both battery and mechanical maintenance tracking for hotel room locks.
 from datetime import date, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, Literal
 
 from db import get_connection, release_connection
 from middleware.auth import get_current_user
@@ -18,13 +18,13 @@ router = APIRouter(prefix="/api/maintenance", tags=["maintenance"])
 class MaintenanceCreate(BaseModel):
     room_id: int
     part_type_id: Optional[int] = None
-    type: str  # 'battery' | 'mechanical'
+    type: Literal["battery", "mechanical"]
     description: Optional[str] = None
     performed_at: Optional[str] = None  # ISO date string
 
 
 class LockUpdate(BaseModel):
-    status: Optional[str] = None
+    status: Optional[Literal["operational", "preventive", "failure", "out_of_service"]] = None
     notes: Optional[str] = None
 
 
@@ -434,13 +434,11 @@ async def list_locks(
         locks = []
         for r in rows:
             lock_id = r[0]
-            if lock_id is None:
-                lock_id = _ensure_lock_asset(cur, r[3])
-
+            # Return null for lock_id if no lock asset exists (GET should not mutate)
             locks.append({
                 "id": lock_id,
-                "code": r[1] or f"LOCK-{r[3]}",
-                "status": r[2] or "operational",
+                "code": r[1] if lock_id else None,
+                "status": r[2] if lock_id else "operational",
                 "room_id": r[3],
                 "room_number": r[4],
                 "room_status": r[5],
@@ -455,7 +453,6 @@ async def list_locks(
                 "events_count": r[14],
             })
 
-        conn.commit()
         return {"success": True, "locks": locks}
     except Exception:
         conn.rollback()

@@ -8,11 +8,17 @@ services:
       POSTGRES_DB: ${DB_NAME:-hmr_db}
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-hmr} -d ${DB_NAME:-hmr_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   hmr-backend:
     build:
       context: ./server
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.prod
     restart: always
     environment:
       - PYTHONDONTWRITEBYTECODE=1
@@ -24,7 +30,8 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       - CORS_ORIGINS=${CORS_ORIGINS}
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
 
   hmr-app:
     build:
@@ -34,7 +41,8 @@ services:
     ports:
       - "80:80"
     depends_on:
-      - hmr-backend
+      hmr-backend:
+        condition: service_healthy
 
 volumes:
   pgdata:

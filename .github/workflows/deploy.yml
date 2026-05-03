@@ -1,31 +1,118 @@
-name: Deploy HMR Locally
+name: Deploy HMR Production
 
 on:
   push:
     branches: [ "main" ]
 
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
 jobs:
-  deploy:
-    # La magia ocurre aquí: le decimos que use la máquina donde instalaste el agente
+  lint-and-build:
     runs-on: self-hosted
-
+    
     steps:
-    - name: Prepare workspace ownership (self-hosted)
-      run: |
-        mkdir -p "$GITHUB_WORKSPACE"
-        docker run --rm -v "$GITHUB_WORKSPACE:/workspace" alpine sh -c "chown -R $(id -u):$(id -g) /workspace || true"
-
     - name: Checkout code
       uses: actions/checkout@v5
       with:
         clean: false
-
-    - name: Cleanup Python cache files
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Run ESLint
+      run: npm run lint
+      continue-on-error: false
+    
+    - name: Build frontend
+      run: npm run build
+      continue-on-error: false
+    
+    - name: Verify build output exists
       run: |
-        docker run --rm -v "$GITHUB_WORKSPACE:/workspace" alpine sh -c "find /workspace -type d -name '__pycache__' -prune -exec rm -rf {} +"
+        if [ ! -d "dist" ] || [ -z "$(ls -A dist)" ]; then
+          echo "Error: Build output 'dist' directory is empty or missing"
+          exit 1
+        fi
+        echo "✅ Build output verified"
 
-    - name: Deploy Docker Containers
+  deploy:
+    needs: lint-and-build
+    runs-on: self-hosted
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v5
+      with:
+        clean: false
+    
+    - name: Cleanup Python cache
+      run: find . -type d -name '__pycache__' -exec rm -rf {} + 2>/dev/null || true
+    
+    - name: Create .env file
       run: |
-        # Despliegue en modo producción (frontend estático con Nginx en puerto 80)
+        cat > .env << 'EOF'
+        JWT_SECRET=${{ secrets.JWT_SECRET }}
+        CORS_ORIGINS=${{ vars.CORS_ORIGINS }}
+        DB_USER=${{ vars.DB_USER }}
+        DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+        DB_NAME=${{ vars.DB_NAME }}
+        EOF
+    
+    - name: Deploy to production
+      run: |
+        echo "🚀 Deploying to production..."
         docker compose -f docker-compose.prod.yml up -d --build --remove-orphans
-        docker image prune -f
+        
+        echo "⏳ Waiting for services to be healthy..."
+        sleep 15
+        
+        echo "🔍 Checking service health..."
+        docker compose -f docker-compose.prod.yml ps
+    
+    - name: Health check
+      run: |
+        echo "🏥 Running health checks..."
+        
+        # Check backend health
+        for i in {1..5}; do
+          if curl -sf http://localhost/api/health; then
+            echo "✅ Backend is healthy"
+            break
+          fi
+          if [ $i -eq 5 ]; then
+            echo "❌ Backend health check failed after 5 attempts"
+            exit 1
+          fi
+          echo "⏳ Attempt $i/5: Backend not ready yet, waiting..."
+          sleep 10
+        done
+        
+        # Check frontend
+        if curl -sf http://localhost/ > /dev/null; then
+          echo "✅ Frontend is responding"
+        else
+          echo "❌ Frontend health check failed"
+          exit 1
+        fi
+        
+        echo "🎉 All health checks passed!"
+    
+    - name: Cleanup old images
+      if: success()
+      run: docker image prune -f
+    
+    - name: Rollback on failure
+      if: failure()
+      run: |
+        echo "⚠️ Deployment failed! Rolling back..."
+        docker compose -f docker-compose.prod.yml down
+        echo "🔄 Rollback complete. Previous version should be restored manually if needed."
+        exit 1

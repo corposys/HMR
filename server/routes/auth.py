@@ -2,11 +2,12 @@
 Authentication routes: register, login, and session verification.
 """
 import bcrypt
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, EmailStr
 
 from db import get_connection, release_connection
 from middleware.auth import create_token, get_current_user
+from middleware.rate_limit import rate_limit
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -15,19 +16,20 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 class RegisterRequest(BaseModel):
     full_name: str
-    email: str
+    email: EmailStr
     password: str
 
 
 class LoginRequest(BaseModel):
-    email: str
+    email: EmailStr
     password: str
 
 
 # --- Routes ---
 
 @router.post("/register")
-async def register(data: RegisterRequest):
+@rate_limit(requests=5, window=300)  # 5 requests per 5 minutes
+async def register(request: Request, data: RegisterRequest):
     """Register a new user with role 'user'."""
     if not data.full_name or not data.email or not data.password:
         raise HTTPException(status_code=400, detail="Todos los campos son requeridos")
@@ -85,7 +87,8 @@ async def register(data: RegisterRequest):
 
 
 @router.post("/login")
-async def login(data: LoginRequest):
+@rate_limit(requests=10, window=60)  # 10 requests per minute
+async def login(request: Request, data: LoginRequest):
     """Authenticate user with email and password."""
     if not data.email or not data.password:
         raise HTTPException(status_code=400, detail="Correo y contraseña son requeridos")

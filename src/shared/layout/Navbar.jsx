@@ -29,8 +29,23 @@ export default function Navbar({ onMenuClick, isMobileSidebarOpen }) {
     const { user, logout } = useAuth();
     const dropdownRef = useRef(null);
 
-    // Simular estado de API
-    const apiStatus = { online: true, latency: '24ms' };
+    // TODO: Implement real API health check
+    // const [apiStatus, setApiStatus] = useState({ online: true, latency: null });
+    // useEffect(() => {
+    //     const checkHealth = async () => {
+    //         const start = performance.now();
+    //         try {
+    //             const res = await fetch('/api/health');
+    //             const latency = Math.round(performance.now() - start);
+    //             setApiStatus({ online: res.ok, latency });
+    //         } catch {
+    //             setApiStatus({ online: false, latency: null });
+    //         }
+    //     };
+    //     checkHealth();
+    //     const interval = setInterval(checkHealth, 30000);
+    //     return () => clearInterval(interval);
+    // }, []);
 
     const handleLogout = () => {
         logout();
@@ -148,7 +163,7 @@ export default function Navbar({ onMenuClick, isMobileSidebarOpen }) {
                         <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                     </div>
                     <span className="text-xs font-medium text-[var(--color-text-secondary)]">
-                        API v1.0 • {apiStatus.latency}
+                        API v1.0 • Conectado
                     </span>
                 </div>
 

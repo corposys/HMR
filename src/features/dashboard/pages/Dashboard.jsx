@@ -4,8 +4,6 @@ import {
     Users,
     BedDouble,
     Banknote,
-    Activity,
-    Clock,
     Hotel
 } from 'lucide-react';
 import StatCard from '@shared/common/StatCard';
@@ -86,36 +84,6 @@ export default function Dashboard() {
         { name: 'Spa', uso: 45 },
         { name: 'Mantenimiento', uso: 60 },
     ];
-
-    // Actividad reciente
-    const recentActivity = [
-        { type: 'checkin', user: 'Familia Perez (Hab 304)', app: 'Recepción', time: 'Hace 5 min' },
-        { type: 'service', user: 'Servicio a la Habitación (Hab 210)', app: 'Restaurante', time: 'Hace 12 min' },
-        { type: 'checkout', user: 'Carlos Lopez (Hab 105)', app: 'Recepción', time: 'Hace 24 min' },
-        { type: 'cleaning', user: 'Limpieza completada (Hab 402)', app: 'Housekeeping', time: 'Hace 38 min' },
-        { type: 'reservation', user: 'Nueva reserva (3 noches)', app: 'Motor Reservas', time: 'Hace 1 hora' },
-    ];
-
-    const getActivityIcon = (type) => {
-        switch (type) {
-            case 'checkin': return <CalendarCheck className="w-4 h-4 text-[var(--color-success)]" />;
-            case 'service': return <Banknote className="w-4 h-4 text-[var(--color-info)]" />;
-            case 'checkout': return <Clock className="w-4 h-4 text-[var(--color-warning)]" />;
-            case 'cleaning': return <BedDouble className="w-4 h-4 text-[var(--color-primary)]" />;
-            default: return <Activity className="w-4 h-4" />;
-        }
-    };
-
-    const getActivityLabel = (type) => {
-        switch (type) {
-            case 'checkin': return 'Check-in';
-            case 'service': return 'Cargo a habitación';
-            case 'checkout': return 'Check-out';
-            case 'cleaning': return 'Housekeeping';
-            case 'reservation': return 'Nueva Reserva';
-            default: return 'Actividad';
-        }
-    };
 
     return (
         <div className="py-5 w-full px-5">

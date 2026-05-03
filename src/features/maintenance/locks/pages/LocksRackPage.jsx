@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DoorOpen, Loader2 } from 'lucide-react';
+import { useToast } from '@context/ToastContext';
 import { useLocksOverview } from '@features/maintenance/locks/hooks/useLocks';
 import { useLockRackData } from '@features/maintenance/locks/hooks/useLockRackData';
 import { RACK_VIEW_MODES } from '@features/maintenance/locks/utils/lockConstants';
@@ -12,6 +13,7 @@ import LockTimelineModal from '@features/maintenance/locks/components/LockTimeli
 
 export default function LocksRackPage() {
     const navigate = useNavigate();
+    const { showToast } = useToast();
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [selectedLockId, setSelectedLockId] = useState(null);
@@ -93,7 +95,11 @@ export default function LocksRackPage() {
                 await fetchLockDetail(selectedLockId);
             }
         } catch {
-            // Fail silently for now, UI keeps previous state.
+            showToast({
+                title: 'Error',
+                message: 'No se pudo guardar el evento',
+                type: 'error',
+            });
         } finally {
             setSavingEvent(false);
         }
@@ -121,7 +127,11 @@ export default function LocksRackPage() {
             await fetchLocksOverview();
             await fetchLockDetail(selectedLockId);
         } catch {
-            // Keep current state if request fails.
+            showToast({
+                title: 'Error',
+                message: 'No se pudo actualizar el estado',
+                type: 'error',
+            });
         } finally {
             setUpdatingStatus(false);
         }

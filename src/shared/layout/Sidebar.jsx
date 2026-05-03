@@ -1,48 +1,150 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { Home, Settings, Wrench, ChevronDown, Shield, BedDouble, Hotel, ServerCog } from 'lucide-react';
 
+// Sidebar configuration - easy to add/modify sections
+const sidebarConfig = [
+    {
+        type: 'link',
+        to: '/',
+        icon: Home,
+        label: 'Dashboard',
+        end: true,
+    },
+    {
+        type: 'dropdown',
+        id: 'reception',
+        icon: Hotel,
+        label: 'Recepción',
+        items: [
+            { to: '/reception/reservas', label: 'Reservas' },
+        ],
+    },
+    {
+        type: 'dropdown',
+        id: 'maintenance',
+        icon: Wrench,
+        label: 'Mantenimiento',
+        items: [
+            { to: '/maintenance/habitaciones', label: 'Habitaciones' },
+        ],
+    },
+    {
+        type: 'dropdown',
+        id: 'housekeeping',
+        icon: BedDouble,
+        label: 'Housekeeping',
+        items: [
+            { to: '/housekeeping/lenceria', label: 'Lenceria' },
+        ],
+    },
+    {
+        type: 'dropdown',
+        id: 'security',
+        icon: Shield,
+        label: 'Seguridad',
+        items: [
+            { to: '/security/vehicle-control', label: 'Control de Vehiculos' },
+        ],
+    },
+    {
+        type: 'dropdown',
+        id: 'systems',
+        icon: ServerCog,
+        label: 'Sistemas',
+        items: [
+            { to: '/signatures', label: 'Firmas' },
+            { to: '/maintenance/rooms', label: 'Cerraduras' },
+        ],
+    },
+];
+
+function SidebarDropdown({ section, isOpen, onToggle, isActive, onCloseMobile }) {
+    const Icon = section.icon;
+    
+    return (
+        <div>
+            <button
+                onClick={onToggle}
+                aria-expanded={isOpen}
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-colors ${
+                    isActive
+                        ? 'bg-[var(--color-bg-tertiary)] text-[var(--color-primary)]'
+                        : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-primary)]'
+                }`}
+            >
+                <div className="flex items-center gap-3">
+                    <Icon className="w-5 h-5" />
+                    <span>{section.label}</span>
+                </div>
+                <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isOpen ? 'max-h-40 opacity-100 mt-1' : 'max-h-0 opacity-0'}`}>
+                <div className="flex flex-col gap-1 py-1">
+                    {section.items.map((item) => (
+                        <NavLink
+                            key={item.to}
+                            to={item.to}
+                            onClick={onCloseMobile}
+                            className={({ isActive }) =>
+                                `group flex items-center gap-3 py-2 pl-11 pr-3 text-sm rounded-lg transition-colors ${
+                                    isActive
+                                        ? 'text-[var(--color-text-primary)] font-medium bg-[var(--color-bg-tertiary)]/50'
+                                        : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]/30'
+                                }`
+                            }
+                        >
+                            {({ isActive }) => (
+                                <>
+                                    <div className={`w-1.5 h-1.5 rounded-full transition-colors ${isActive ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-text-muted)] group-hover:bg-[var(--color-text-secondary)]'}`} />
+                                    <span>{item.label}</span>
+                                </>
+                            )}
+                        </NavLink>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export default function Sidebar({ isMobileOpen = false, onCloseMobile }) {
     const location = useLocation();
-    const isSystemsActive = location.pathname.startsWith('/signatures') || location.pathname === '/maintenance/rooms' || location.pathname.startsWith('/maintenance/room/');
-    const [isSystemsOpen, setIsSystemsOpen] = useState(isSystemsActive);
-    const isMaintenanceActive = location.pathname === '/maintenance' || location.pathname.startsWith('/maintenance/habitaciones');
-    const [isMaintenanceOpen, setIsMaintenanceOpen] = useState(isMaintenanceActive);
-    const isSecurityActive = location.pathname.startsWith('/security');
-    const [isSecurityOpen, setIsSecurityOpen] = useState(isSecurityActive);
-    const isHousekeepingActive = location.pathname.startsWith('/housekeeping');
-    const [isHousekeepingOpen, setIsHousekeepingOpen] = useState(isHousekeepingActive);
-    const isReceptionActive = location.pathname.startsWith('/reception');
-    const [isReceptionOpen, setIsReceptionOpen] = useState(isReceptionActive);
+    
+    // Calculate which dropdowns should be open based on current path
+    const activeDropdowns = useMemo(() => {
+        const active = {};
+        sidebarConfig.forEach(section => {
+            if (section.type === 'dropdown') {
+                const isActive = section.items.some(item => 
+                    location.pathname === item.to || location.pathname.startsWith(item.to + '/')
+                );
+                if (isActive) {
+                    active[section.id] = true;
+                }
+            }
+        });
+        return active;
+    }, [location.pathname]);
+    
+    // State for manually toggled dropdowns (overrides auto-open)
+    const [openDropdowns, setOpenDropdowns] = useState({});
+    
+    // Merge auto-open with manual toggles
+    const dropdownState = useMemo(() => ({
+        ...activeDropdowns,
+        ...openDropdowns,
+    }), [activeDropdowns, openDropdowns]);
+    
+    const toggleDropdown = (id) => {
+        setOpenDropdowns(prev => ({
+            ...prev,
+            [id]: !prev[id],
+        }));
+    };
 
-    const isLocksActive = location.pathname === '/maintenance/rooms' || location.pathname.startsWith('/maintenance/room/');
-
-    useEffect(() => {
-        if (isSystemsActive) {
-            setIsSystemsOpen(true);
-        }
-    }, [isSystemsActive]);
-    useEffect(() => {
-        if (isMaintenanceActive) {
-            setIsMaintenanceOpen(true);
-        }
-    }, [isMaintenanceActive]);
-    useEffect(() => {
-        if (isSecurityActive) {
-            setIsSecurityOpen(true);
-        }
-    }, [isSecurityActive]);
-    useEffect(() => {
-        if (isHousekeepingActive) {
-            setIsHousekeepingOpen(true);
-        }
-    }, [isHousekeepingActive]);
-    useEffect(() => {
-        if (isReceptionActive) {
-            setIsReceptionOpen(true);
-        }
-    }, [isReceptionActive]);
-
+    // Close mobile menu on route change
     useEffect(() => {
         onCloseMobile?.();
     }, [location.pathname, onCloseMobile]);
@@ -54,230 +156,41 @@ export default function Sidebar({ isMobileOpen = false, onCloseMobile }) {
                     HMR<span className="text-[var(--color-primary)]"> System</span>
                 </h2>
             </div>
-            <nav className="p-4 flex-1 flex flex-col">
+            <nav className="p-4 flex-1 flex flex-col" aria-label="Main navigation">
                 <div className="space-y-2">
-                    <NavLink to="/" end onClick={onCloseMobile} className={({ isActive }) => `flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${isActive ? 'bg-[var(--shadow-none)] text-[var(--color-primary)]' : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-primary)]'}`}>
-                        <Home className="w-5 h-5" />
-                        <span>Dashboard</span>
-                    </NavLink>
-                {/* Dropdown Recepción */}
-                <div>
-                    <button
-                        onClick={() => setIsReceptionOpen(!isReceptionOpen)}
-                        className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-colors ${
-                            isReceptionActive
-                                ? 'bg-[var(--color-bg-tertiary)] text-[var(--color-primary)]'
-                                : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-primary)]'
-                        }`}
-                    >
-                        <div className="flex items-center gap-3">
-                            <Hotel className="w-5 h-5" />
-                            <span>Recepción</span>
-                        </div>
-                        <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isReceptionOpen ? 'rotate-180' : ''}`} />
-                    </button>
-
-                    <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isReceptionOpen ? 'max-h-40 opacity-100 mt-1' : 'max-h-0 opacity-0'}`}>
-                        <div className="flex flex-col gap-1 py-1">
-                            <NavLink
-                                to="/reception/reservas"
-                                onClick={onCloseMobile}
-                                className={({ isActive }) =>
-                                    `group flex items-center gap-3 py-2 pl-11 pr-3 text-sm rounded-lg transition-colors ${
-                                        isActive
-                                            ? 'text-[var(--color-text-primary)] font-medium bg-[var(--color-bg-tertiary)]/50'
-                                            : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]/30'
-                                    }`
-                                }
-                            >
-                                {({ isActive }) => (
-                                    <>
-                                        <div className={`w-1.5 h-1.5 rounded-full transition-colors ${isActive ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-text-muted)] group-hover:bg-[var(--color-text-secondary)]'}`} />
-                                        <span>Reservas</span>
-                                    </>
-                                )}
-                            </NavLink>
-                        </div>
-                    </div>
-                </div>
-                {/* Dropdown Mantenimiento */}
-                <div>
-                    <button
-                        onClick={() => setIsMaintenanceOpen(!isMaintenanceOpen)}
-                        className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-colors ${
-                            isMaintenanceActive
-                                ? 'bg-[var(--color-bg-tertiary)] text-[var(--color-primary)]'
-                                : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-primary)]'
-                        }`}
-                    >
-                        <div className="flex items-center gap-3">
-                            <Wrench className="w-5 h-5" />
-                            <span>Mantenimiento</span>
-                        </div>
-                        <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isMaintenanceOpen ? 'rotate-180' : ''}`} />
-                    </button>
-
-                    <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isMaintenanceOpen ? 'max-h-40 opacity-100 mt-1' : 'max-h-0 opacity-0'}`}>
-                        <div className="flex flex-col gap-1 py-1">
-                            <NavLink
-                                to="/maintenance/habitaciones"
-                                onClick={onCloseMobile}
-                                className={({ isActive }) =>
-                                    `group flex items-center gap-3 py-2 pl-11 pr-3 text-sm rounded-lg transition-colors ${
-                                        isActive
-                                            ? 'text-[var(--color-text-primary)] font-medium bg-[var(--color-bg-tertiary)]/50'
-                                            : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]/30'
-                                    }`
-                                }
-                            >
-                                {({ isActive }) => (
-                                    <>
-                                        <div className={`w-1.5 h-1.5 rounded-full transition-colors ${isActive ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-text-muted)] group-hover:bg-[var(--color-text-secondary)]'}`} />
-                                        <span>Habitaciones</span>
-                                    </>
-                                )}
-                            </NavLink>
-                        </div>
-                    </div>
-                </div>
-                {/* Dropdown Housekeeping */}
-                <div>
-                    <button
-                        onClick={() => setIsHousekeepingOpen(!isHousekeepingOpen)}
-                        className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-colors ${
-                            isHousekeepingActive
-                                ? 'bg-[var(--color-bg-tertiary)] text-[var(--color-primary)]'
-                                : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-primary)]'
-                        }`}
-                    >
-                        <div className="flex items-center gap-3">
-                            <BedDouble className="w-5 h-5" />
-                            <span>Housekeeping</span>
-                        </div>
-                        <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isHousekeepingOpen ? 'rotate-180' : ''}`} />
-                    </button>
-
-                    <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isHousekeepingOpen ? 'max-h-40 opacity-100 mt-1' : 'max-h-0 opacity-0'}`}>
-                        <div className="flex flex-col gap-1 py-1">
-                            <NavLink
-                                to="/housekeeping/lenceria"
-                                onClick={onCloseMobile}
-                                className={({ isActive }) =>
-                                    `group flex items-center gap-3 py-2 pl-11 pr-3 text-sm rounded-lg transition-colors ${
-                                        isActive
-                                            ? 'text-[var(--color-text-primary)] font-medium bg-[var(--color-bg-tertiary)]/50'
-                                            : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]/30'
-                                    }`
-                                }
-                            >
-                                {({ isActive }) => (
-                                    <>
-                                        <div className={`w-1.5 h-1.5 rounded-full transition-colors ${isActive ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-text-muted)] group-hover:bg-[var(--color-text-secondary)]'}`} />
-                                        <span>Lenceria</span>
-                                    </>
-                                )}
-                            </NavLink>
-                        </div>
-                    </div>
-                </div>
-                {/* Dropdown Seguridad */}
-                <div>
-                    <button
-                        onClick={() => setIsSecurityOpen(!isSecurityOpen)}
-                        className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-colors ${
-                            isSecurityActive
-                                ? 'bg-[var(--color-bg-tertiary)] text-[var(--color-primary)]'
-                                : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-primary)]'
-                        }`}
-                    >
-                        <div className="flex items-center gap-3">
-                            <Shield className="w-5 h-5" />
-                            <span>Seguridad</span>
-                        </div>
-                        <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isSecurityOpen ? 'rotate-180' : ''}`} />
-                    </button>
-
-                    <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isSecurityOpen ? 'max-h-40 opacity-100 mt-1' : 'max-h-0 opacity-0'}`}>
-                        <div className="flex flex-col gap-1 py-1">
-                            <NavLink
-                                to="/security/vehicle-control"
-                                onClick={onCloseMobile}
-                                className={({ isActive }) =>
-                                    `group flex items-center gap-3 py-2 pl-11 pr-3 text-sm rounded-lg transition-colors ${
-                                        isActive
-                                            ? 'text-[var(--color-text-primary)] font-medium bg-[var(--color-bg-tertiary)]/50'
-                                            : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]/30'
-                                    }`
-                                }
-                            >
-                                {({ isActive }) => (
-                                    <>
-                                        <div className={`w-1.5 h-1.5 rounded-full transition-colors ${isActive ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-text-muted)] group-hover:bg-[var(--color-text-secondary)]'}`} />
-                                        <span>Control de Vehiculos</span>
-                                    </>
-                                )}
-                            </NavLink>
-                        </div>
-                    </div>
-                </div>
-                {/* Dropdown Sistemas */}
-                <div>
-                    <button
-                        onClick={() => setIsSystemsOpen(!isSystemsOpen)}
-                        className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-colors ${
-                            isSystemsActive
-                                ? 'bg-[var(--color-bg-tertiary)] text-[var(--color-primary)]'
-                                : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-primary)]'
-                        }`}
-                    >
-                        <div className="flex items-center gap-3">
-                            <ServerCog className="w-5 h-5" />
-                            <span>Sistemas</span>
-                        </div>
-                        <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isSystemsOpen ? 'rotate-180' : ''}`} />
-                    </button>
-
-                    <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isSystemsOpen ? 'max-h-40 opacity-100 mt-1' : 'max-h-0 opacity-0'}`}>
-                        <div className="flex flex-col gap-1 py-1">
-                            <NavLink
-                                to="/signatures"
-                                onClick={onCloseMobile}
-                                className={({ isActive }) =>
-                                    `group flex items-center gap-3 py-2 pl-11 pr-3 text-sm rounded-lg transition-colors ${
-                                        isActive
-                                            ? 'text-[var(--color-text-primary)] font-medium bg-[var(--color-bg-tertiary)]/50'
-                                            : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]/30'
-                                    }`
-                                }
-                            >
-                                {({ isActive }) => (
-                                    <>
-                                        <div className={`w-1.5 h-1.5 rounded-full transition-colors ${isActive ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-text-muted)] group-hover:bg-[var(--color-text-secondary)]'}`} />
-                                        <span>Firmas</span>
-                                    </>
-                                )}
-                            </NavLink>
-                            <NavLink
-                                to="/maintenance/rooms"
-                                onClick={onCloseMobile}
-                                className={({ isActive }) =>
-                                    `group flex items-center gap-3 py-2 pl-11 pr-3 text-sm rounded-lg transition-colors ${
-                                        isActive
-                                            ? 'text-[var(--color-text-primary)] font-medium bg-[var(--color-bg-tertiary)]/50'
-                                            : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]/30'
-                                    }`
-                                }
-                            >
-                                {({ isActive }) => (
-                                    <>
-                                        <div className={`w-1.5 h-1.5 rounded-full transition-colors ${isLocksActive ? 'bg-[var(--color-primary)]' : isActive ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-text-muted)] group-hover:bg-[var(--color-text-secondary)]'}`} />
-                                        <span>Cerraduras</span>
-                                    </>
-                                )}
-                            </NavLink>
-                        </div>
-                    </div>
-                </div>
+                    {sidebarConfig.map((section) => {
+                        if (section.type === 'link') {
+                            const Icon = section.icon;
+                            return (
+                                <NavLink 
+                                    key={section.to}
+                                    to={section.to} 
+                                    end={section.end}
+                                    onClick={onCloseMobile} 
+                                    className={({ isActive }) => `flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${isActive ? 'bg-[var(--color-bg-tertiary)] text-[var(--color-primary)]' : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-primary)]'}`}
+                                >
+                                    <Icon className="w-5 h-5" />
+                                    <span>{section.label}</span>
+                                </NavLink>
+                            );
+                        }
+                        
+                        // Dropdown section
+                        const isActive = section.items.some(item => 
+                            location.pathname === item.to || location.pathname.startsWith(item.to + '/')
+                        );
+                        
+                        return (
+                            <SidebarDropdown
+                                key={section.id}
+                                section={section}
+                                isOpen={!!dropdownState[section.id]}
+                                onToggle={() => toggleDropdown(section.id)}
+                                isActive={isActive}
+                                onCloseMobile={onCloseMobile}
+                            />
+                        );
+                    })}
                 </div>
 
                 <div className="mt-auto pt-4">

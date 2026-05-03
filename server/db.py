@@ -4,12 +4,14 @@ Uses psycopg2 with a connection pool.
 """
 import os
 import time
+from contextlib import contextmanager
 import psycopg2
 from psycopg2 import pool
+from logging_config import logger
 
 DB_CONFIG = {
     "host": os.getenv("DB_HOST", "postgres"),
-    "port": os.getenv("DB_PORT", "5432"),
+    "port": int(os.getenv("DB_PORT", "5432")),
     "user": os.getenv("DB_USER", "hmr"),
     "password": os.getenv("DB_PASSWORD", "hmr_secret"),
     "database": os.getenv("DB_NAME", "hmr_db"),
@@ -34,6 +36,34 @@ def get_connection():
 def release_connection(conn):
     """Return a connection to the pool."""
     get_pool().putconn(conn)
+
+
+@contextmanager
+def get_db():
+    """
+    Context manager for database connections.
+    Handles connection acquisition, commit/rollback, and cleanup automatically.
+    
+    Usage:
+        with get_db() as (conn, cur):
+            cur.execute("SELECT ...")
+            conn.commit()
+    """
+    conn = None
+    cur = None
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+        yield conn, cur
+    except Exception:
+        if conn:
+            conn.rollback()
+        raise
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            release_connection(conn)
 
 
 def init_db():
@@ -158,10 +188,19 @@ def init_db():
             cur.execute("ALTER TABLE lock_assets ADD COLUMN IF NOT EXISTS installed_at DATE")
             cur.execute("ALTER TABLE lock_assets ADD COLUMN IF NOT EXISTS notes TEXT")
 
+            # Migrate room_category_id -> category if the old column exists
+            cur.execute("""
+                SELECT column_name FROM information_schema.columns
+                WHERE table_name = 'rooms' AND column_name = 'room_category_id'
+            """)
+            if cur.fetchone():
+                cur.execute("ALTER TABLE rooms RENAME COLUMN room_category_id TO category")
+                logger.info("Migrated rooms.room_category_id -> rooms.category")
+
             conn.commit()
             cur.close()
             release_connection(conn)
-            print("✅ Database tables initialized successfully")
+            logger.info("Database tables initialized successfully")
 
             # Seed defaults
             _seed_hotel_structure()
@@ -169,10 +208,10 @@ def init_db():
             _seed_lock_assets()
             return
         except psycopg2.OperationalError as e:
-            print(f"⏳ Waiting for database (attempt {attempt + 1}/10)... {e}")
+            logger.warning(f"Waiting for database (attempt {attempt + 1}/10)... {e}")
             time.sleep(2)
 
-    raise Exception("❌ Could not connect to database after 10 attempts")
+    raise Exception("Could not connect to database after 10 attempts")
 
 
 def _seed_hotel_structure():
@@ -188,7 +227,7 @@ def _seed_hotel_structure():
         # Only seed if no properties exist
         cur.execute("SELECT COUNT(*) FROM properties")
         if cur.fetchone()[0] > 0:
-            print("ℹ️  Hotel structure already seeded, skipping")
+            logger.info("Hotel structure already seeded, skipping")
             cur.close()
             release_connection(conn)
             return
@@ -246,11 +285,11 @@ def _seed_hotel_structure():
         conn.commit()
         cur.close()
         release_connection(conn)
-        print("✅ Hotel Margarita Real structure seeded (6 modules, 24 floors, 96 rooms)")
+        logger.info("Hotel Margarita Real structure seeded (6 modules, 24 floors, 96 rooms)")
     except Exception as e:
         conn.rollback()
         release_connection(conn)
-        print(f"⚠️  Error seeding hotel structure: {e}")
+        logger.error(f"Error seeding hotel structure: {e}")
 
 
 def _seed_part_types():
@@ -277,11 +316,11 @@ def _seed_part_types():
         conn.commit()
         cur.close()
         release_connection(conn)
-        print("✅ Part types seeded (5 types)")
+        logger.info("Part types seeded (5 types)")
     except Exception as e:
         conn.rollback()
         release_connection(conn)
-        print(f"⚠️  Error seeding part types: {e}")
+        logger.error(f"Error seeding part types: {e}")
 
 
 def _seed_lock_assets():
@@ -302,9 +341,9 @@ def _seed_lock_assets():
         cur.close()
         release_connection(conn)
         if inserted > 0:
-            print(f"✅ Lock assets seeded ({inserted} created)")
+            logger.info(f"Lock assets seeded ({inserted} created)")
     except Exception as e:
         conn.rollback()
         release_connection(conn)
-        print(f"⚠️  Error seeding lock assets: {e}")
+        logger.error(f"Error seeding lock assets: {e}")
 
