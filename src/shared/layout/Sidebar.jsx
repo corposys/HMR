@@ -1,8 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { Home, Settings, Wrench, ChevronDown, Shield, BedDouble, Hotel, ServerCog } from 'lucide-react';
+import { Home, Settings, Wrench, ChevronDown, Shield, BedDouble, Hotel, ServerCog, Users, CalendarDays, LayoutGrid } from 'lucide-react';
 
-// Sidebar configuration - easy to add/modify sections
 const sidebarConfig = [
     {
         type: 'link',
@@ -17,6 +16,8 @@ const sidebarConfig = [
         icon: Hotel,
         label: 'Recepción',
         items: [
+            { to: '/reception/rack', label: 'Habitaciones' },
+            { to: '/reception/huespedes', label: 'Huéspedes' },
             { to: '/reception/reservas', label: 'Reservas' },
         ],
     },

@@ -11,9 +11,12 @@ const LocksRackPage = lazy(() => import('@features/maintenance/locks/pages/Locks
 const VehicleControl = lazy(() => import('@features/security/pages/VehicleControl'));
 const Linen = lazy(() => import('@features/housekeeping/pages/Linen'));
 const Reservations = lazy(() => import('@features/reception/pages/Reservations'));
+const RackPage = lazy(() => import('@features/reception/pages/RackPage'));
 
 export const protectedRoutes = [
     { index: true, element: <Dashboard /> },
+    { path: 'reception/rack', element: <RackPage /> },
+    { path: 'reception/reservas', element: <Reservations /> },
     { path: 'signatures', element: <SignaturesHistory /> },
     { path: 'signatures/new', element: <Signatures /> },
     { path: 'maintenance', element: <Habitaciones /> },
@@ -23,6 +26,5 @@ export const protectedRoutes = [
     { path: 'maintenance/dashboard', element: <LockHealthDashboard /> },
     { path: 'security/vehicle-control', element: <VehicleControl /> },
     { path: 'housekeeping/lenceria', element: <Linen /> },
-    { path: 'reception/reservas', element: <Reservations /> },
     { path: 'settings', element: <Settings /> },
 ];
