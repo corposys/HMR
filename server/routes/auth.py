@@ -52,20 +52,20 @@ async def register(request: Request, data: RegisterRequest):
         # Insert new user
         cur.execute(
             """
-            INSERT INTO users (full_name, email, password_hash, role)
-            VALUES (%s, %s, %s, 'user')
-            RETURNING id, full_name, email, role, created_at
+            INSERT INTO users (full_name, email, password_hash, role, role_id)
+            VALUES (%s, %s, %s, 'user', 3)
+            RETURNING id, full_name, email, role, role_id, created_at
             """,
             (data.full_name, data.email, password_hash),
         )
         user_row = cur.fetchone()
-        conn.commit()
 
         user_data = {
             "id": user_row[0],
             "full_name": user_row[1],
             "email": user_row[2],
             "role": user_row[3],
+            "role_id": user_row[4],
         }
 
         token = create_token(user_data)
@@ -97,7 +97,7 @@ async def login(request: Request, data: LoginRequest):
     try:
         cur = conn.cursor()
         cur.execute(
-            "SELECT id, full_name, email, password_hash, role FROM users WHERE email = %s",
+            "SELECT id, full_name, email, password_hash, role, role_id FROM users WHERE email = %s",
             (data.email,),
         )
         user_row = cur.fetchone()
@@ -115,6 +115,7 @@ async def login(request: Request, data: LoginRequest):
             "full_name": user_row[1],
             "email": user_row[2],
             "role": user_row[4],
+            "role_id": user_row[5],
         }
 
         token = create_token(user_data)
@@ -136,8 +137,31 @@ async def login(request: Request, data: LoginRequest):
 
 @router.get("/me")
 async def get_me(current_user: dict = Depends(get_current_user)):
-    """Return current authenticated user data from the JWT."""
-    return {
-        "success": True,
-        "user": current_user,
-    }
+    """Return current authenticated user data with role and permissions."""
+    from db import get_connection, release_connection
+
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT role_id FROM users WHERE id = %s", (current_user["id"],))
+        row = cur.fetchone()
+        role_id = row[0] if row else None
+
+        permissions = {}
+        if role_id:
+            cur.execute("SELECT permissions FROM roles WHERE id = %s", (role_id,))
+            perm_row = cur.fetchone()
+            if perm_row and isinstance(perm_row[0], dict):
+                permissions = perm_row[0]
+
+        return {
+            "success": True,
+            "user": {
+                **current_user,
+                "role_id": role_id,
+                "permissions": permissions,
+            },
+        }
+    finally:
+        cur.close()
+        release_connection(conn)

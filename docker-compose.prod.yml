@@ -20,6 +20,8 @@ services:
       context: ./server
       dockerfile: Dockerfile.prod
     restart: always
+    volumes:
+      - uploads:/app/uploads
     environment:
       - PYTHONDONTWRITEBYTECODE=1
       - DB_HOST=postgres
@@ -52,3 +54,4 @@ services:
 
 volumes:
   pgdata:
+  uploads:

@@ -6,6 +6,7 @@ import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from db import init_db
 from logging_config import logger
@@ -13,35 +14,41 @@ from routes.auth import router as auth_router
 from routes.signatures import router as signatures_router
 from routes.structure import router as structure_router
 from routes.maintenance import router as maintenance_router
+from routes.reception import router as reception_router
+from routes.settings import router as settings_router
+from routes.roles import router as roles_router
+
+UPLOADS_DIR = os.path.join(os.path.dirname(__file__), "uploads")
+os.makedirs(os.path.join(UPLOADS_DIR, "payments"), exist_ok=True)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Handle startup and shutdown events."""
-    # Startup
     logger.info("Starting up HMR API...")
     init_db()
     yield
-    # Shutdown
     logger.info("Shutting down HMR API...")
 
 app = FastAPI(title="HMR API", version="1.0.0", lifespan=lifespan)
 
-# CORS middleware configuration
-# Allow origins from environment or default to localhost for dev
 cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(",")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[origin.strip() for origin in cors_origins],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type"],
 )
 
-# Mount routes
 app.include_router(auth_router)
 app.include_router(signatures_router)
 app.include_router(structure_router)
 app.include_router(maintenance_router)
+app.include_router(reception_router)
+app.include_router(settings_router)
+app.include_router(roles_router)
+
+app.mount("/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
 
 
 @app.get("/api/health")
