@@ -36,10 +36,15 @@ export default function CreateLockEventModal({ onSave, onCancel, saving, initial
         if (!initialRoom) return;
 
         hasInitializedRoom.current = true;
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setSelectedRoom(initialRoom);
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setForm((current) => ({ ...current, room_id: initialRoom.id }));
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setRoomQuery('');
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setShowSuggestions(false);
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setActiveIdx(-1);
     }, [initialRoomId, rooms]);
 

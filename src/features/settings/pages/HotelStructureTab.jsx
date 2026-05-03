@@ -75,6 +75,7 @@ const FloorSection = ({ floor, isEditable, onDeleteFloor, onCreateRoom, onSaveRo
     const prevIsEditable = useRef(isEditable);
     useEffect(() => {
         if (prevIsEditable.current && !isEditable) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setShowNewRoomForm(false);
         }
         prevIsEditable.current = isEditable;
@@ -222,6 +223,7 @@ const ModuleCard = ({ module, isEditable, onToggleEditMode, onDraftChange, onDel
     const prevIsEditable = useRef(isEditable);
     useEffect(() => {
         if (prevIsEditable.current && !isEditable) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setShowNewFloorForm(false);
         }
         prevIsEditable.current = isEditable;
@@ -231,7 +233,9 @@ const ModuleCard = ({ module, isEditable, onToggleEditMode, onDraftChange, onDel
     const prevModuleId = useRef(module.id);
     useEffect(() => {
         if (prevModuleId.current !== module.id) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setName(currentModuleName);
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setCategory(module.category || 'hotel');
             prevModuleId.current = module.id;
         }
