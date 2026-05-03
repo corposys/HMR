@@ -6,7 +6,7 @@ __pycache__
 server/__pycache__
 server/**/*.pyc
 *.log
-.DS_Storenode_modules
-dist
+.DS_Store
+node_modules
 .git
 .env

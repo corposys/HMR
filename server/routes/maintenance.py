@@ -112,8 +112,8 @@ async def list_maintenance(
             for r in rows
         ]
         return {"success": True, "logs": logs}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception:
+        raise HTTPException(status_code=500, detail="Error al obtener registros de mantenimiento")
     finally:
         cur.close()
         release_connection(conn)
@@ -153,9 +153,9 @@ async def create_maintenance(
 
         conn.commit()
         return {"success": True, "id": log_id}
-    except Exception as e:
+    except Exception:
         conn.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Error al crear registro de mantenimiento")
     finally:
         cur.close()
         release_connection(conn)
@@ -175,9 +175,9 @@ async def delete_maintenance(log_id: int, current_user: dict = Depends(get_curre
         return {"success": True}
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception:
         conn.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Error al eliminar registro")
     finally:
         cur.close()
         release_connection(conn)
@@ -231,8 +231,8 @@ async def maintenance_stats(current_user: dict = Depends(get_current_user)):
                 "by_module": by_module,
             },
         }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception:
+        raise HTTPException(status_code=500, detail="Error al obtener estadísticas")
     finally:
         cur.close()
         release_connection(conn)
@@ -248,8 +248,8 @@ async def list_part_types(current_user: dict = Depends(get_current_user)):
         cur.execute("SELECT id, name, category FROM part_types ORDER BY category, name")
         parts = [{"id": r[0], "name": r[1], "category": r[2]} for r in cur.fetchall()]
         return {"success": True, "part_types": parts}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception:
+        raise HTTPException(status_code=500, detail="Error al obtener tipos de piezas")
     finally:
         cur.close()
         release_connection(conn)
@@ -339,8 +339,8 @@ async def get_predictions(
             })
 
         return {"success": True, "predictions": predictions}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception:
+        raise HTTPException(status_code=500, detail="Error al calcular predicciones")
     finally:
         cur.close()
         release_connection(conn)
@@ -457,9 +457,9 @@ async def list_locks(
 
         conn.commit()
         return {"success": True, "locks": locks}
-    except Exception as e:
+    except Exception:
         conn.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Error al obtener cerraduras")
     finally:
         cur.close()
         release_connection(conn)
@@ -533,8 +533,8 @@ async def list_lock_events(lock_id: int, current_user: dict = Depends(get_curren
         }
     except HTTPException:
         raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception:
+        raise HTTPException(status_code=500, detail="Error al obtener eventos de cerradura")
     finally:
         cur.close()
         release_connection(conn)
@@ -575,9 +575,9 @@ async def update_lock_asset(
         return {"success": True}
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception:
         conn.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Error al actualizar cerradura")
     finally:
         cur.close()
         release_connection(conn)

@@ -76,9 +76,9 @@ async def register(data: RegisterRequest):
 
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception:
         conn.rollback()
-        raise HTTPException(status_code=500, detail=f"Error al registrar: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error al registrar usuario")
     finally:
         cur.close()
         release_connection(conn)
@@ -124,8 +124,8 @@ async def login(data: LoginRequest):
 
     except HTTPException:
         raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al iniciar sesión: {str(e)}")
+    except Exception:
+        raise HTTPException(status_code=500, detail="Error al iniciar sesión")
     finally:
         cur.close()
         release_connection(conn)

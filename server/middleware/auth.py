@@ -2,22 +2,28 @@
 JWT authentication middleware for FastAPI.
 """
 import os
-from functools import wraps
+from datetime import datetime, timedelta, timezone
 
 import jwt
 from fastapi import Request, HTTPException
 
-JWT_SECRET = os.getenv("JWT_SECRET", "change-me-in-production")
+JWT_SECRET = os.getenv("JWT_SECRET")
+if not JWT_SECRET:
+    raise RuntimeError("JWT_SECRET environment variable is required")
+
 JWT_ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_DAYS = 7
 
 
 def create_token(user_data: dict) -> str:
     """Create a JWT token with user data."""
+    expire = datetime.now(timezone.utc) + timedelta(days=ACCESS_TOKEN_EXPIRE_DAYS)
     payload = {
         "id": user_data["id"],
         "email": user_data["email"],
         "role": user_data["role"],
         "full_name": user_data["full_name"],
+        "exp": expire,
     }
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
 

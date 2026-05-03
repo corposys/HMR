@@ -114,8 +114,8 @@ async def get_structure_tree(current_user: dict = Depends(get_current_user)):
             property_data["modules"].append(mod_data)
 
         return {"success": True, "property": property_data}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al obtener estructura: {str(e)}")
+    except Exception:
+        raise HTTPException(status_code=500, detail="Error al obtener estructura")
     finally:
         cur.close()
         release_connection(conn)
@@ -150,8 +150,8 @@ async def get_structure_stats(current_user: dict = Depends(get_current_user)):
                 "total_rooms": total_rooms,
             },
         }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception:
+        raise HTTPException(status_code=500, detail="Error al obtener estadísticas")
     finally:
         cur.close()
         release_connection(conn)
@@ -205,8 +205,8 @@ async def list_rooms(
             for r in rows
         ]
         return {"success": True, "rooms": rooms}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception:
+        raise HTTPException(status_code=500, detail="Error al obtener habitaciones")
     finally:
         cur.close()
         release_connection(conn)
@@ -226,9 +226,9 @@ async def create_module(data: ModuleCreate, current_user: dict = Depends(get_cur
         mod_id = cur.fetchone()[0]
         conn.commit()
         return {"success": True, "id": mod_id}
-    except Exception as e:
+    except Exception:
         conn.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Error al crear módulo")
     finally:
         cur.close()
         release_connection(conn)
@@ -258,9 +258,9 @@ async def update_module(module_id: int, data: ModuleUpdate, current_user: dict =
         return {"success": True}
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception:
         conn.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Error al actualizar módulo")
     finally:
         cur.close()
         release_connection(conn)
@@ -286,9 +286,9 @@ async def delete_module(module_id: int, current_user: dict = Depends(get_current
         return {"success": True}
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception:
         conn.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Error al eliminar módulo")
     finally:
         cur.close()
         release_connection(conn)
@@ -310,9 +310,9 @@ async def create_floor(data: FloorCreate, current_user: dict = Depends(get_curre
         fl_id = cur.fetchone()[0]
         conn.commit()
         return {"success": True, "id": fl_id}
-    except Exception as e:
+    except Exception:
         conn.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Error al crear piso")
     finally:
         cur.close()
         release_connection(conn)
@@ -340,9 +340,9 @@ async def update_floor(floor_id: int, data: FloorUpdate, current_user: dict = De
         return {"success": True}
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception:
         conn.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Error al actualizar piso")
     finally:
         cur.close()
         release_connection(conn)
@@ -363,9 +363,9 @@ async def delete_floor(floor_id: int, current_user: dict = Depends(get_current_u
         return {"success": True}
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception:
         conn.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Error al eliminar piso")
     finally:
         cur.close()
         release_connection(conn)
@@ -385,9 +385,9 @@ async def create_room(data: RoomCreate, current_user: dict = Depends(get_current
         room_id = cur.fetchone()[0]
         conn.commit()
         return {"success": True, "id": room_id}
-    except Exception as e:
+    except Exception:
         conn.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Error al crear habitación")
     finally:
         cur.close()
         release_connection(conn)
@@ -417,9 +417,9 @@ async def update_room(room_id: int, data: RoomUpdate, current_user: dict = Depen
         return {"success": True}
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception:
         conn.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Error al actualizar habitación")
     finally:
         cur.close()
         release_connection(conn)
@@ -437,9 +437,9 @@ async def delete_room(room_id: int, current_user: dict = Depends(get_current_use
         return {"success": True}
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception:
         conn.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Error al eliminar habitación")
     finally:
         cur.close()
         release_connection(conn)

@@ -307,7 +307,7 @@ p {
 }
 
 .badge-primary {
-  background-color: rgba(185, 28, 28, 0.15);
+  background-color: rgba(0, 144, 152, 0.15);
   color: var(--color-primary-light);
 }
 

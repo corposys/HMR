@@ -52,8 +52,8 @@ async def list_signatures(current_user: dict = Depends(get_current_user)):
             for r in rows
         ]
         return {"success": True, "signatures": signatures}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al obtener firmas: {str(e)}")
+    except Exception:
+        raise HTTPException(status_code=500, detail="Error al obtener firmas")
     finally:
         cur.close()
         release_connection(conn)
@@ -97,9 +97,9 @@ async def create_signature(
                 "created_at": row[6].isoformat() if row[6] else None,
             },
         }
-    except Exception as e:
+    except Exception:
         conn.rollback()
-        raise HTTPException(status_code=500, detail=f"Error al guardar firma: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error al guardar firma")
     finally:
         cur.close()
         release_connection(conn)
@@ -110,22 +110,23 @@ async def delete_signature(
     signature_id: int,
     current_user: dict = Depends(get_current_user),
 ):
-    """Delete a signature by ID."""
+    """Delete a signature by ID. Only the creator can delete."""
     conn = get_connection()
     try:
         cur = conn.cursor()
-        cur.execute("SELECT id FROM signatures WHERE id = %s", (signature_id,))
+        # Verify ownership
+        cur.execute("SELECT id FROM signatures WHERE id = %s AND created_by = %s", (signature_id, current_user["id"]))
         if not cur.fetchone():
-            raise HTTPException(status_code=404, detail="Firma no encontrada")
+            raise HTTPException(status_code=404, detail="Firma no encontrada o no tienes permiso para eliminarla")
 
         cur.execute("DELETE FROM signatures WHERE id = %s", (signature_id,))
         conn.commit()
         return {"success": True, "message": "Firma eliminada correctamente"}
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception:
         conn.rollback()
-        raise HTTPException(status_code=500, detail=f"Error al eliminar firma: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error al eliminar firma")
     finally:
         cur.close()
         release_connection(conn)

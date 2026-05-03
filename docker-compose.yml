@@ -5,7 +5,7 @@ services:
     container_name: hmr_postgres
     restart: always
     ports:
-      - "15432:5432"
+      - "127.0.0.1:15432:5432"
     environment:
       POSTGRES_USER: ${DB_USER:-hmr}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-hmr_secret}
@@ -31,7 +31,8 @@ services:
       - DB_USER=${DB_USER:-hmr}
       - DB_PASSWORD=${DB_PASSWORD:-hmr_secret}
       - DB_NAME=${DB_NAME:-hmr_db}
-      - JWT_SECRET=${JWT_SECRET:-hmr-jwt-secret-change-in-production}
+      - JWT_SECRET=${JWT_SECRET}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
     depends_on:
       - postgres
 
