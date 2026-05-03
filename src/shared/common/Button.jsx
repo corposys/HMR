@@ -1,15 +1,15 @@
-/**
- * Button - Botón reutilizable con múltiples variantes
- * Diseño minimalista con transiciones suaves
- */
+import { Loader2 } from 'lucide-react';
+
 export default function Button({
     children,
     variant = 'primary',
     size = 'md',
     icon: Icon,
     iconPosition = 'left',
+    loading = false,
     className = '',
     type = 'button',
+    disabled,
     ...props
 }) {
     const baseStyles = 'btn inline-flex items-center justify-center gap-2 font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed';
@@ -30,15 +30,27 @@ export default function Button({
         lg: 'px-6 py-2.5 text-base',
     };
 
+    const isDisabled = disabled || loading;
+
     return (
         <button
             type={type}
             className={`${baseStyles} ${variants[variant] || variants.primary} ${sizes[size]} ${className}`}
+            disabled={isDisabled}
             {...props}
         >
-            {Icon && iconPosition === 'left' && <Icon className="w-4 h-4" />}
-            {children}
-            {Icon && iconPosition === 'right' && <Icon className="w-4 h-4" />}
+            {loading ? (
+                <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    {typeof children === 'string' ? children : 'Cargando...'}
+                </>
+            ) : (
+                <>
+                    {Icon && iconPosition === 'left' && <Icon className="w-4 h-4" />}
+                    {children}
+                    {Icon && iconPosition === 'right' && <Icon className="w-4 h-4" />}
+                </>
+            )}
         </button>
     );
 }

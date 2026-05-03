@@ -1,11 +1,9 @@
-/**
- * Card - Contenedor con estilo de tarjeta
- */
 export default function Card({
     children,
     className = '',
     padding = 'md',
     hover = false,
+    elevated = false,
     ...props
 }) {
     const paddingStyles = {
@@ -15,11 +13,12 @@ export default function Card({
         lg: 'p-8',
     };
 
+    const cardType = elevated ? 'card-elevated' : 'card';
     const hoverStyles = hover ? 'hover:border-[var(--color-border-hover)] cursor-pointer' : '';
 
     return (
         <div
-            className={`card ${paddingStyles[padding]} ${hoverStyles} ${className}`}
+            className={`${cardType} ${paddingStyles[padding]} ${hoverStyles} ${className}`}
             {...props}
         >
             {children}
@@ -27,9 +26,6 @@ export default function Card({
     );
 }
 
-/**
- * CardHeader - Cabecera de la tarjeta
- */
 export function CardHeader({ children, className = '' }) {
     return (
         <div className={`mb-4 ${className}`}>
@@ -38,9 +34,6 @@ export function CardHeader({ children, className = '' }) {
     );
 }
 
-/**
- * CardTitle - Título de la tarjeta
- */
 export function CardTitle({ children, className = '' }) {
     return (
         <h3 className={`text-lg font-semibold text-[var(--color-text-primary)] ${className}`}>
@@ -49,9 +42,6 @@ export function CardTitle({ children, className = '' }) {
     );
 }
 
-/**
- * CardDescription - Descripción de la tarjeta
- */
 export function CardDescription({ children, className = '' }) {
     return (
         <p className={`text-sm text-[var(--color-text-secondary)] mt-1 ${className}`}>
@@ -60,12 +50,17 @@ export function CardDescription({ children, className = '' }) {
     );
 }
 
-/**
- * CardContent - Contenido de la tarjeta
- */
 export function CardContent({ children, className = '' }) {
     return (
         <div className={className}>
+            {children}
+        </div>
+    );
+}
+
+export function CardFooter({ children, className = '' }) {
+    return (
+        <div className={`flex items-center justify-end gap-3 mt-4 pt-4 border-t border-[var(--color-border)] ${className}`}>
             {children}
         </div>
     );

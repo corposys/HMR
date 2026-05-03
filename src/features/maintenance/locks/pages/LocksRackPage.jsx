@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { DoorOpen, Loader2 } from 'lucide-react';
+import { DoorOpen } from 'lucide-react';
+import { apiFetch } from '@utils/api';
+import LoadingSpinner from '@shared/common/LoadingSpinner';
 import { useToast } from '@context/ToastContext';
 import { useLocksOverview } from '@features/maintenance/locks/hooks/useLocks';
 import { useLockRackData } from '@features/maintenance/locks/hooks/useLockRackData';
@@ -48,14 +50,7 @@ export default function LocksRackPage() {
         }
         setDetailLoading(true);
         try {
-            const token = localStorage.getItem('token');
-            const response = await fetch(`/api/maintenance/locks/${lockId}/events`, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
-            if (!response.ok) {
-                throw new Error('No se pudo cargar historial de cerradura');
-            }
-            const payload = await response.json();
+            const payload = await apiFetch(`/api/maintenance/locks/${lockId}/events`);
             setSelectedLock(payload.lock || null);
             setEvents(payload.events || []);
         } catch {
@@ -75,20 +70,10 @@ export default function LocksRackPage() {
     const handleCreateEvent = async (data) => {
         setSavingEvent(true);
         try {
-            const token = localStorage.getItem('token');
-            const response = await fetch('/api/maintenance', {
+            await apiFetch('/api/maintenance', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`,
-                },
                 body: JSON.stringify(data),
             });
-
-            if (!response.ok) {
-                throw new Error('No se pudo guardar el evento');
-            }
-
             setShowCreate(false);
             await fetchLocksOverview();
             if (selectedLockId) {
@@ -112,18 +97,10 @@ export default function LocksRackPage() {
 
         setUpdatingStatus(true);
         try {
-            const token = localStorage.getItem('token');
-            const response = await fetch(`/api/maintenance/locks/${selectedLockId}`, {
+            await apiFetch(`/api/maintenance/locks/${selectedLockId}`, {
                 method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`,
-                },
                 body: JSON.stringify({ status }),
             });
-            if (!response.ok) {
-                throw new Error('No se pudo actualizar el estado');
-            }
             await fetchLocksOverview();
             await fetchLockDetail(selectedLockId);
         } catch {
@@ -150,11 +127,7 @@ export default function LocksRackPage() {
     };
 
     if (loading) {
-        return (
-            <div className="py-5 px-5 w-full flex items-center justify-center min-h-[50vh]">
-                <Loader2 className="w-8 h-8 animate-spin text-[var(--color-primary)]" />
-            </div>
-        );
+        return <LoadingSpinner />;
     }
 
     return (

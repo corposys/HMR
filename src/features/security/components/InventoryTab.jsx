@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import Card from '@shared/common/Card';
 import Button from '@shared/common/Button';
+import Badge from '@shared/common/Badge';
 
 export default function InventoryTab() {
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -32,12 +33,12 @@ export default function InventoryTab() {
         }
     };
 
-    const getStatusStyle = (status) => {
+    const getStatusVariant = (status) => {
         switch (status) {
-            case 'Activo': return 'text-[var(--color-success)] bg-[var(--color-success)]/10';
-            case 'Mantenimiento': return 'text-[var(--color-warning)] bg-[var(--color-warning)]/10';
-            case 'Inactivo': return 'text-[var(--color-danger)] bg-[var(--color-danger)]/10';
-            default: return 'text-[var(--color-text-muted)] bg-[var(--color-bg-tertiary)]';
+            case 'Activo': return 'success';
+            case 'Mantenimiento': return 'warning';
+            case 'Inactivo': return 'danger';
+            default: return 'primary';
         }
     };
 
@@ -89,9 +90,7 @@ export default function InventoryTab() {
                                             </span>
                                         </td>
                                         <td className="p-4 text-center">
-                                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${getStatusStyle(vehicle.status)}`}>
-                                                {vehicle.status}
-                                            </span>
+                                            <Badge variant={getStatusVariant(vehicle.status)}>{vehicle.status}</Badge>
                                         </td>
                                         <td className="p-4 text-right">
                                             <p className="font-medium text-[var(--color-text-primary)]">{vehicle.mileage.toLocaleString()} km</p>

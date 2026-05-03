@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Settings as SettingsIcon, Users, Globe, Link as LinkIcon, Building2 } from 'lucide-react';
+import { Users, Globe, Link as LinkIcon, Building2 } from 'lucide-react';
+import Tabs from '@shared/common/Tabs';
 import HotelStructureTab from './HotelStructureTab';
 import GeneralTab from './GeneralTab';
 
@@ -47,29 +48,7 @@ export default function Settings() {
         <div className="py-5 w-full px-5">
             <div className="mx-auto max-w-auto space-y-4">
             <div className="bg-[var(--color-bg-secondary)] rounded-xl border border-[var(--color-border)] shadow-sm overflow-hidden">
-                <div className="border-b border-[var(--color-border)]">
-                    <nav className="flex overflow-x-auto" aria-label="Tabs">
-                        {tabs.map((tab) => {
-                            const Icon = tab.icon;
-                            const isActive = activeTab === tab.id;
-                            return (
-                                <button
-                                    key={tab.id}
-                                    onClick={() => setActiveTab(tab.id)}
-                                    className={`
-                                        flex items-center gap-2 px-6 py-4 text-sm font-medium border-b-2 transition-colors whitespace-nowrap
-                                        ${isActive
-                                            ? 'border-[var(--color-primary)] text-[var(--color-primary)] bg-[var(--color-primary)]/5'
-                                            : 'border-transparent text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]'}
-                                    `}
-                                >
-                                    <Icon className="w-4 h-4" />
-                                    {tab.label}
-                                </button>
-                            );
-                        })}
-                    </nav>
-                </div>
+                <Tabs items={tabs} activeId={activeTab} onChange={setActiveTab} />
 
                 <div className="p-6 bg-[var(--color-bg-primary)] rounded-b-xl h-auto min-h-0">
                     {(() => {

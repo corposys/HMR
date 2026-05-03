@@ -1,11 +1,10 @@
-/**
- * StatCard - Tarjeta de estadísticas para el dashboard
- */
 export default function StatCard({
     title,
     value,
     subtitle,
     icon: Icon,
+    iconClassName = '',
+    iconBgClassName = '',
     trend,
     trendLabel,
     variant = 'default'
@@ -39,8 +38,8 @@ export default function StatCard({
                     )}
                 </div>
                 {Icon && (
-                    <div className="p-2 bg-[var(--color-bg-tertiary)] rounded-lg">
-                        <Icon className="w-5 h-5 text-[var(--color-text-muted)]" />
+                    <div className={`p-2 rounded-lg ${iconBgClassName || 'bg-[var(--color-bg-tertiary)]'}`}>
+                        <Icon className={`w-5 h-5 ${iconClassName || 'text-[var(--color-text-muted)]'}`} />
                     </div>
                 )}
             </div>

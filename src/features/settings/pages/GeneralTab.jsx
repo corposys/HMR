@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Globe, Building2, UploadCloud, Save } from 'lucide-react';
 import CustomDropdown from '@shared/common/CustomDropdown';
 import Button from '@shared/common/Button';
+import Input from '@shared/common/Input';
 
 const STORAGE_KEY = 'hmr_general_profile';
 
@@ -49,51 +50,12 @@ function normalizeProfile(profile = {}) {
     };
 }
 
-/**
- * Subcomponent to render form fields with a label.
- * Reduces code repetition and maintains consistent styling.
- */
-function InputGroup({ label, value, onChange, type = "text", placeholder, className = "", colSpan = "", icon: Icon }) {
-    return (
-        <div className={`flex flex-col gap-1.5 ${colSpan} ${className}`}>
-            <label className="text-sm font-medium text-[var(--color-text-primary)]">
-                {label}
-            </label>
-            <div className="relative">
-                {Icon && (
-                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]">
-                        <Icon size={16} />
-                    </div>
-                )}
-                <input
-                    type={type}
-                    value={value}
-                    onChange={onChange}
-                    placeholder={placeholder}
-                    className={`
-                        w-full bg-[var(--color-bg-primary)] border border-[var(--color-border)]
-                        text-sm rounded-lg px-3 py-2 text-[var(--color-text-primary)]
-                        placeholder-[var(--color-text-muted)]
-                        focus:border-[var(--color-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]
-                        transition-all
-                        ${Icon ? 'pl-9' : ''}
-                    `}
-                />
-            </div>
-        </div>
-    );
-}
-
-/**
- * Component for the "General" tab in Settings.
- * Handles Hotel Corporate Profile: Branding, Fiscal Data, and Contact Info.
- */
 export default function GeneralTab() {
     const [isDragging, setIsDragging] = useState(false);
     const [formData, setFormData] = useState(EMPTY_PROFILE);
     const [savedData, setSavedData] = useState(EMPTY_PROFILE);
     const [isSaving, setIsSaving] = useState(false);
-    const [saveStatus, setSaveStatus] = useState(null); // null | saved | error
+    const [saveStatus, setSaveStatus] = useState(null);
 
     useEffect(() => {
         const storedProfile = localStorage.getItem(STORAGE_KEY);
@@ -163,13 +125,11 @@ export default function GeneralTab() {
     const handleDrop = (e) => {
         e.preventDefault();
         setIsDragging(false);
-        // Handle file drop logic here (not implemented for UI demo)
     };
 
     return (
         <div className="space-y-6 animate-in fade-in duration-300 pb-10">
             
-            {/* ── Header ───────────────────────────────────────────────────────── */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">
@@ -194,7 +154,6 @@ export default function GeneralTab() {
                 <p className="text-sm text-[var(--color-danger)]">No se pudo guardar. Intenta nuevamente.</p>
             )}
 
-            {/* ── Bloque 1: Identidad Visual (Branding) ────────────────────────── */}
             <div className="bg-[var(--color-bg-secondary)] rounded-xl border border-[var(--color-border)] overflow-visible shadow-sm">
                 <div className="p-4 border-b border-[var(--color-border)] flex items-center gap-3 bg-[var(--color-bg-tertiary)]/30">
                     <div className="p-2 bg-blue-500/10 rounded-lg text-blue-600">
@@ -206,7 +165,6 @@ export default function GeneralTab() {
                 </div>
                 
                 <div className="p-6 grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* Logo Upload Area */}
                     <div className="lg:col-span-1">
                         <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
                             Logotipo del Hotel
@@ -237,9 +195,8 @@ export default function GeneralTab() {
                         </div>
                     </div>
 
-                    {/* Inputs */}
                     <div className="lg:col-span-2 space-y-5">
-                        <InputGroup 
+                        <Input 
                             label="Nombre Comercial" 
                             value={formData.commercialName}
                             onChange={handleFieldChange('commercialName')}
@@ -258,7 +215,7 @@ export default function GeneralTab() {
                             />
                         </div>
 
-                        <InputGroup 
+                        <Input 
                             label="Eslogan Comercial" 
                             value={formData.slogan}
                             onChange={handleFieldChange('slogan')}
@@ -268,7 +225,6 @@ export default function GeneralTab() {
                 </div>
             </div>
 
-            {/* ── Bloque 2: Datos Fiscales y Contacto ──────────────────────────── */}
             <div className="bg-[var(--color-bg-secondary)] rounded-xl border border-[var(--color-border)] overflow-visible shadow-sm">
                 <div className="p-4 border-b border-[var(--color-border)] flex items-center gap-3 bg-[var(--color-bg-tertiary)]/30">
                     <div className="p-2 bg-purple-500/10 rounded-lg text-purple-600">
@@ -280,14 +236,14 @@ export default function GeneralTab() {
                 </div>
 
                 <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <InputGroup 
+                    <Input 
                         label="Razón Social (Empresa)" 
                         value={formData.legalName}
                         onChange={handleFieldChange('legalName')}
                         placeholder="Nombre legal completo"
                     />
                     
-                    <InputGroup 
+                    <Input 
                         label="Registro de Información Fiscal (RIF)" 
                         value={formData.rif}
                         onChange={handleFieldChange('rif')}
@@ -307,7 +263,7 @@ export default function GeneralTab() {
                         ></textarea>
                     </div>
 
-                    <InputGroup 
+                    <Input 
                         label="Teléfono de Recepción" 
                         value={formData.receptionPhone}
                         onChange={handleFieldChange('receptionPhone')}
@@ -315,7 +271,7 @@ export default function GeneralTab() {
                         placeholder="Ej. +58 (281) 555-0199"
                     />
                     
-                    <InputGroup 
+                    <Input 
                         label="Correo Electrónico Oficial" 
                         value={formData.officialEmail}
                         onChange={handleFieldChange('officialEmail')}
@@ -335,7 +291,7 @@ export default function GeneralTab() {
                         />
                     </div>
 
-                    <InputGroup 
+                    <Input 
                         label="Sitio Web" 
                         value={formData.website}
                         onChange={handleFieldChange('website')}

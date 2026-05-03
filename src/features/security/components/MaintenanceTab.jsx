@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import Card from '@shared/common/Card';
 import Button from '@shared/common/Button';
+import Badge from '@shared/common/Badge';
 
 export default function MaintenanceTab() {
     // Datos simulados (Mock Data)
@@ -66,26 +67,26 @@ export default function MaintenanceTab() {
         }
     ];
 
-    const getStatusStyles = (status) => {
+    const getStatusConfig = (status) => {
         if (status === 'Completado') {
             return {
                 iconBg: 'bg-emerald-500/10',
                 iconColor: 'text-emerald-500',
-                textColor: 'text-emerald-600',
-                Icon: CheckCircle2
+                Icon: CheckCircle2,
+                variant: 'success'
             };
         }
         return {
             iconBg: 'bg-amber-500/10',
             iconColor: 'text-amber-500',
-            textColor: 'text-amber-600',
-            Icon: Clock
+            Icon: Clock,
+            variant: 'warning'
         };
     };
 
-    const getTypeStyles = (type) => {
-        if (type === 'Preventivo') return 'bg-blue-500/10 text-blue-600 border-blue-500/20';
-        return 'bg-rose-500/10 text-rose-600 border-rose-500/20';
+    const getTypeVariant = (type) => {
+        if (type === 'Preventivo') return 'info';
+        return 'danger';
     };
 
     return (
@@ -146,15 +147,15 @@ export default function MaintenanceTab() {
                 
                 <div className="divide-y divide-[var(--color-border)] flex flex-col">
                     {maintenanceOrders.map((order) => {
-                        const sStyles = getStatusStyles(order.status);
-                        const StatusIcon = sStyles.Icon;
+                        const sConfig = getStatusConfig(order.status);
+                        const StatusIcon = sConfig.Icon;
 
                         return (
                             <div key={order.id} className="group p-4 hover:bg-[var(--color-bg-tertiary)]/50 transition-colors flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 relative">
                                 
                                 {/* Ícono de Estado (Izquierda) */}
-                                <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${sStyles.iconBg}`}>
-                                    <Wrench className={`w-6 h-6 ${sStyles.iconColor}`} />
+<div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${sConfig.iconBg}`}>
+                                        <Wrench className={`w-6 h-6 ${sConfig.iconColor}`} />
                                 </div>
 
                                 {/* Información Central */}
@@ -163,9 +164,7 @@ export default function MaintenanceTab() {
                                         <span className="font-semibold text-[var(--color-text-primary)]">{order.id}</span>
                                         <span className="text-[var(--color-text-muted)] text-sm">•</span>
                                         <span className="font-medium text-[var(--color-text-primary)]">{order.vehicleId} <span className="font-mono text-xs opacity-70">({order.plate})</span></span>
-                                        <span className={`px-2 py-0.5 rounded text-xs font-medium border ${getTypeStyles(order.type)}`}>
-                                            {order.type}
-                                        </span>
+<Badge variant={getTypeVariant(order.type)}>{order.type}</Badge>
                                     </div>
                                     <p className="text-sm text-[var(--color-text-secondary)]">
                                         {order.description}
@@ -184,10 +183,10 @@ export default function MaintenanceTab() {
                                             ${order.cost.toFixed(2)}
                                         </p>
                                     </div>
-                                    <div className={`flex items-center gap-1.5 text-sm font-medium ${sStyles.textColor}`}>
-                                        <StatusIcon className="w-4 h-4" />
-                                        {order.status}
-                                    </div>
+<Badge variant={sConfig.variant} className="text-sm flex items-center gap-1.5">
+                                            <StatusIcon className="w-4 h-4" />
+                                            {order.status}
+                                        </Badge>
                                 </div>
 
                                 {/* Botón Hover Overlay p/Desktop */}

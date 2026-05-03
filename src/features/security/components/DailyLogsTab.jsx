@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import Card, { CardHeader, CardTitle, CardContent } from '@shared/common/Card';
 import Button from '@shared/common/Button';
+import Badge from '@shared/common/Badge';
 
 export default function DailyLogsTab() {
     // Mock data for UI
@@ -210,10 +211,10 @@ export default function DailyLogsTab() {
                                                         </div>
 
                                                         {hasFuel && (
-                                                            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 rounded-full text-sm font-medium whitespace-nowrap">
+                                                            <Badge variant="success" className="gap-1.5 text-sm whitespace-nowrap">
                                                                 <Fuel className="w-4 h-4" />
                                                                 +{log.liters}L <span className="opacity-70 text-xs">(${log.cost.toFixed(2)})</span>
-                                                            </div>
+                                                            </Badge>
                                                         )}
                                                     </div>
                                                 </div>

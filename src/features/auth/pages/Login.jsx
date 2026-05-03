@@ -1,13 +1,12 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Shield, Mail, Lock, AlertCircle, Loader2 } from 'lucide-react';
+import { Shield, Mail, Lock } from 'lucide-react';
 import { useAuth } from '@context/AuthContext';
 import AuthLayout from '@features/auth/components/AuthLayout';
+import Input from '@shared/common/Input';
+import Button from '@shared/common/Button';
+import Alert from '@shared/common/Alert';
 
-/**
- * Login - Página de inicio de sesión
- * Usa AuthLayout para consistencia con registro
- */
 export default function Login() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -35,7 +34,6 @@ export default function Login() {
     return (
         <AuthLayout>
             <div className="w-full max-w-md">
-                {/* Logo móvil */}
                 <div className="text-center mb-6 lg:hidden">
                     <div className="inline-flex items-center justify-center w-14 h-14 bg-[var(--color-bg-secondary)] rounded-xl mb-3 border border-[var(--color-border)]">
                         <Shield className="w-7 h-7 text-[var(--color-primary)]" />
@@ -45,7 +43,6 @@ export default function Login() {
                     </h1>
                 </div>
 
-                {/* Header */}
                 <div className="mb-6">
                     <h2 className="text-2xl font-semibold text-[var(--color-text-primary)]">
                         Bienvenido
@@ -55,73 +52,38 @@ export default function Login() {
                     </p>
                 </div>
 
-                {/* Formulario */}
                 <form onSubmit={handleSubmit} className="space-y-4">
                     {displayError && (
-                        <div className="flex items-center gap-3 p-3 bg-[rgba(239,68,68,0.1)] border border-[rgba(239,68,68,0.3)] rounded-lg text-[var(--color-danger)]">
-                            <AlertCircle className="w-5 h-5 flex-shrink-0" />
-                            <p className="text-sm">{displayError}</p>
-                        </div>
+                        <Alert type="error">{displayError}</Alert>
                     )}
 
-                    {/* Email */}
-                    <div>
-                        <label htmlFor="email" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1.5">
-                            Correo electrónico
-                        </label>
-                        <div className="relative">
-                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-text-muted)] pointer-events-none" />
-                            <input
-                                id="email"
-                                type="email"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                className="w-full pl-10 pr-3 py-2.5 text-sm bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] rounded-lg text-[var(--color-text-primary)] placeholder-[var(--color-text-muted)] focus:border-[var(--color-primary)] focus:outline-none transition-colors"
-                                placeholder="admin@empresa.com"
-                                autoComplete="email"
-                                disabled={isLoading}
-                            />
-                        </div>
-                    </div>
-
-                    {/* Password */}
-                    <div>
-                        <label htmlFor="password" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1.5">
-                            Contraseña
-                        </label>
-                        <div className="relative">
-                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-text-muted)] pointer-events-none" />
-                            <input
-                                id="password"
-                                type="password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                className="w-full pl-10 pr-3 py-2.5 text-sm bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] rounded-lg text-[var(--color-text-primary)] placeholder-[var(--color-text-muted)] focus:border-[var(--color-primary)] focus:outline-none transition-colors"
-                                placeholder="••••••••"
-                                autoComplete="current-password"
-                                disabled={isLoading}
-                            />
-                        </div>
-                    </div>
-
-                    {/* Submit */}
-                    <button
-                        type="submit"
-                        className="w-full py-2.5 px-4 bg-[var(--color-primary)] hover:bg-[var(--color-primary-light)] text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                    <Input
+                        label="Correo electrónico"
+                        icon={Mail}
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="admin@empresa.com"
+                        autoComplete="email"
                         disabled={isLoading}
-                    >
-                        {isLoading ? (
-                            <>
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                                Iniciando sesión...
-                            </>
-                        ) : (
-                            'Iniciar Sesión'
-                        )}
-                    </button>
+                    />
+
+                    <Input
+                        label="Contraseña"
+                        icon={Lock}
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="••••••••"
+                        autoComplete="current-password"
+                        disabled={isLoading}
+                    />
+
+                    <Button type="submit" variant="primary" loading={isLoading} className="w-full">
+                        Iniciar Sesión
+                    </Button>
                 </form>
 
-                {/* Register link */}
                 <p className="mt-6 text-center text-sm text-[var(--color-text-muted)]">
                     ¿No tienes cuenta?{' '}
                     <Link to="/register" className="text-[var(--color-primary)] hover:underline font-medium">

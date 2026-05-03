@@ -5,7 +5,6 @@ import {
     Battery,
     Calendar,
     DoorOpen,
-    Loader2,
     ShieldAlert,
     User,
     Plus,
@@ -18,6 +17,8 @@ import {
     MapPin,
     Hash,
 } from 'lucide-react';
+import { apiFetch } from '@utils/api';
+import LoadingSpinner from '@shared/common/LoadingSpinner';
 import CreateLockEventModal from '@features/maintenance/locks/components/CreateLockEventModal';
 import { LOCK_STATUS_STYLES, LOCK_STATUS_LABELS } from '@features/maintenance/locks/utils/lockConstants';
 import { formatDate } from '@features/maintenance/locks/utils/lockHelpers';
@@ -48,20 +49,10 @@ export default function LockTimelinePage() {
         setLoading(true);
         setError('');
         try {
-            const token = localStorage.getItem('token');
-            const headers = { Authorization: `Bearer ${token}` };
-
-            const [locksRes, predRes] = await Promise.all([
-                fetch('/api/maintenance/locks', { headers }),
-                fetch('/api/maintenance/predictions', { headers }),
+            const [locksData, predData] = await Promise.all([
+                apiFetch('/api/maintenance/locks'),
+                apiFetch('/api/maintenance/predictions'),
             ]);
-
-            if (!locksRes.ok || !predRes.ok) {
-                throw new Error('No se pudo cargar el detalle de la cerradura');
-            }
-
-            const locksData = await locksRes.json();
-            const predData = await predRes.json();
 
             const foundLock = (locksData.locks || []).find((item) => Number(item.room_id) === roomId) || null;
             setLock(foundLock);
@@ -70,18 +61,10 @@ export default function LockTimelinePage() {
             setPrediction(foundPrediction);
 
             if (foundLock?.id) {
-                const eventsRes = await fetch(`/api/maintenance/locks/${foundLock.id}/events`, { headers });
-                if (!eventsRes.ok) {
-                    throw new Error('No se pudo cargar el historial');
-                }
-                const eventsData = await eventsRes.json();
+                const eventsData = await apiFetch(`/api/maintenance/locks/${foundLock.id}/events`);
                 setEvents(eventsData.events || []);
             } else {
-                const fallbackRes = await fetch(`/api/maintenance?room_id=${roomId}`, { headers });
-                if (!fallbackRes.ok) {
-                    throw new Error('No se encontró cerradura para la habitación');
-                }
-                const fallbackData = await fallbackRes.json();
+                const fallbackData = await apiFetch(`/api/maintenance?room_id=${roomId}`);
                 setEvents(fallbackData.logs || []);
             }
         } catch (err) {
@@ -106,25 +89,16 @@ export default function LockTimelinePage() {
     const handleCreateEvent = async (data) => {
         setSavingEvent(true);
         try {
-            const token = localStorage.getItem('token');
             const payload = {
                 ...data,
                 room_id: Number(data.room_id || roomId),
                 part_type_id: data.part_type_id ? Number(data.part_type_id) : null,
             };
 
-            const response = await fetch('/api/maintenance', {
+            await apiFetch('/api/maintenance', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`,
-                },
                 body: JSON.stringify(payload),
             });
-
-            if (!response.ok) {
-                throw new Error('No se pudo registrar el evento');
-            }
 
             setShowCreate(false);
             await fetchDetail();
@@ -142,19 +116,10 @@ export default function LockTimelinePage() {
 
         setUpdatingStatus(true);
         try {
-            const token = localStorage.getItem('token');
-            const response = await fetch(`/api/maintenance/locks/${lock.id}`, {
+            await apiFetch(`/api/maintenance/locks/${lock.id}`, {
                 method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`,
-                },
                 body: JSON.stringify({ status }),
             });
-
-            if (!response.ok) {
-                throw new Error('No se pudo actualizar el estado');
-            }
 
             await fetchDetail();
         } catch {
@@ -165,11 +130,7 @@ export default function LockTimelinePage() {
     };
 
     if (loading) {
-        return (
-            <div className="py-5 px-5 w-full flex items-center justify-center min-h-[50vh]">
-                <Loader2 className="w-8 h-8 animate-spin text-[var(--color-primary)]" />
-            </div>
-        );
+        return <LoadingSpinner />;
     }
 
     return (

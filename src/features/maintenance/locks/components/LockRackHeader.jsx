@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Activity, CheckCircle2, ShieldAlert, TriangleAlert, X, Search, Plus, DoorOpen, MapPin, BatteryFull } from 'lucide-react';
+import Badge from '@shared/common/Badge';
 import { LOCK_STATUS_LABELS } from '../utils/lockConstants';
 
 export default function LockRackHeader({
@@ -158,10 +159,15 @@ export default function LockRackHeader({
                                             >
                                                 <div className="flex justify-between items-start mb-1.5">
                                                     <div className="font-semibold text-[var(--color-text-primary)] text-[11px]">Hab. {item.room_number}</div>
-                                                    <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider ${isCritical ? 'bg-red-500/20 text-red-400' : 'bg-amber-500/20 text-amber-400'
-                                                        }`}>
-                                                        {item.status === 'operational' ? 'Mantenimiento' : LOCK_STATUS_LABELS[item.status]}
-                                                    </span>
+{isCritical ? (
+                                                            <Badge variant="danger" className="text-[8px] font-bold uppercase tracking-wider">
+                                                                {item.status === 'operational' ? 'Mantenimiento' : LOCK_STATUS_LABELS[item.status]}
+                                                            </Badge>
+                                                        ) : (
+                                                            <Badge variant="warning" className="text-[8px] font-bold uppercase tracking-wider">
+                                                                {item.status === 'operational' ? 'Mantenimiento' : LOCK_STATUS_LABELS[item.status]}
+                                                            </Badge>
+                                                        )}
                                                 </div>
 
                                                 <div className="flex flex-col gap-0.5 mt-1">

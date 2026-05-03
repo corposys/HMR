@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import Card from '@shared/common/Card';
 import Button from '@shared/common/Button';
+import Badge from '@shared/common/Badge';
 
 export default function DriversTab() {
     const [isDriverModalOpen, setIsDriverModalOpen] = useState(false);
@@ -30,17 +31,17 @@ export default function DriversTab() {
         const diffTime = expiryDate - today;
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-        if (diffDays < 0) return { label: 'Vencida', class: 'text-[var(--color-danger)] font-bold' };
-        if (diffDays <= 30) return { label: `Vence en ${diffDays} días`, class: 'text-[var(--color-warning)] font-medium' };
-        return { label: 'Vigente', class: 'text-[var(--color-text-muted)]' };
+        if (diffDays < 0) return { label: 'Vencida', variant: 'danger' };
+        if (diffDays <= 30) return { label: `Vence en ${diffDays} días`, variant: 'warning' };
+        return { label: 'Vigente', variant: 'info' };
     };
 
-    const getDriverStatusStyle = (status) => {
+    const getDriverStatusVariant = (status) => {
         switch (status) {
-            case 'Activo': return 'text-[var(--color-success)] bg-[var(--color-success)]/10 border-[var(--color-success)]/20';
-            case 'Inactivo': return 'text-[var(--color-warning)] bg-[var(--color-warning)]/10 border-[var(--color-warning)]/20';
-            case 'Suspendido': return 'text-[var(--color-danger)] bg-[var(--color-danger)]/10 border-[var(--color-danger)]/20';
-            default: return 'text-[var(--color-text-muted)] bg-[var(--color-bg-tertiary)]';
+            case 'Activo': return 'success';
+            case 'Inactivo': return 'danger';
+            case 'Suspendido': return 'danger';
+            default: return 'primary';
         }
     };
 
@@ -107,16 +108,14 @@ export default function DriversTab() {
                                                 <p className="text-sm text-[var(--color-text-primary)]">
                                                     {new Date(driver.licenseExpiry).toLocaleDateString('es-VE')}
                                                 </p>
-                                                <p className={`text-xs flex items-center gap-1 ${licenseStatus.class}`}>
-                                                    {isExpired ? <AlertTriangle className="w-3 h-3" /> : (licenseStatus.label.includes('Vence en') ? <AlertTriangle className="w-3 h-3" /> : <CheckCircle2 className="w-3 h-3" />)}
-                                                    {licenseStatus.label}
-                                                </p>
+<Badge variant={licenseStatus.variant} className="gap-1">
+                                                        {isExpired ? <AlertTriangle className="w-3 h-3" /> : (licenseStatus.label.includes('Vence en') ? <AlertTriangle className="w-3 h-3" /> : <CheckCircle2 className="w-3 h-3" />)}
+                                                        {licenseStatus.label}
+                                                    </Badge>
                                             </div>
                                         </td>
                                         <td className="p-4 text-center">
-                                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${getDriverStatusStyle(driver.status)}`}>
-                                                {driver.status}
-                                            </span>
+                                            <Badge variant={getDriverStatusVariant(driver.status)}>{driver.status}</Badge>
                                         </td>
                                         <td className="p-4 text-right">
                                             <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">

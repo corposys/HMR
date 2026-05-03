@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import Card from '@shared/common/Card';
 import Button from '@shared/common/Button';
+import Badge from '@shared/common/Badge';
 
 export default function FinancialAnalyticsTab() {
     // Configuración global
@@ -53,22 +54,21 @@ export default function FinancialAnalyticsTab() {
     const anomalies = processedData.filter(v => v.isAnomaly);
 
     // Helpers para Tailwind Classes
-    const getEfficiencyColor = (actual, expected) => {
+    const getEfficiencyVariant = (actual, expected) => {
         const ratio = actual / expected;
-        if (ratio >= 0.9) return 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20';
-        if (ratio >= 0.7) return 'text-amber-500 bg-amber-500/10 border-amber-500/20';
-        return 'text-rose-500 bg-rose-500/10 border-rose-500/20';
+        if (ratio >= 0.9) return 'success';
+        if (ratio >= 0.7) return 'warning';
+        return 'danger';
     };
 
-    const getCPKColor = (cpk, type) => {
-        // Valores base de CPK aceptables según tipo
-        let threshold = 0.15; // Sedán
+    const getCPKVariant = (cpk, type) => {
+        let threshold = 0.15;
         if (type === 'Camioneta') threshold = 0.25;
         if (type === 'Autobús') threshold = 0.40;
 
-        if (cpk <= threshold) return 'text-emerald-500';
-        if (cpk <= threshold * 1.5) return 'text-amber-500';
-        return 'text-rose-500 font-bold';
+        if (cpk <= threshold) return 'success';
+        if (cpk <= threshold * 1.5) return 'warning';
+        return 'danger';
     };
 
     return (
@@ -233,15 +233,15 @@ export default function FinancialAnalyticsTab() {
                                     </td>
                                     
                                     <td className="p-4 text-center">
-                                        <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-mono font-bold border ${getEfficiencyColor(row.efficiency, row.expectedKmL)}`}>
-                                            {row.efficiency} km/L
-                                        </span>
+<Badge variant={getEfficiencyVariant(row.efficiency, row.expectedKmL)} className="font-mono font-bold">
+                                                {row.efficiency} km/L
+                                            </Badge>
                                     </td>
                                     
                                     <td className="p-4 text-right">
-                                        <span className={`font-mono text-base font-bold ${getCPKColor(row.cpk, row.type)}`}>
-                                            ${row.cpk}
-                                        </span>
+<Badge variant={getCPKVariant(row.cpk, row.type)} className="font-mono text-base font-bold">
+                                                ${row.cpk}
+                                            </Badge>
                                     </td>
                                 </tr>
                             ))}

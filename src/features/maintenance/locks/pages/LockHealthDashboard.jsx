@@ -2,8 +2,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     ArrowLeft, AlertTriangle, Battery, Shield, Activity,
-    DoorOpen, Loader2, AlertCircle, ChevronRight
+    DoorOpen, AlertCircle, ChevronRight
 } from 'lucide-react';
+import LoadingSpinner from '@shared/common/LoadingSpinner';
 import { formatDate } from '@features/maintenance/locks/utils/lockHelpers';
 import { HealthBar } from '@features/maintenance/locks/components/LockSharedComponents';
 import { useLockDashboard } from '@features/maintenance/locks/hooks/useLocks';
@@ -22,11 +23,7 @@ export default function LockHealthDashboard() {
     const healthy = predictions.filter(p => p.health_score >= 60).length;
 
     if (loading) {
-        return (
-            <div className="py-6 px-4 lg:px-8 w-full flex items-center justify-center min-h-[50vh]">
-                <Loader2 className="w-8 h-8 animate-spin text-[var(--color-primary)]" />
-            </div>
-        );
+        return <LoadingSpinner />;
     }
 
     return (
