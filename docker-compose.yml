@@ -62,6 +62,7 @@ services:
     volumes:
       - .:/app
       - /app/node_modules
+      - /app/node_modules/.vite-temp
     environment:
       - VITE_PORT=5173
       - CHOKIDAR_USEPOLLING=true

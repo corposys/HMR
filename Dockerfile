@@ -15,8 +15,8 @@ RUN npm install
 # Copiar código fuente
 COPY . .
 
-# Change ownership
-RUN chown -R nextjs:nodejs /app
+# Change ownership and ensure vite temp dir is writable
+RUN chown -R nextjs:nodejs /app && mkdir -p node_modules/.vite-temp && chown -R nextjs:nodejs node_modules/.vite-temp
 
 # Switch to non-root user
 USER nextjs
