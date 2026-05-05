@@ -1,6 +1,7 @@
 """
-Maintenance routes: CRUD for maintenance logs, stats, predictions, and alerts.
-Handles both battery and mechanical maintenance tracking for hotel room locks.
+Maintenance routes: CRUD for maintenance logs, stats, predictions, alerts,
+operational reports, and part types.
+Handles battery, mechanical, and reprogramming maintenance tracking for hotel room locks.
 """
 from datetime import date, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -8,7 +9,7 @@ from pydantic import BaseModel
 from typing import Optional, Literal
 
 from db import get_connection, release_connection
-from middleware.auth import get_current_user
+from middleware.auth import get_current_user, require_permission
 
 router = APIRouter(prefix="/api/maintenance", tags=["maintenance"])
 
@@ -18,7 +19,7 @@ router = APIRouter(prefix="/api/maintenance", tags=["maintenance"])
 class MaintenanceCreate(BaseModel):
     room_id: int
     part_type_id: Optional[int] = None
-    type: Literal["battery", "mechanical"]
+    type: Literal["battery", "mechanical", "reprogramming"]
     description: Optional[str] = None
     performed_at: Optional[str] = None  # ISO date string
 
@@ -26,6 +27,28 @@ class MaintenanceCreate(BaseModel):
 class LockUpdate(BaseModel):
     status: Optional[Literal["operational", "preventive", "failure", "out_of_service"]] = None
     notes: Optional[str] = None
+
+
+class ReportCreate(BaseModel):
+    report_type: Literal["lock_failure", "room_issue", "equipment_issue", "other"]
+    room_id: int
+    issue_description: str
+    source_department: Literal["reception", "housekeeping", "maintenance", "systems"]
+
+
+class ReportUpdate(BaseModel):
+    status: Literal["resolved", "duplicate"]
+
+
+class PartTypeCreate(BaseModel):
+    name: str
+    category: Literal["battery", "mechanical"]
+
+
+class PartTypeUpdate(BaseModel):
+    name: Optional[str] = None
+    category: Optional[Literal["battery", "mechanical"]] = None
+    is_active: Optional[bool] = None
 
 
 def _ensure_lock_asset(cur, room_id: int) -> int:
@@ -124,7 +147,7 @@ async def list_maintenance(
 @router.post("")
 async def create_maintenance(
     data: MaintenanceCreate,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_permission("maintenance", "write")),
 ):
     """Create a maintenance log entry. If type=battery, also updates rooms.last_battery_change."""
     conn = get_connection()
@@ -151,6 +174,13 @@ async def create_maintenance(
                 (perf_date, data.room_id),
             )
 
+        # Update lock status to operational after reprogramming or mechanical repair
+        if data.type in ("reprogramming", "mechanical"):
+            cur.execute(
+                "UPDATE lock_assets SET status = 'operational' WHERE id = %s AND status = 'failure'",
+                (lock_asset_id,),
+            )
+
         conn.commit()
         return {"success": True, "id": log_id}
     except Exception:
@@ -164,7 +194,10 @@ async def create_maintenance(
 # ── Delete a maintenance log ─────────────────────────────────────────────────
 
 @router.delete("/{log_id}")
-async def delete_maintenance(log_id: int, current_user: dict = Depends(get_current_user)):
+async def delete_maintenance(
+    log_id: int,
+    current_user: dict = Depends(require_permission("maintenance", "write")),
+):
     conn = get_connection()
     try:
         cur = conn.cursor()
@@ -221,6 +254,22 @@ async def maintenance_stats(current_user: dict = Depends(get_current_user)):
         """)
         by_module = [{"module": r[0], "count": r[1]} for r in cur.fetchall()]
 
+        # Reports summary
+        cur.execute("""
+            SELECT status, COUNT(*) FROM operational_reports
+            WHERE status = 'pending'
+            GROUP BY status
+        """)
+        pending_reports = 0
+        for r in cur.fetchall():
+            pending_reports = r[1]
+
+        # Lock status counts
+        cur.execute("""
+            SELECT status, COUNT(*) FROM lock_assets GROUP BY status
+        """)
+        by_lock_status = {r[0]: r[1] for r in cur.fetchall()}
+
         return {
             "success": True,
             "stats": {
@@ -228,6 +277,12 @@ async def maintenance_stats(current_user: dict = Depends(get_current_user)):
                 "this_month": this_month,
                 "battery_changes": by_type.get("battery", 0),
                 "mechanical_repairs": by_type.get("mechanical", 0),
+                "reprogrammings": by_type.get("reprogramming", 0),
+                "pending_reports": pending_reports,
+                "locks_operational": by_lock_status.get("operational", 0),
+                "locks_preventive": by_lock_status.get("preventive", 0),
+                "locks_failure": by_lock_status.get("failure", 0),
+                "locks_out_of_service": by_lock_status.get("out_of_service", 0),
                 "by_module": by_module,
             },
         }
@@ -245,11 +300,331 @@ async def list_part_types(current_user: dict = Depends(get_current_user)):
     conn = get_connection()
     try:
         cur = conn.cursor()
-        cur.execute("SELECT id, name, category FROM part_types ORDER BY category, name")
-        parts = [{"id": r[0], "name": r[1], "category": r[2]} for r in cur.fetchall()]
+        cur.execute("SELECT id, name, category, is_active FROM part_types ORDER BY category, name")
+        parts = [{"id": r[0], "name": r[1], "category": r[2], "is_active": r[3]} for r in cur.fetchall()]
         return {"success": True, "part_types": parts}
     except Exception:
         raise HTTPException(status_code=500, detail="Error al obtener tipos de piezas")
+    finally:
+        cur.close()
+        release_connection(conn)
+
+
+@router.post("/part-types")
+async def create_part_type(
+    data: PartTypeCreate,
+    current_user: dict = Depends(require_permission("maintenance", "write")),
+):
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO part_types (name, category) VALUES (%s, %s) RETURNING id",
+            (data.name, data.category),
+        )
+        pt_id = cur.fetchone()[0]
+        conn.commit()
+        return {"success": True, "id": pt_id}
+    except Exception:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail="Error al crear tipo de pieza")
+    finally:
+        cur.close()
+        release_connection(conn)
+
+
+@router.put("/part-types/{pt_id}")
+async def update_part_type(
+    pt_id: int,
+    data: PartTypeUpdate,
+    current_user: dict = Depends(require_permission("maintenance", "write")),
+):
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+        updates, params = [], []
+
+        if data.name is not None:
+            updates.append("name = %s")
+            params.append(data.name)
+        if data.category is not None:
+            updates.append("category = %s")
+            params.append(data.category)
+        if data.is_active is not None:
+            updates.append("is_active = %s")
+            params.append(data.is_active)
+
+        if not updates:
+            raise HTTPException(status_code=400, detail="No hay campos para actualizar")
+
+        params.append(pt_id)
+        cur.execute(f"UPDATE part_types SET {', '.join(updates)} WHERE id = %s", params)
+        conn.commit()
+
+        if cur.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Tipo de pieza no encontrado")
+
+        return {"success": True}
+    except HTTPException:
+        raise
+    except Exception:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail="Error al actualizar tipo de pieza")
+    finally:
+        cur.close()
+        release_connection(conn)
+
+
+@router.delete("/part-types/{pt_id}")
+async def delete_part_type(
+    pt_id: int,
+    current_user: dict = Depends(require_permission("maintenance", "write")),
+):
+    """Soft-delete a part type."""
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute("UPDATE part_types SET is_active = FALSE WHERE id = %s", (pt_id,))
+        conn.commit()
+        if cur.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Tipo de pieza no encontrado")
+        return {"success": True}
+    except HTTPException:
+        raise
+    except Exception:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail="Error al desactivar tipo de pieza")
+    finally:
+        cur.close()
+        release_connection(conn)
+
+
+# ── Operational Reports ──────────────────────────────────────────────────────
+
+@router.get("/reports")
+async def list_reports(
+    room_id: Optional[int] = None,
+    status: Optional[str] = None,
+    report_type: Optional[str] = None,
+    source_department: Optional[str] = None,
+    limit: int = Query(default=50, le=200),
+    offset: int = 0,
+    current_user: dict = Depends(get_current_user),
+):
+    """List operational reports with optional filters."""
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+        query = """
+            SELECT
+                opr.id, opr.report_type, opr.room_id, opr.lock_asset_id,
+                opr.source_department, opr.issue_description, opr.status,
+                opr.created_at, opr.resolved_at,
+                r.room_number,
+                f.code AS floor_code,
+                m.name AS module_name,
+                u.full_name AS reported_by_name,
+                ru.full_name AS resolved_by_name,
+                la.status AS lock_status
+            FROM operational_reports opr
+            JOIN rooms r ON opr.room_id = r.id
+            JOIN floors f ON r.floor_id = f.id
+            JOIN modules m ON f.module_id = m.id
+            LEFT JOIN users u ON opr.reported_by = u.id
+            LEFT JOIN users ru ON opr.resolved_by = ru.id
+            LEFT JOIN lock_assets la ON opr.lock_asset_id = la.id
+            WHERE 1=1
+        """
+        params = []
+
+        if room_id:
+            query += " AND opr.room_id = %s"
+            params.append(room_id)
+        if status:
+            query += " AND opr.status = %s"
+            params.append(status)
+        if report_type:
+            query += " AND opr.report_type = %s"
+            params.append(report_type)
+        if source_department:
+            query += " AND opr.source_department = %s"
+            params.append(source_department)
+
+        query += " ORDER BY opr.created_at DESC LIMIT %s OFFSET %s"
+        params.extend([limit, offset])
+
+        cur.execute(query, params)
+        rows = cur.fetchall()
+
+        reports = [
+            {
+                "id": r[0], "report_type": r[1], "room_id": r[2], "lock_asset_id": r[3],
+                "source_department": r[4], "issue_description": r[5], "status": r[6],
+                "created_at": r[7].isoformat() if r[7] else None,
+                "resolved_at": r[8].isoformat() if r[8] else None,
+                "room_number": r[9], "floor_code": r[10], "module_name": r[11],
+                "reported_by_name": r[12], "resolved_by_name": r[13], "lock_status": r[14],
+            }
+            for r in rows
+        ]
+        return {"success": True, "reports": reports}
+    except Exception:
+        raise HTTPException(status_code=500, detail="Error al obtener reportes")
+    finally:
+        cur.close()
+        release_connection(conn)
+
+
+@router.post("/reports")
+async def create_report(
+    data: ReportCreate,
+    current_user: dict = Depends(require_permission("maintenance", "write")),
+):
+    """Create an operational report. If lock_failure, updates lock_assets.status to 'failure'."""
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+
+        # Check for active duplicate
+        cur.execute(
+            """
+            SELECT id FROM operational_reports
+            WHERE room_id = %s AND report_type = %s AND status = 'pending'
+            LIMIT 1
+            """,
+            (data.room_id, data.report_type),
+        )
+        if cur.fetchone():
+            raise HTTPException(
+                status_code=409,
+                detail="Ya existe un reporte activo de este tipo para esta habitación"
+            )
+
+        # Get lock_asset_id if report_type is lock_failure
+        lock_asset_id = None
+        if data.report_type == "lock_failure":
+            cur.execute("SELECT id FROM lock_assets WHERE room_id = %s", (data.room_id,))
+            row = cur.fetchone()
+            lock_asset_id = row[0] if row else None
+
+        cur.execute("""
+            INSERT INTO operational_reports
+            (report_type, room_id, lock_asset_id, source_department, issue_description, reported_by, status)
+            VALUES (%s, %s, %s, %s, %s, %s, 'pending')
+            RETURNING id
+        """, (
+            data.report_type, data.room_id, lock_asset_id,
+            data.source_department, data.issue_description, current_user["id"],
+        ))
+        report_id = cur.fetchone()[0]
+
+        # Update lock status to failure
+        if data.report_type == "lock_failure" and lock_asset_id:
+            cur.execute(
+                "UPDATE lock_assets SET status = 'failure' WHERE id = %s",
+                (lock_asset_id,),
+            )
+
+        conn.commit()
+        return {"success": True, "id": report_id}
+    except HTTPException:
+        conn.rollback()
+        raise
+    except Exception:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail="Error al crear reporte")
+    finally:
+        cur.close()
+        release_connection(conn)
+
+
+@router.patch("/reports/{report_id}")
+async def resolve_report(
+    report_id: int,
+    data: ReportUpdate,
+    current_user: dict = Depends(require_permission("maintenance", "write")),
+):
+    """Resolve or mark a report as duplicate. If lock_failure, may restore lock status."""
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+
+        cur.execute(
+            """
+            SELECT report_type, room_id, lock_asset_id, status
+            FROM operational_reports WHERE id = %s
+            """,
+            (report_id,),
+        )
+        row = cur.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Reporte no encontrado")
+
+        report_type, room_id, lock_asset_id, current_status = row
+        if current_status != "pending":
+            raise HTTPException(status_code=400, detail="El reporte ya fue cerrado")
+
+        resolved_at = date.today().isoformat()
+        cur.execute("""
+            UPDATE operational_reports
+            SET status = %s, resolved_by = %s, resolved_at = %s
+            WHERE id = %s
+        """, (data.status, current_user["id"], resolved_at, report_id))
+
+        # If resolving a lock_failure, check if there are other pending lock failures for this room
+        if report_type == "lock_failure" and lock_asset_id:
+            cur.execute(
+                """
+                SELECT COUNT(*) FROM operational_reports
+                WHERE room_id = %s AND report_type = 'lock_failure' AND status = 'pending'
+                """,
+                (room_id,),
+            )
+            remaining = cur.fetchone()[0]
+            if remaining == 0:
+                # Check battery status before deciding status
+                cur.execute("""
+                    SELECT r.last_battery_change FROM rooms r WHERE r.id = %s
+                """, (room_id,))
+                last_change = cur.fetchone()[0]
+
+                new_status = "operational"
+                if last_change:
+                    today = date.today()
+                    days_since = (today - last_change).days
+                    # Get avg days
+                    cur.execute("""
+                        SELECT performed_at FROM maintenance_logs
+                        WHERE room_id = %s AND type = 'battery'
+                        ORDER BY performed_at DESC LIMIT 4
+                    """, (room_id,))
+                    dates = [r[0] for r in cur.fetchall()]
+                    if len(dates) >= 2:
+                        intervals = []
+                        for i in range(len(dates) - 1):
+                            delta = (dates[i] - dates[i + 1]).days
+                            if delta > 0:
+                                intervals.append(delta)
+                        avg_days = int(sum(intervals) / len(intervals)) if intervals else 90
+                    else:
+                        avg_days = 90
+                    health = max(0, min(100, int(100 - (days_since / max(avg_days, 1)) * 100)))
+                    if health < 30:
+                        new_status = "preventive"
+
+                cur.execute(
+                    "UPDATE lock_assets SET status = %s WHERE id = %s",
+                    (new_status, lock_asset_id),
+                )
+
+        conn.commit()
+        return {"success": True}
+    except HTTPException:
+        conn.rollback()
+        raise
+    except Exception:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail="Error al actualizar reporte")
     finally:
         cur.close()
         release_connection(conn)
@@ -370,7 +745,7 @@ async def get_alerts(
     }
 
 
-# ── Locks inventory (phase 1) ───────────────────────────────────────────────
+# ── Locks inventory ──────────────────────────────────────────────────────────
 
 @router.get("/locks")
 async def list_locks(
@@ -380,15 +755,16 @@ async def list_locks(
     status: Optional[str] = None,
     current_user: dict = Depends(get_current_user),
 ):
-    """List lock assets mapped to rooms with latest maintenance context."""
+    """List lock assets mapped to rooms with latest maintenance context.
+    Auto-transitions operational locks to preventive if battery health < 30."""
     conn = get_connection()
     try:
         cur = conn.cursor()
         query = """
             SELECT la.id, la.code, la.status,
                    r.id AS room_id, r.room_number, r.status AS room_status,
-                   f.id AS floor_id, f.code AS floor_code,
-                   m.id AS module_id, m.name AS module_name, m.number AS module_number,
+                   f.id AS floor_id, f.code AS floor_code, f.is_active AS floor_is_active,
+                   m.id AS module_id, m.name AS module_name, m.number AS module_number, m.is_active AS module_is_active,
                    r.last_battery_change,
                    (
                        SELECT ml.performed_at FROM maintenance_logs ml
@@ -431,27 +807,72 @@ async def list_locks(
         cur.execute(query, params)
         rows = cur.fetchall()
 
+        today = date.today()
         locks = []
+        locks_to_update = []
+
         for r in rows:
             lock_id = r[0]
-            # Return null for lock_id if no lock asset exists (GET should not mutate)
+            current_lock_status = r[2] if lock_id else "operational"
+            last_battery_change = r[13]
+            room_id_val = r[3]
+
+            # Auto-transition: if operational and battery health < 30, set to preventive
+            if current_lock_status == "operational" and last_battery_change:
+                days_since = (today - last_battery_change).days
+                # Get avg days for this room
+                cur.execute("""
+                    SELECT performed_at FROM maintenance_logs
+                    WHERE room_id = %s AND type = 'battery'
+                    ORDER BY performed_at DESC LIMIT 4
+                """, (room_id_val,))
+                dates = [row[0] for row in cur.fetchall()]
+                if len(dates) >= 2:
+                    intervals = []
+                    for i in range(len(dates) - 1):
+                        delta = (dates[i] - dates[i + 1]).days
+                        if delta > 0:
+                            intervals.append(delta)
+                    avg_days = int(sum(intervals) / len(intervals)) if intervals else 90
+                else:
+                    avg_days = 90
+                health = max(0, min(100, int(100 - (days_since / max(avg_days, 1)) * 100)))
+                if health < 30:
+                    current_lock_status = "preventive"
+                    if lock_id:
+                        locks_to_update.append((lock_id, "preventive"))
+
             locks.append({
                 "id": lock_id,
                 "code": r[1] if lock_id else None,
-                "status": r[2] if lock_id else "operational",
-                "room_id": r[3],
+                "status": current_lock_status,
+                "room_id": room_id_val,
                 "room_number": r[4],
                 "room_status": r[5],
                 "floor_id": r[6],
                 "floor_code": r[7],
-                "module_id": r[8],
-                "module_name": r[9],
-                "module_number": r[10],
-                "last_battery_change": r[11].isoformat() if r[11] else None,
-                "last_maintenance_at": r[12].isoformat() if r[12] else None,
-                "last_maintenance_type": r[13],
-                "events_count": r[14],
+                "floor_is_active": r[8] if r[8] is not None else True,
+                "module_id": r[9],
+                "module_name": r[10],
+                "module_number": r[11],
+                "module_is_active": r[12] if r[12] is not None else True,
+                "last_battery_change": r[13].isoformat() if r[13] else None,
+                "last_maintenance_at": r[14].isoformat() if r[14] else None,
+                "last_maintenance_type": r[15],
+                "events_count": r[16],
             })
+
+        # Batch update locks that transitioned to preventive
+        for lid, new_status in locks_to_update:
+            cur.execute(
+                "UPDATE lock_assets SET status = %s WHERE id = %s",
+                (new_status, lid),
+            )
+
+        if locks_to_update:
+            conn.commit()
+        else:
+            conn.commit()  # commit anyway since we may have other side effects
 
         return {"success": True, "locks": locks}
     except Exception:
@@ -541,7 +962,7 @@ async def list_lock_events(lock_id: int, current_user: dict = Depends(get_curren
 async def update_lock_asset(
     lock_id: int,
     data: LockUpdate,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_permission("maintenance", "write")),
 ):
     """Update lock status/notes for operational tracking."""
     conn = get_connection()

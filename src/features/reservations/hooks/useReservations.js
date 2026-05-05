@@ -76,3 +76,26 @@ export function useReservations(params = {}) {
 
     return { reservations, isLoading, error, fetchReservations, getReservation, createReservation, updateReservation, checkin, checkout };
 }
+
+export function useReservationsDashboard() {
+    const [dashboard, setDashboard] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+        let mounted = true;
+        apiFetch('/api/reception/reservations/dashboard')
+            .then((data) => {
+                if (mounted) setDashboard(data.dashboard);
+            })
+            .catch((err) => {
+                if (mounted) setError(err.message);
+            })
+            .finally(() => {
+                if (mounted) setIsLoading(false);
+            });
+        return () => { mounted = false; };
+    }, []);
+
+    return { dashboard, isLoading, error };
+}

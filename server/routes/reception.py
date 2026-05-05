@@ -802,6 +802,72 @@ async def create_reservation(
         release_connection(conn)
 
 
+# ── Reservations Dashboard ────────────────────────────────────────────────────────────
+
+@router.get("/reservations/dashboard")
+async def get_reservations_dashboard(
+    current_user: dict = Depends(require_permission("reception", "read")),
+):
+    """Reservations dashboard stats."""
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+        today = date.today()
+        
+        cur.execute("SELECT COUNT(*) FROM rooms WHERE status = 'active'")
+        total_rooms = cur.fetchone()[0]
+        
+        cur.execute("SELECT COUNT(*) FROM reservations WHERE status = 'reserved'")
+        pending_arrivals = cur.fetchone()[0]
+        
+        cur.execute("""
+            SELECT COUNT(*) FROM reservations 
+            WHERE status = 'reserved' AND check_in_date = %s
+        """, (today,))
+        arrivals_today = cur.fetchone()[0]
+        
+        cur.execute("""
+            SELECT COUNT(*) FROM reservations 
+            WHERE status = 'reserved' AND check_out_date = %s
+        """, (today,))
+        departures_today = cur.fetchone()[0]
+        
+        cur.execute("SELECT COUNT(*) FROM reservations WHERE status = 'checked_in'")
+        in_house = cur.fetchone()[0]
+        
+        cur.execute("""
+            SELECT COUNT(*) FROM reservations 
+            WHERE status = 'checked_out' 
+            AND DATE(check_out_date) = DATE_TRUNC('month', CURRENT_DATE)
+        """)
+        checked_out_month = cur.fetchone()[0]
+        
+        cur.execute("""
+            SELECT COUNT(*) FROM reservations 
+            WHERE status = 'no_show' 
+            AND DATE(check_in_date) = %s
+        """, (today,))
+        no_shows_today = cur.fetchone()[0]
+        
+        return {
+            "success": True,
+            "dashboard": {
+                "total_rooms": total_rooms,
+                "pending_arrivals": pending_arrivals,
+                "arrivals_today": arrivals_today,
+                "departures_today": departures_today,
+                "in_house": in_house,
+                "checked_out_month": checked_out_month,
+                "no_shows_today": no_shows_today,
+            },
+        }
+    except Exception:
+        raise HTTPException(status_code=500, detail="Error al obtener dashboard de reservas")
+    finally:
+        cur.close()
+        release_connection(conn)
+
+
 @router.get("/reservations/{reservation_id}")
 async def get_reservation(reservation_id: int, current_user: dict = Depends(get_current_user)):
     """Full reservation detail with guest, room, folio, payments, and charges."""

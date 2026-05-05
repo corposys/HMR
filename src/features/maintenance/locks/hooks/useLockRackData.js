@@ -5,7 +5,11 @@ export function useLockRackData(locks, predictionsByRoom, search, statusFilter) 
     const filteredLocks = useMemo(() => {
         const q = search.trim().toLowerCase();
         return locks.filter((item) => {
-            if (item.room_status === 'inactive' || item.module_is_active === false || item.floor_is_active === false) {
+            if (item.room_status !== 'active') {
+                return false;
+            }
+
+            if (item.floor_is_active === false || item.module_is_active === false) {
                 return false;
             }
 

@@ -218,6 +218,7 @@ def _create_tables(cur):
             id          SERIAL PRIMARY KEY,
             name        VARCHAR(100) NOT NULL UNIQUE,
             category    VARCHAR(20) NOT NULL CHECK (category IN ('battery', 'mechanical')),
+            is_active   BOOLEAN DEFAULT TRUE,
             created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
     """)
@@ -239,7 +240,7 @@ def _create_tables(cur):
             room_id       INTEGER NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
             lock_asset_id INTEGER REFERENCES lock_assets(id) ON DELETE SET NULL,
             part_type_id  INTEGER REFERENCES part_types(id) ON DELETE SET NULL,
-            type          VARCHAR(20) NOT NULL CHECK (type IN ('battery', 'mechanical')),
+            type          VARCHAR(20) NOT NULL CHECK (type IN ('battery', 'mechanical', 'reprogramming')),
             description   TEXT,
             performed_by  INTEGER REFERENCES users(id) ON DELETE SET NULL,
             performed_at  DATE NOT NULL DEFAULT CURRENT_DATE,
@@ -518,6 +519,44 @@ def _run_migrations(cur):
     cur.execute("ALTER TABLE housekeeping_assignments ADD COLUMN IF NOT EXISTS inspected_by INTEGER REFERENCES users(id) ON DELETE SET NULL")
     cur.execute("ALTER TABLE housekeeping_assignments ADD COLUMN IF NOT EXISTS inspected_at TIMESTAMP")
     cur.execute("ALTER TABLE housekeeping_assignments ADD COLUMN IF NOT EXISTS inspection_notes TEXT")
+    cur.execute("ALTER TABLE part_types ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE")
+
+    cur.execute("""
+        DO $$
+        BEGIN
+            IF EXISTS (
+                SELECT 1 FROM pg_constraint WHERE conname = 'maintenance_logs_type_check'
+            ) THEN
+                ALTER TABLE maintenance_logs DROP CONSTRAINT maintenance_logs_type_check;
+            END IF;
+            ALTER TABLE maintenance_logs ADD CONSTRAINT maintenance_logs_type_check
+                CHECK (type IN ('battery', 'mechanical', 'reprogramming'));
+        END $$;
+    """)
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS operational_reports (
+            id              SERIAL PRIMARY KEY,
+            report_type     VARCHAR(30) NOT NULL
+                CHECK (report_type IN ('lock_failure', 'room_issue', 'equipment_issue', 'other')),
+            room_id         INTEGER NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
+            lock_asset_id   INTEGER REFERENCES lock_assets(id) ON DELETE SET NULL,
+            reported_by     INTEGER REFERENCES users(id) ON DELETE SET NULL,
+            source_department VARCHAR(30) NOT NULL
+                CHECK (source_department IN ('reception', 'housekeeping', 'maintenance', 'systems')),
+            issue_description TEXT NOT NULL,
+            status          VARCHAR(20) NOT NULL DEFAULT 'pending'
+                CHECK (status IN ('pending', 'resolved', 'duplicate')),
+            resolved_by     INTEGER REFERENCES users(id) ON DELETE SET NULL,
+            created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            resolved_at     TIMESTAMP
+        );
+    """)
+    cur.execute("""
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_active_report
+        ON operational_reports (room_id, report_type)
+        WHERE status = 'pending';
+    """)
 
     cur.execute("""
         CREATE TABLE IF NOT EXISTS housekeeping_incidents (

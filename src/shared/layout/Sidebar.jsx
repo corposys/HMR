@@ -22,6 +22,7 @@ const sidebarConfig = [
         icon: CalendarCheck,
         label: 'Reservaciones',
         items: [
+            { to: '/reservaciones/dashboard', label: 'Dashboard' },
             { to: '/reservaciones', label: 'Reservas' },
             { to: '/reservaciones/tarifas', label: 'Temporadas y Tarifas' },
         ],
@@ -32,6 +33,7 @@ const sidebarConfig = [
         icon: Hotel,
         label: 'Recepción',
         items: [
+            { to: '/reception/dashboard', label: 'Dashboard' },
             { to: '/reception/operations', label: 'Check-in/out' },
             { to: '/reception/folios', label: 'Folios' },
             { to: '/reception/walkins', label: 'Walk-ins' },

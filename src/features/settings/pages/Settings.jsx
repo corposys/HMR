@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Users, Globe, Link as LinkIcon, Building2 } from 'lucide-react';
+import { Users, Globe, Link as LinkIcon, Building2, Wrench } from 'lucide-react';
 import Tabs from '@shared/common/Tabs';
 import HotelStructureTab from './HotelStructureTab';
 import GeneralTab from './GeneralTab';
+import PartTypesTab from './PartTypesTab';
 
 // Simple mock components for the new tabs
 function IntegrationsTab() {
@@ -40,6 +41,7 @@ export default function Settings() {
     const tabs = [
         { id: 'general', label: 'General', icon: Globe, component: GeneralTab },
         { id: 'structure', label: 'Estructura', icon: Building2, component: HotelStructureTab },
+        { id: 'locks', label: 'Cerraduras', icon: Wrench, component: PartTypesTab },
         { id: 'integrations', label: 'Integraciones', icon: LinkIcon, component: IntegrationsTab },
         { id: 'users', label: 'Usuarios', icon: Users, component: UsersTab },
     ];

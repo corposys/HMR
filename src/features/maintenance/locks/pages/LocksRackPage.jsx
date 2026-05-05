@@ -12,6 +12,7 @@ import { LockSummaryCard } from '@features/maintenance/locks/components/LockShar
 import CreateLockEventModal from '@features/maintenance/locks/components/CreateLockEventModal';
 import LockRackHeader from '@features/maintenance/locks/components/LockRackHeader';
 import LockTimelineModal from '@features/maintenance/locks/components/LockTimelineModal';
+import ReportModal from '@features/maintenance/locks/components/ReportModal';
 
 export default function LocksRackPage() {
     const navigate = useNavigate();
@@ -24,8 +25,10 @@ export default function LocksRackPage() {
     const [detailLoading, setDetailLoading] = useState(false);
     const [showCreate, setShowCreate] = useState(false);
     const [showTimelineModal, setShowTimelineModal] = useState(false);
+    const [showReport, setShowReport] = useState(false);
     const [rackViewMode] = useState(RACK_VIEW_MODES.priority);
     const [savingEvent, setSavingEvent] = useState(false);
+    const [savingReport, setSavingReport] = useState(false);
     const [updatingStatus, setUpdatingStatus] = useState(false);
 
     const { locks, predictionsByRoom, loading, error, fetchLocksOverview } = useLocksOverview();
@@ -121,6 +124,31 @@ export default function LocksRackPage() {
         navigate(`/maintenance/room/${roomId}`);
     };
 
+    const handleCreateReport = async (data) => {
+        setSavingReport(true);
+        try {
+            await apiFetch('/api/maintenance/reports', {
+                method: 'POST',
+                body: JSON.stringify(data),
+            });
+            setShowReport(false);
+            await fetchLocksOverview();
+            showToast({
+                title: 'Reporte creado',
+                message: 'El reporte ha sido registrado exitosamente',
+                type: 'success',
+            });
+        } catch (err) {
+            showToast({
+                title: 'Error',
+                message: err.message || 'No se pudo crear el reporte',
+                type: 'error',
+            });
+        } finally {
+            setSavingReport(false);
+        }
+    };
+
     if (loading) {
         return <LoadingSpinner />;
     }
@@ -140,6 +168,7 @@ export default function LocksRackPage() {
                         setSelectedLock(null);
                         setShowCreate(true);
                     }}
+                    onOpenReport={() => setShowReport(true)}
                     onOpenLockDetail={openLockDetail}
                     failureCount={filteredLocks.filter((item) => item.status === 'failure').length}
                     outOfServiceCount={filteredLocks.filter((item) => item.status === 'out_of_service').length}
@@ -272,6 +301,14 @@ export default function LocksRackPage() {
                     onRefresh={() => fetchLockDetail(selectedLockId)}
                     onUpdateStatus={handleUpdateLockStatus}
                     updatingStatus={updatingStatus}
+                />
+            )}
+
+            {showReport && (
+                <ReportModal
+                    onSave={handleCreateReport}
+                    onCancel={() => setShowReport(false)}
+                    saving={savingReport}
                 />
             )}
         </div>

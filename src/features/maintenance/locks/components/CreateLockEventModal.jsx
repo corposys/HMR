@@ -1,8 +1,22 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Wrench, Battery, Cog, Plus, Search, X, Loader2 } from 'lucide-react';
+import { Wrench, Battery, Cog, Plus, Search, X, Loader2, Radio, HelpCircle } from 'lucide-react';
 import { apiFetch } from '@utils/api';
 import Modal from '@shared/common/Modal';
 import CustomDropdown from '@shared/common/CustomDropdown';
+
+function Tooltip({ children, text }) {
+    return (
+        <div className="group relative inline-block">
+            {children}
+            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-50 whitespace-nowrap">
+                <div className="bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-xs text-[var(--color-text-primary)] shadow-xl whitespace-pre-line w-48 text-center">
+                    {text}
+                    <div className="absolute left-1/2 -translate-x-1/2 -bottom-1 w-2 h-2 bg-[var(--color-bg-elevated)] border-r border-b border-[var(--color-border)] rotate-45"></div>
+                </div>
+            </div>
+        </div>
+    );
+}
 
 export default function CreateLockEventModal({ onSave, onCancel, saving, initialRoomId = null, lockRoomSelection = false }) {
     const [rooms, setRooms] = useState([]);
@@ -22,11 +36,12 @@ export default function CreateLockEventModal({ onSave, onCancel, saving, initial
         apiFetch('/api/structure/rooms?status=active')
             .then(d => setRooms(d.rooms || []));
         apiFetch('/api/maintenance/part-types')
-            .then(d => setPartTypes(d.part_types || []));
+            .then(d => {
+                const activeParts = (d.part_types || []).filter(p => p.is_active !== false);
+                setPartTypes(activeParts);
+            });
     }, []);
 
-    // Initialize selected room when rooms load and initialRoomId is provided
-    // Using a ref to avoid the set-state-in-effect ESLint error while still syncing external -> internal state
     const hasInitializedRoom = useRef(false);
     useEffect(() => {
         if (hasInitializedRoom.current) return;
@@ -36,15 +51,10 @@ export default function CreateLockEventModal({ onSave, onCancel, saving, initial
         if (!initialRoom) return;
 
         hasInitializedRoom.current = true;
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         setSelectedRoom(initialRoom);
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         setForm((current) => ({ ...current, room_id: initialRoom.id }));
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         setRoomQuery('');
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         setShowSuggestions(false);
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         setActiveIdx(-1);
     }, [initialRoomId, rooms]);
 
@@ -95,6 +105,32 @@ export default function CreateLockEventModal({ onSave, onCancel, saving, initial
         if (e.key === 'Enter') { e.preventDefault(); if (activeIdx >= 0) selectRoom(suggestions[activeIdx]); }
         if (e.key === 'Escape') { setShowSuggestions(false); }
     };
+
+    const registrationTypes = [
+        {
+            value: 'battery',
+            label: 'Cambio de Batería',
+            icon: Battery,
+            color: 'blue',
+            helpText: 'Reinicia el 100% de vida útil de la batería. Se recalcula el próximo pronóstico.'
+        },
+        {
+            value: 'mechanical',
+            label: 'Reparación Mecánica',
+            icon: Cog,
+            color: 'orange',
+            helpText: 'Reemplazo de piezas o reparaciones. No afecta la predicción de batería.'
+        },
+        {
+            value: 'reprogramming',
+            label: 'Reprogramación',
+            icon: Radio,
+            color: 'purple',
+            helpText: 'Programación o reconfiguración de la cerradura. No afecta la predicción.'
+        }
+    ];
+
+    const currentTypeInfo = registrationTypes.find(t => t.value === form.type);
 
     return (
         <Modal
@@ -202,21 +238,28 @@ export default function CreateLockEventModal({ onSave, onCancel, saving, initial
                 </div>
 
                 <div>
-                    <label className="text-xs font-medium text-[var(--color-text-secondary)] mb-2 block">
+                    <label className="text-xs font-medium text-[var(--color-text-secondary)] mb-2 flex items-center gap-1">
                         Tipo de Registro
+                        {currentTypeInfo && (
+                            <Tooltip text={currentTypeInfo.helpText}>
+                                <HelpCircle className="w-3.5 h-3.5 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] cursor-help" />
+                            </Tooltip>
+                        )}
                     </label>
-                    <div className="flex gap-2 mb-3">
-                        {[
-                            { value: 'battery', label: 'Cambio de Batería', icon: Battery },
-                            { value: 'mechanical', label: 'Reparación Mecánica', icon: Cog },
-                        ].map(opt => {
+                    <div className="flex gap-2">
+                        {registrationTypes.map(opt => {
                             const Icon = opt.icon;
                             const active = form.type === opt.value;
+                            const colorClasses = {
+                                blue: active ? 'bg-blue-500/10 border-blue-500/40 text-blue-400' : 'hover:bg-blue-500/5',
+                                orange: active ? 'bg-orange-500/10 border-orange-500/40 text-orange-400' : 'hover:bg-orange-500/5',
+                                purple: active ? 'bg-purple-500/10 border-purple-500/40 text-purple-400' : 'hover:bg-purple-500/5',
+                            };
                             return (
                                 <button key={opt.value}
                                     onClick={() => setForm(f => ({ ...f, type: opt.value, part_type_id: '' }))}
                                     className={`flex-1 flex flex-col items-center justify-center gap-1.5 p-3 rounded-xl border transition-all ${active
-                                        ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/40 text-[var(--color-primary)] shadow-sm'
+                                        ? `${colorClasses[opt.color]} border-opacity-40 shadow-sm`
                                         : 'bg-[var(--color-bg-secondary)] border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)]'
                                         }`}
                                 >
@@ -229,23 +272,8 @@ export default function CreateLockEventModal({ onSave, onCancel, saving, initial
                         })}
                     </div>
 
-                    {form.type === 'battery' && (
-                        <div className="flex items-start gap-2.5 p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl">
-                            <Battery className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
-                            <p className="text-[11px] leading-relaxed text-blue-400">
-                                <span className="font-semibold block mb-0.5">Control Predictivo</span>
-                                Al procesar este registro, la vida útil estimada de la batería de esta habitación se reiniciará al 100% y se recalculará el próximo pronóstico de cambio.
-                            </p>
-                        </div>
-                    )}
-                    {form.type === 'mechanical' && (
-                        <div className="flex items-start gap-2.5 p-3 bg-orange-500/10 border border-orange-500/20 rounded-xl">
-                            <Cog className="w-4 h-4 text-orange-500 shrink-0 mt-0.5" />
-                            <p className="text-[11px] leading-relaxed text-orange-400">
-                                <span className="font-semibold block mb-0.5">Mantenimiento Mecánico</span>
-                                Registra el reemplazo de piezas o reparaciones en el mecanismo de la cerradura. Esto no afectará la predicción de batería.
-                            </p>
-                        </div>
+                    {!currentTypeInfo && (
+                        <p className="text-[11px] text-[var(--color-text-muted)] mt-2">Selecciona un tipo de registro para ver más información.</p>
                     )}
                 </div>
 
