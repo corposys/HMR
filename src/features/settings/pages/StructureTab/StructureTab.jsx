@@ -403,7 +403,7 @@ const ModuleCard = ({ module, roomTypes, isEditable, canEditType, onToggleEditMo
     );
 };
 
-export default function HotelStructureTab() {
+export default function StructureTab() {
     const [property, setProperty] = useState(null);
     const [roomTypes, setRoomTypes] = useState([]);
     const [loading, setLoading] = useState(true);

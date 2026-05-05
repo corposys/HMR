@@ -1,7 +1,7 @@
 import { lazy } from 'react';
 
 const Dashboard = lazy(() => import('@features/dashboard/pages/Dashboard'));
-const Settings = lazy(() => import('@features/settings/pages/Settings'));
+const Settings = lazy(() => import('@features/settings/pages/SettingsPage'));
 const Signatures = lazy(() => import('@features/signatures/pages/Signatures'));
 const SignaturesHistory = lazy(() => import('@features/signatures/pages/SignaturesHistory'));
 const Habitaciones = lazy(() => import('@features/maintenance/pages/Habitaciones'));

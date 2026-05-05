@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { Home, Settings, Wrench, ChevronDown, Shield, BedDouble, Hotel, ServerCog, CalendarCheck, Receipt, Monitor, DoorOpen, Moon, BookOpen } from 'lucide-react';
+import { Home, Settings, Wrench, ChevronDown, Shield, BedDouble, Hotel, ServerCog, CalendarCheck, Monitor } from 'lucide-react';
 
 const sidebarConfig = [
     {
@@ -94,14 +94,14 @@ function SidebarDropdown({ section, isOpen, onToggle, isActive, onCloseMobile })
             <button
                 onClick={onToggle}
                 aria-expanded={isOpen}
-                className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-colors ${
+                className={`w-full flex items-center justify-between px-2.5 py-1.5 text-sm rounded-lg transition-colors ${
                     isActive
                         ? 'bg-[var(--color-bg-tertiary)] text-[var(--color-primary)]'
                         : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-primary)]'
                 }`}
             >
                 <div className="flex items-center gap-3">
-                    <Icon className="w-5 h-5" />
+                    <Icon className="w-4 h-4" />
                     <span>{section.label}</span>
                 </div>
                 <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
@@ -115,7 +115,7 @@ function SidebarDropdown({ section, isOpen, onToggle, isActive, onCloseMobile })
                             to={item.to}
                             onClick={onCloseMobile}
                             className={({ isActive }) =>
-                                `group flex items-center gap-3 py-2 pl-11 pr-3 text-sm rounded-lg transition-colors ${
+                                `group flex items-center gap-3 py-1.5 pl-10 pr-2.5 text-sm rounded-lg transition-colors ${
                                     isActive
                                         ? 'text-[var(--color-text-primary)] font-medium bg-[var(--color-bg-tertiary)]/50'
                                         : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]/30'
@@ -124,7 +124,7 @@ function SidebarDropdown({ section, isOpen, onToggle, isActive, onCloseMobile })
                         >
                             {({ isActive }) => (
                                 <>
-                                    <div className={`w-1.5 h-1.5 rounded-full transition-colors ${isActive ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-text-muted)] group-hover:bg-[var(--color-text-secondary)]'}`} />
+                                    <div className={`w-1 h-1 rounded-full transition-colors ${isActive ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-text-muted)] group-hover:bg-[var(--color-text-secondary)]'}`} />
                                     <span>{item.label}</span>
                                 </>
                             )}
@@ -177,14 +177,14 @@ export default function Sidebar({ isMobileOpen = false, onCloseMobile }) {
     }, [location.pathname, onCloseMobile]);
 
     return (
-        <aside className={`fixed inset-y-0 left-0 z-40 w-72 bg-[var(--color-bg-secondary)] border-r border-[var(--color-border)] h-full flex-shrink-0 flex flex-col transition-transform duration-300 ease-out md:static md:z-auto md:w-64 ${isMobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
-            <div className="p-4 border-b border-[var(--color-border)] h-16 flex items-center">
-                <h2 className="text-xl font-bold text-[var(--color-text-primary)]">
+        <aside className={`fixed inset-y-0 left-0 z-40 w-64 bg-[var(--color-bg-secondary)] border-r border-[var(--color-border)] h-full flex-shrink-0 flex flex-col transition-transform duration-300 ease-out md:static md:z-auto md:w-56 ${isMobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
+            <div className="px-3 py-2 border-b border-[var(--color-border)] h-14 flex items-center">
+                <h2 className="text-lg font-bold text-[var(--color-text-primary)]">
                     HMR<span className="text-[var(--color-primary)]"> System</span>
                 </h2>
             </div>
-            <nav className="p-4 flex-1 flex flex-col" aria-label="Main navigation">
-                <div className="space-y-2">
+            <nav className="p-3 flex-1 flex flex-col overflow-y-auto scrollbar-hide" aria-label="Main navigation">
+                <div className="space-y-1.5">
                     {sidebarConfig.map((section) => {
                         if (section.type === 'link') {
                             const Icon = section.icon;
@@ -194,9 +194,9 @@ export default function Sidebar({ isMobileOpen = false, onCloseMobile }) {
                                     to={section.to} 
                                     end={section.end}
                                     onClick={onCloseMobile} 
-                                    className={({ isActive }) => `flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${isActive ? 'bg-[var(--color-bg-tertiary)] text-[var(--color-primary)]' : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-primary)]'}`}
+                                    className={({ isActive }) => `flex items-center gap-3 px-2.5 py-1.5 text-sm rounded-lg transition-colors ${isActive ? 'bg-[var(--color-bg-tertiary)] text-[var(--color-primary)]' : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-primary)]'}`}
                                 >
-                                    <Icon className="w-5 h-5" />
+                                    <Icon className="w-4 h-4" />
                                     <span>{section.label}</span>
                                 </NavLink>
                             );
@@ -220,19 +220,19 @@ export default function Sidebar({ isMobileOpen = false, onCloseMobile }) {
                     })}
                 </div>
 
-                <div className="mt-auto pt-4">
+                <div className="mt-auto pt-3">
                     <NavLink
                         to="/settings"
                         onClick={onCloseMobile}
                         className={({ isActive }) =>
-                            `flex items-center gap-3 px-3 py-2 rounded-lg border transition-colors ${
+                            `flex items-center gap-3 px-2.5 py-1.5 text-sm rounded-lg border transition-colors ${
                                 isActive
                                     ? 'border-[var(--color-border)] bg-[var(--color-bg-tertiary)] text-[var(--color-primary)]'
                                     : 'border-[var(--color-border)]/60 text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-primary)]'
                             }`
                         }
                     >
-                        <Settings className="w-5 h-5" />
+                        <Settings className="w-4 h-4" />
                         <span>Configuración</span>
                     </NavLink>
                 </div>

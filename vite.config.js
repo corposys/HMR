@@ -18,6 +18,7 @@ export default defineConfig({
       '@utils': path.resolve(__dirname, './src/utils'),
       '@hooks': path.resolve(__dirname, './src/hooks'),
     },
+    extensions: ['.mjs', '.js', '.mts', '.jsx', '.ts', '.tsx', '.json'],
   },
   server: {
     host: '0.0.0.0',

@@ -15,7 +15,7 @@ const PART_CATEGORIES = [
     { value: 'other', label: 'Otro' },
 ];
 
-export default function PartTypesTab() {
+export default function LockTypesTab() {
     const [partTypes, setPartTypes] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);

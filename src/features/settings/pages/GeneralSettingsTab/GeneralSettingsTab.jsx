@@ -50,7 +50,7 @@ function normalizeProfile(profile = {}) {
     };
 }
 
-export default function GeneralTab() {
+export default function GeneralSettingsTab() {
     const [isDragging, setIsDragging] = useState(false);
     const [formData, setFormData] = useState(EMPTY_PROFILE);
     const [savedData, setSavedData] = useState(EMPTY_PROFILE);
