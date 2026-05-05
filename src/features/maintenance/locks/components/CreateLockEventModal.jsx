@@ -22,12 +22,15 @@ export default function CreateLockEventModal({ onSave, onCancel, saving, initial
     const [rooms, setRooms] = useState([]);
     const [partTypes, setPartTypes] = useState([]);
     const [form, setForm] = useState({
-        room_id: '', type: 'battery', part_type_id: '', description: '',
+        room_id: initialRoomId || '', type: 'battery', part_type_id: '', description: '',
         performed_at: new Date().toISOString().split('T')[0],
     });
 
     const [roomQuery, setRoomQuery] = useState('');
-    const [selectedRoom, setSelectedRoom] = useState(null);
+    const [selectedRoom, setSelectedRoom] = useState(() => {
+        if (!initialRoomId) return null;
+        return null;
+    });
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [activeIdx, setActiveIdx] = useState(-1);
     const inputRef = useRef(null);
@@ -41,22 +44,6 @@ export default function CreateLockEventModal({ onSave, onCancel, saving, initial
                 setPartTypes(activeParts);
             });
     }, []);
-
-    const hasInitializedRoom = useRef(false);
-    useEffect(() => {
-        if (hasInitializedRoom.current) return;
-        if (!initialRoomId || rooms.length === 0) return;
-
-        const initialRoom = rooms.find((room) => room.id === Number(initialRoomId));
-        if (!initialRoom) return;
-
-        hasInitializedRoom.current = true;
-        setSelectedRoom(initialRoom);
-        setForm((current) => ({ ...current, room_id: initialRoom.id }));
-        setRoomQuery('');
-        setShowSuggestions(false);
-        setActiveIdx(-1);
-    }, [initialRoomId, rooms]);
 
     const filteredParts = partTypes.filter(p => p.category === form.type);
     const partOptions = filteredParts.map((p) => ({ value: String(p.id), label: p.name }));
