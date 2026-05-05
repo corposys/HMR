@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { Home, Settings, Wrench, ChevronDown, Shield, BedDouble, Hotel, ServerCog, Users, CalendarDays, LayoutGrid } from 'lucide-react';
+import { Home, Settings, Wrench, ChevronDown, Shield, BedDouble, Hotel, ServerCog, CalendarCheck, Receipt, Monitor, DoorOpen, Moon, BookOpen } from 'lucide-react';
 
 const sidebarConfig = [
     {
@@ -11,14 +11,47 @@ const sidebarConfig = [
         end: true,
     },
     {
+        type: 'link',
+        to: '/rack',
+        icon: Monitor,
+        label: 'Rack Operativo',
+    },
+    {
+        type: 'dropdown',
+        id: 'reservations',
+        icon: CalendarCheck,
+        label: 'Reservaciones',
+        items: [
+            { to: '/reservaciones', label: 'Reservas' },
+            { to: '/reservaciones/tarifas', label: 'Temporadas y Tarifas' },
+        ],
+    },
+    {
         type: 'dropdown',
         id: 'reception',
         icon: Hotel,
         label: 'Recepción',
         items: [
-            { to: '/reception/rack', label: 'Habitaciones' },
-            { to: '/reception/huespedes', label: 'Huéspedes' },
-            { to: '/reception/reservas', label: 'Reservas' },
+            { to: '/reception/operations', label: 'Check-in/out' },
+            { to: '/reception/folios', label: 'Folios' },
+            { to: '/reception/walkins', label: 'Walk-ins' },
+            { to: '/reception/audit', label: 'Auditoría' },
+            { to: '/reception/logbook', label: 'Novedades' },
+        ],
+    },
+    {
+        type: 'dropdown',
+        id: 'housekeeping',
+        icon: BedDouble,
+        label: 'Housekeeping',
+        items: [
+            { to: '/housekeeping/dashboard', label: 'Dashboard' },
+            { to: '/housekeeping', label: 'Asignaciones' },
+            { to: '/housekeeping/panel', label: 'Panel de Camarera' },
+            { to: '/housekeeping/inspeccion', label: 'Inspección' },
+            { to: '/housekeeping/incidencias', label: 'Incidencias' },
+            { to: '/housekeeping/personal', label: 'Personal' },
+            { to: '/housekeeping/lenceria', label: 'Lencería' },
         ],
     },
     {
@@ -28,15 +61,6 @@ const sidebarConfig = [
         label: 'Mantenimiento',
         items: [
             { to: '/maintenance/habitaciones', label: 'Habitaciones' },
-        ],
-    },
-    {
-        type: 'dropdown',
-        id: 'housekeeping',
-        icon: BedDouble,
-        label: 'Housekeeping',
-        items: [
-            { to: '/housekeeping/lenceria', label: 'Lenceria' },
         ],
     },
     {
@@ -81,7 +105,7 @@ function SidebarDropdown({ section, isOpen, onToggle, isActive, onCloseMobile })
                 <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
             </button>
 
-            <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isOpen ? 'max-h-40 opacity-100 mt-1' : 'max-h-0 opacity-0'}`}>
+            <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isOpen ? 'max-h-80 opacity-100 mt-1' : 'max-h-0 opacity-0'}`}>
                 <div className="flex flex-col gap-1 py-1">
                     {section.items.map((item) => (
                         <NavLink

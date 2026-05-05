@@ -6,6 +6,7 @@ from decimal import Decimal
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from typing import Optional, Dict, List
+import httpx
 
 from db import get_connection, release_connection
 from middleware.auth import get_current_user, require_permission
@@ -329,6 +330,49 @@ async def create_bcv_rate(
     except Exception:
         conn.rollback()
         raise HTTPException(status_code=500, detail="Error al registrar tasa BCV")
+    finally:
+        cur.close()
+        release_connection(conn)
+
+
+@router.post("/bcv/refresh")
+async def refresh_bcv_rate(current_user: dict = Depends(get_current_user)):
+    """Fetch latest BCV rate from dolarapi.com and save it."""
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get("https://ve.dolarapi.com/v1/dolares")
+            resp.raise_for_status()
+            data = resp.json()
+            oficial = next((d for d in data if d.get("fuente") == "oficial"), None)
+            if not oficial or "promedio" not in oficial:
+                raise HTTPException(status_code=502, detail="No se encontró la tasa oficial en la respuesta")
+            rate = float(oficial["promedio"])
+    except httpx.HTTPError:
+        raise HTTPException(status_code=502, detail="Error al consultar dolarapi.com")
+    except Exception:
+        raise HTTPException(status_code=502, detail="Error al consultar dolarapi.com")
+
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO bcv_rates (rate, source) VALUES (%s, %s) RETURNING id, rate, source, created_at",
+            (rate, "dolarapi"),
+        )
+        r = cur.fetchone()
+        conn.commit()
+        return {
+            "success": True,
+            "rate": {
+                "id": r[0],
+                "rate": float(r[1]),
+                "source": r[2],
+                "created_at": r[3].isoformat() if r[3] else None,
+            },
+        }
+    except Exception:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail="Error al guardar tasa BCV")
     finally:
         cur.close()
         release_connection(conn)

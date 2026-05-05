@@ -10,12 +10,13 @@ import LoadingSpinner from '@shared/common/LoadingSpinner';
 import Alert from '@shared/common/Alert';
 import { apiJson } from '@utils/api';
 import { useToast } from '@context/ToastContext';
+import { usePermissions } from '@hooks/usePermissions';
 
 const getNextModuleNumber = (modules = []) => String(modules.reduce((max, m) => Math.max(max, Number(m.number) || 0), 0) + 1);
 const ROOM_CARD_MIN_WIDTH = 170;
 const ROOM_GRID_MAX_COLUMNS = 12;
 
-const RoomCard = ({ room, isEditable, onSave, onDelete, onToggle }) => {
+const RoomCard = ({ room, roomTypes, isEditable, canEditType, onSave, onDelete, onToggle }) => {
     const isActive = room.status === 'active';
 
     const handleEditRoomNumber = async () => {
@@ -28,14 +29,39 @@ const RoomCard = ({ room, isEditable, onSave, onDelete, onToggle }) => {
         await onSave(room.id, { room_number: trimmed });
     };
 
+    const handleTypeChange = async (e) => {
+        const typeId = e.target.value ? parseInt(e.target.value) : null;
+        if (typeId === room.room_type_id) return;
+        await onSave(room.id, { room_type_id: typeId });
+    };
+
     return (
-        <div className={`group relative flex w-full min-w-0 min-h-[112px] flex-col rounded-xl border p-2 transition-all duration-200 hover:border-[var(--color-primary)] ${isActive ? 'border-[var(--color-border)] bg-[var(--color-bg-secondary)]' : 'border-red-900/20 bg-black/40'}`}>
+        <div className={`group relative flex w-full min-w-0 min-h-[128px] flex-col rounded-xl border p-2 transition-all duration-200 hover:border-[var(--color-primary)] ${isActive ? 'border-[var(--color-border)] bg-[var(--color-bg-secondary)]' : 'border-red-900/20 bg-black/40'}`}>
             <div className="mb-2 flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                     <BedDouble className={`h-4 w-4 ${isActive ? 'text-[var(--color-primary)]' : 'text-red-900/40'}`} />
                     <h4 className="text-base font-semibold leading-none tracking-tight text-[var(--color-text-primary)]">{room.room_number}</h4>
                 </div>
                 <ToggleSwitch checked={isActive} onChange={(value) => onToggle(room.id, value ? 'active' : 'inactive')} disabled={!isEditable} size="sm" />
+            </div>
+
+            <div className="mt-1">
+                {canEditType && roomTypes.length > 0 ? (
+                    <select
+                        value={room.room_type_id || ''}
+                        onChange={handleTypeChange}
+                        className="w-full rounded-md border border-[var(--color-border)] bg-[var(--color-bg-primary)] px-2 py-1 text-[11px] font-medium text-[var(--color-text-secondary)] focus:border-[var(--color-primary)] focus:outline-none"
+                    >
+                        <option value="">Sin tipo</option>
+                        {roomTypes.map((rt) => (
+                            <option key={rt.id} value={rt.id}>{rt.name}</option>
+                        ))}
+                    </select>
+                ) : (
+                    <div className="text-[11px] text-[var(--color-text-muted)] truncate">
+                        {room.room_type_name || 'Sin tipo'}
+                    </div>
+                )}
             </div>
 
             {isEditable && (
@@ -64,7 +90,7 @@ const RoomCard = ({ room, isEditable, onSave, onDelete, onToggle }) => {
     );
 };
 
-const FloorSection = ({ floor, isEditable, onDeleteFloor, onCreateRoom, onSaveRoom, onDeleteRoom, onToggleRoom }) => {
+const FloorSection = ({ floor, roomTypes, isEditable, canEditType, onDeleteFloor, onCreateRoom, onSaveRoom, onDeleteRoom, onToggleRoom }) => {
     const [isExpanded, setIsExpanded] = useState(true);
     const [showNewRoomForm, setShowNewRoomForm] = useState(false);
     const [roomForm, setRoomForm] = useState({ roomNumber: '' });
@@ -161,7 +187,9 @@ const FloorSection = ({ floor, isEditable, onDeleteFloor, onCreateRoom, onSaveRo
                             <RoomCard
                                 key={room.id}
                                 room={room}
+                                roomTypes={roomTypes}
                                 isEditable={isEditable}
+                                canEditType={canEditType}
                                 onSave={onSaveRoom}
                                 onDelete={onDeleteRoom}
                                 onToggle={onToggleRoom}
@@ -209,7 +237,7 @@ const FloorSection = ({ floor, isEditable, onDeleteFloor, onCreateRoom, onSaveRo
     );
 };
 
-const ModuleCard = ({ module, isEditable, onToggleEditMode, onDraftChange, onDeleteModule, onCreateFloor, onSaveFloor, onDeleteFloor, onCreateRoom, onSaveRoom, onDeleteRoom, onToggleModule, onToggleFloor, onToggleRoom }) => {
+const ModuleCard = ({ module, roomTypes, isEditable, canEditType, onToggleEditMode, onDraftChange, onDeleteModule, onCreateFloor, onSaveFloor, onDeleteFloor, onCreateRoom, onSaveRoom, onDeleteRoom, onToggleModule, onToggleFloor, onToggleRoom }) => {
     const [isExpanded, setIsExpanded] = useState(true);
     const defaultModuleName = `Bloque ${module.number}`;
     const normalizedModuleName = (module.name || '').trim();
@@ -328,7 +356,9 @@ const ModuleCard = ({ module, isEditable, onToggleEditMode, onDraftChange, onDel
                             key={floor.id}
                             moduleId={module.id}
                             floor={floor}
+                            roomTypes={roomTypes}
                             isEditable={isEditable}
+                            canEditType={canEditType}
                             onSaveFloor={onSaveFloor}
                             onDeleteFloor={onDeleteFloor}
                             onCreateRoom={onCreateRoom}
@@ -375,6 +405,7 @@ const ModuleCard = ({ module, isEditable, onToggleEditMode, onDraftChange, onDel
 
 export default function HotelStructureTab() {
     const [property, setProperty] = useState(null);
+    const [roomTypes, setRoomTypes] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [creatingModule, setCreatingModule] = useState(false);
@@ -382,13 +413,19 @@ export default function HotelStructureTab() {
     const [pendingModuleUpdates, setPendingModuleUpdates] = useState({});
     const [editingModuleIds, setEditingModuleIds] = useState({});
     const { showToast } = useToast();
+    const { isAdmin, can } = usePermissions();
+    const canEditType = isAdmin || can('settings', 'write');
 
     const fetchTree = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
-            const data = await apiJson('/api/structure/tree');
-            setProperty(data.property);
+            const [treeData, typesData] = await Promise.all([
+                apiJson('/api/structure/tree'),
+                apiJson('/api/settings/room-types'),
+            ]);
+            setProperty(treeData.property);
+            setRoomTypes(typesData.room_types || []);
         } catch (fetchError) {
             setError(fetchError.message);
             showToast({ title: 'No se pudo cargar la estructura', message: fetchError.message, type: 'error' });
@@ -534,7 +571,9 @@ export default function HotelStructureTab() {
                     <ModuleCard
                         key={module.id}
                         module={module}
+                        roomTypes={roomTypes}
                         isEditable={isModuleEditable(module.id)}
+                        canEditType={canEditType}
                         onToggleEditMode={toggleModuleEditMode}
                         onDraftChange={handleModuleDraftChange}
                         onDeleteModule={handleDeleteModule}

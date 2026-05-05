@@ -14,9 +14,12 @@ import {
     Shield,
     FileSignature,
     SettingsIcon,
-    BedDouble
+    BedDouble,
+    RefreshCw,
+    TrendingUp
 } from 'lucide-react';
 import { useAuth } from '@context/AuthContext';
+import { apiFetch } from '@utils/api';
 
 /**
  * Navbar - Barra superior de utilidades (Topbar)
@@ -28,24 +31,35 @@ export default function Navbar({ onMenuClick, isMobileSidebarOpen }) {
     const location = useLocation();
     const { user, logout } = useAuth();
     const dropdownRef = useRef(null);
+    const [bcvRate, setBcvRate] = useState(null);
+    const [bcvLoading, setBcvLoading] = useState(false);
 
-    // TODO: Implement real API health check
-    // const [apiStatus, setApiStatus] = useState({ online: true, latency: null });
-    // useEffect(() => {
-    //     const checkHealth = async () => {
-    //         const start = performance.now();
-    //         try {
-    //             const res = await fetch('/api/health');
-    //             const latency = Math.round(performance.now() - start);
-    //             setApiStatus({ online: res.ok, latency });
-    //         } catch {
-    //             setApiStatus({ online: false, latency: null });
-    //         }
-    //     };
-    //     checkHealth();
-    //     const interval = setInterval(checkHealth, 30000);
-    //     return () => clearInterval(interval);
-    // }, []);
+    useEffect(() => {
+        loadBcvRate();
+        const interval = setInterval(loadBcvRate, 300000);
+        return () => clearInterval(interval);
+    }, []);
+
+    async function loadBcvRate() {
+        try {
+            const data = await apiFetch('/api/settings/bcv');
+            if (data.rate) setBcvRate(data.rate);
+        } catch {
+            // silently fail
+        }
+    }
+
+    async function refreshBcvRate() {
+        setBcvLoading(true);
+        try {
+            const data = await apiFetch('/api/settings/bcv/refresh', { method: 'POST' });
+            if (data.rate) setBcvRate(data.rate);
+        } catch {
+            // silently fail
+        } finally {
+            setBcvLoading(false);
+        }
+    }
 
     const handleLogout = () => {
         logout();
@@ -156,16 +170,19 @@ export default function Navbar({ onMenuClick, isMobileSidebarOpen }) {
 
             {/* Right Section: Utilities & Profile */}
             <div className="flex items-center gap-4">
-                {/* API Status Indicator */}
-                <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-[var(--color-bg-tertiary)] rounded-full border border-[var(--color-border)]">
-                    <div className="relative flex items-center justify-center w-2.5 h-2.5">
-                        <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 animate-ping"></span>
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                    </div>
+                {/* BCV Rate Indicator */}
+                <button
+                    onClick={refreshBcvRate}
+                    disabled={bcvLoading}
+                    className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-[var(--color-bg-tertiary)] rounded-full border border-[var(--color-border)] hover:border-[var(--color-primary)]/40 transition-colors"
+                    title="Clic para actualizar tasa BCV"
+                >
+                    <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
                     <span className="text-xs font-medium text-[var(--color-text-secondary)]">
-                        API v1.0 • Conectado
+                        BCV {bcvRate ? `$${Number(bcvRate.rate).toLocaleString('es-VE', { minimumFractionDigits: 2 })}` : '—'}
                     </span>
-                </div>
+                    <RefreshCw className={`w-3 h-3 text-[var(--color-text-muted)] ${bcvLoading ? 'animate-spin' : ''}`} />
+                </button>
 
 
 

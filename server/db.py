@@ -374,6 +374,132 @@ def _create_tables(cur):
         );
     """)
 
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS housekeeping_staff (
+            id SERIAL PRIMARY KEY,
+            full_name VARCHAR(100) NOT NULL,
+            role VARCHAR(20) NOT NULL DEFAULT 'maid' CHECK (role IN ('maid', 'supervisor')),
+            is_active BOOLEAN DEFAULT TRUE,
+            color VARCHAR(7) DEFAULT '#009098',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    """)
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS housekeeping_assignments (
+            id SERIAL PRIMARY KEY,
+            staff_id INTEGER NOT NULL REFERENCES housekeeping_staff(id) ON DELETE CASCADE,
+            room_id INTEGER NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
+            assignment_date DATE NOT NULL DEFAULT CURRENT_DATE,
+            status VARCHAR(20) NOT NULL DEFAULT 'assigned'
+                CHECK (status IN ('assigned', 'in_progress', 'completed')),
+            notes TEXT,
+            started_at TIMESTAMP,
+            completed_at TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(staff_id, room_id, assignment_date)
+        );
+    """)
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS housekeeping_incidents (
+            id SERIAL PRIMARY KEY,
+            assignment_id INTEGER REFERENCES housekeeping_assignments(id) ON DELETE SET NULL,
+            room_id INTEGER NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
+            staff_id INTEGER REFERENCES housekeeping_staff(id) ON DELETE SET NULL,
+            incident_type VARCHAR(30) NOT NULL
+                CHECK (incident_type IN ('broken_item', 'missing_inventory', 'maintenance_needed', 'guest_belongings', 'damage', 'other')),
+            description TEXT,
+            severity VARCHAR(10) DEFAULT 'low'
+                CHECK (severity IN ('low', 'medium', 'high', 'critical')),
+            resolved BOOLEAN DEFAULT FALSE,
+            maintenance_ticket_id INTEGER,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            resolved_at TIMESTAMP
+        );
+    """)
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS maintenance_tickets (
+            id SERIAL PRIMARY KEY,
+            room_id INTEGER REFERENCES rooms(id) ON DELETE SET NULL,
+            description TEXT NOT NULL,
+            priority VARCHAR(20) DEFAULT 'normal' CHECK (priority IN ('low', 'normal', 'urgent', 'critical')),
+            status VARCHAR(20) DEFAULT 'open' CHECK (status IN ('open', 'in_progress', 'resolved', 'cancelled')),
+            created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+            assigned_to INTEGER,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            resolved_at TIMESTAMP
+        );
+    """)
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS seasons (
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(100) NOT NULL,
+            type VARCHAR(20) NOT NULL CHECK (type IN ('low', 'high', 'shoulder', 'special')),
+            start_date DATE NOT NULL,
+            end_date DATE NOT NULL,
+            year INTEGER NOT NULL,
+            is_active BOOLEAN DEFAULT TRUE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            CONSTRAINT seasons_date_order CHECK (start_date <= end_date)
+        );
+    """)
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS occupancy_configs (
+            id SERIAL PRIMARY KEY,
+            code VARCHAR(20) NOT NULL UNIQUE,
+            label VARCHAR(50) NOT NULL,
+            min_pax INTEGER NOT NULL,
+            max_pax INTEGER NOT NULL,
+            sort_order INTEGER DEFAULT 0,
+            is_active BOOLEAN DEFAULT TRUE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    """)
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS rate_plans (
+            id SERIAL PRIMARY KEY,
+            season_id INTEGER NOT NULL REFERENCES seasons(id) ON DELETE CASCADE,
+            room_type_id INTEGER NOT NULL REFERENCES room_types(id) ON DELETE CASCADE,
+            occupancy_code VARCHAR(20) NOT NULL REFERENCES occupancy_configs(code) ON DELETE RESTRICT,
+            nightly_rate_usd NUMERIC(10,2) NOT NULL DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(season_id, room_type_id, occupancy_code)
+        );
+    """)
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS rate_exceptions (
+            id SERIAL PRIMARY KEY,
+            exception_date DATE NOT NULL,
+            room_type_id INTEGER REFERENCES room_types(id) ON DELETE CASCADE,
+            occupancy_code VARCHAR(20) REFERENCES occupancy_configs(code) ON DELETE SET NULL,
+            nightly_rate_usd NUMERIC(10,2) NOT NULL,
+            reason VARCHAR(200),
+            is_active BOOLEAN DEFAULT TRUE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    """)
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS child_rates (
+            id SERIAL PRIMARY KEY,
+            season_id INTEGER NOT NULL REFERENCES seasons(id) ON DELETE CASCADE,
+            age_min INTEGER NOT NULL,
+            age_max INTEGER NOT NULL,
+            nightly_rate_usd NUMERIC(10,2) NOT NULL DEFAULT 0,
+            label VARCHAR(50),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(season_id, age_min, age_max)
+        );
+    """)
+
 
 def _run_migrations(cur):
     cur.execute("ALTER TABLE maintenance_logs ADD COLUMN IF NOT EXISTS lock_asset_id INTEGER REFERENCES lock_assets(id) ON DELETE SET NULL")
@@ -389,6 +515,87 @@ def _run_migrations(cur):
     cur.execute("ALTER TABLE rooms ADD COLUMN IF NOT EXISTS blocked_until DATE")
     cur.execute("ALTER TABLE rooms ADD COLUMN IF NOT EXISTS photo_url TEXT")
     cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS role_id INTEGER REFERENCES roles(id) ON DELETE SET NULL")
+    cur.execute("ALTER TABLE housekeeping_assignments ADD COLUMN IF NOT EXISTS inspected_by INTEGER REFERENCES users(id) ON DELETE SET NULL")
+    cur.execute("ALTER TABLE housekeeping_assignments ADD COLUMN IF NOT EXISTS inspected_at TIMESTAMP")
+    cur.execute("ALTER TABLE housekeeping_assignments ADD COLUMN IF NOT EXISTS inspection_notes TEXT")
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS housekeeping_incidents (
+            id SERIAL PRIMARY KEY,
+            assignment_id INTEGER REFERENCES housekeeping_assignments(id) ON DELETE SET NULL,
+            room_id INTEGER NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
+            staff_id INTEGER REFERENCES housekeeping_staff(id) ON DELETE SET NULL,
+            incident_type VARCHAR(30) NOT NULL
+                CHECK (incident_type IN ('broken_item', 'missing_inventory', 'maintenance_needed', 'guest_belongings', 'damage', 'other')),
+            description TEXT,
+            severity VARCHAR(10) DEFAULT 'low'
+                CHECK (severity IN ('low', 'medium', 'high', 'critical')),
+            resolved BOOLEAN DEFAULT FALSE,
+            maintenance_ticket_id INTEGER,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            resolved_at TIMESTAMP
+        );
+    """)
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS maintenance_tickets (
+            id SERIAL PRIMARY KEY,
+            room_id INTEGER REFERENCES rooms(id) ON DELETE SET NULL,
+            description TEXT NOT NULL,
+            priority VARCHAR(20) DEFAULT 'normal' CHECK (priority IN ('low', 'normal', 'urgent', 'critical')),
+            status VARCHAR(20) DEFAULT 'open' CHECK (status IN ('open', 'in_progress', 'resolved', 'cancelled')),
+            created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+            assigned_to INTEGER,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            resolved_at TIMESTAMP
+        );
+    """)
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS linen_types (
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(50) NOT NULL,
+            category VARCHAR(30) NOT NULL CHECK (category IN ('bedding', 'bathroom', 'amenity', 'other')),
+            par_level INTEGER DEFAULT 0,
+            unit VARCHAR(20) DEFAULT 'unidad'
+        );
+    """)
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS linen_inventory (
+            id SERIAL PRIMARY KEY,
+            linen_type_id INTEGER REFERENCES linen_types(id) ON DELETE CASCADE,
+            floor_id INTEGER REFERENCES floors(id) ON DELETE CASCADE,
+            quantity INTEGER DEFAULT 0,
+            UNIQUE(linen_type_id, floor_id)
+        );
+    """)
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS linen_transactions (
+            id SERIAL PRIMARY KEY,
+            linen_type_id INTEGER REFERENCES linen_types(id) ON DELETE SET NULL,
+            transaction_type VARCHAR(20) CHECK (transaction_type IN ('checkout', 'return', 'loss', 'restock')),
+            quantity INTEGER NOT NULL,
+            floor_id INTEGER REFERENCES floors(id) ON DELETE SET NULL,
+            staff_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+            notes TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    """)
+
+    cur.execute("""
+        DO $$
+        BEGIN
+            IF EXISTS (
+                SELECT 1 FROM pg_constraint WHERE conname = 'housekeeping_assignments_status_check'
+            ) THEN
+                ALTER TABLE housekeeping_assignments DROP CONSTRAINT housekeeping_assignments_status_check;
+            END IF;
+            ALTER TABLE housekeeping_assignments ADD CONSTRAINT housekeeping_assignments_status_check
+                CHECK (status IN ('assigned', 'in_progress', 'completed', 'inspection'));
+        END $$;
+    """)
 
     cur.execute("""
         SELECT column_name FROM information_schema.columns
@@ -398,18 +605,84 @@ def _run_migrations(cur):
         cur.execute("ALTER TABLE rooms RENAME COLUMN room_category_id TO category")
         logger.info("Migrated rooms.room_category_id -> rooms.category")
 
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS linen_types (
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(50) NOT NULL,
+            category VARCHAR(30) NOT NULL CHECK (category IN ('bedding', 'bathroom', 'amenity', 'other')),
+            par_level INTEGER DEFAULT 0,
+            unit VARCHAR(20) DEFAULT 'unidad'
+        );
+    """)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS linen_inventory (
+            id SERIAL PRIMARY KEY,
+            linen_type_id INTEGER REFERENCES linen_types(id) ON DELETE CASCADE,
+            floor_id INTEGER REFERENCES floors(id) ON DELETE CASCADE,
+            quantity INTEGER DEFAULT 0,
+            UNIQUE(linen_type_id, floor_id)
+        );
+    """)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS linen_transactions (
+            id SERIAL PRIMARY KEY,
+            linen_type_id INTEGER REFERENCES linen_types(id) ON DELETE SET NULL,
+            transaction_type VARCHAR(20) CHECK (transaction_type IN ('checkout', 'return', 'loss', 'restock')),
+            quantity INTEGER NOT NULL,
+            floor_id INTEGER REFERENCES floors(id) ON DELETE SET NULL,
+            staff_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+            notes TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    """)
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS night_audits (
+            id SERIAL PRIMARY KEY,
+            audit_date DATE NOT NULL UNIQUE,
+            executed_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+            executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            status VARCHAR(20) NOT NULL DEFAULT 'completed' CHECK (status IN ('pending', 'running', 'completed', 'failed')),
+            total_rent_charges NUMERIC(12,2) DEFAULT 0,
+            total_occupancy INTEGER DEFAULT 0,
+            total_payments NUMERIC(12,2) DEFAULT 0,
+            metadata JSONB DEFAULT '{}'
+        );
+    """)
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS logbook_notes (
+            id SERIAL PRIMARY KEY,
+            shift VARCHAR(20) NOT NULL CHECK (shift IN ('morning', 'afternoon', 'night')),
+            note_type VARCHAR(30) NOT NULL DEFAULT 'note' CHECK (note_type IN ('note', 'alert', 'reminder')),
+            priority VARCHAR(10) NOT NULL DEFAULT 'normal' CHECK (priority IN ('low', 'normal', 'high', 'urgent')),
+            content TEXT NOT NULL,
+            room_id INTEGER REFERENCES rooms(id) ON DELETE SET NULL,
+            is_alert BOOLEAN NOT NULL DEFAULT FALSE,
+            is_resolved BOOLEAN NOT NULL DEFAULT FALSE,
+            resolved_at TIMESTAMP,
+            created_by INTEGER NOT NULL REFERENCES users(id),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    """)
+
 
 def _seed_all():
     _seed_roles()
     _seed_user_role_migration()
     _seed_hotel_settings()
     _seed_room_types()
+    _seed_occupancy_configs()
     _seed_reservation_plans()
     _seed_bcv_rates()
     _seed_hotel_structure()
     _seed_room_type_assignments()
     _seed_part_types()
     _seed_lock_assets()
+    _seed_housekeeping_staff()
+    _seed_linen_types()
+    _seed_demo_data()
 
 
 def _seed_roles():
@@ -606,10 +879,12 @@ def _seed_room_types():
             return
 
         types = [
-            ("Individual", "Habitación para 1 huésped", 1, 35.00),
-            ("Doble", "Habitación para 2 huéspedes", 2, 50.00),
-            ("Triple", "Habitación para 3 huéspedes", 3, 65.00),
-            ("Suite", "Suite con sala y vista", 4, 90.00),
+            ("Suite", "Suite estándar", 6, 100.00),
+            ("Suite A", "Suite Tipo A", 6, 105.00),
+            ("Suite PB", "Suite Planta Baja", 6, 155.00),
+            ("Suite PB A", "Suite Planta Baja Tipo A", 6, 160.00),
+            ("PH Tipo B", "Penthouse con Terraza Privada", 8, 195.00),
+            ("PH Tipo A", "Penthouse con Terraza Privada y Jacuzzi", 8, 220.00),
         ]
         for name, desc, max_occ, rate in types:
             cur.execute(
@@ -620,11 +895,47 @@ def _seed_room_types():
         conn.commit()
         cur.close()
         release_connection(conn)
-        logger.info("Room types seeded (4 types)")
+        logger.info("Room types seeded (6 types)")
     except Exception as e:
         conn.rollback()
         release_connection(conn)
         logger.error(f"Error seeding room types: {e}")
+
+
+def _seed_occupancy_configs():
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT COUNT(*) FROM occupancy_configs")
+        if cur.fetchone()[0] > 0:
+            logger.info("Occupancy configs already seeded, skipping")
+            cur.close()
+            release_connection(conn)
+            return
+
+        configs = [
+            ("SGL_DBL", "SGL/DBL", 1, 2, 1),
+            ("TPL", "TPL", 3, 3, 2),
+            ("CDPL", "CDPL", 4, 4, 3),
+            ("QUIN", "QUIN", 5, 5, 4),
+            ("SEXT", "SEXT", 6, 6, 5),
+            ("SEPT", "SEPT", 7, 7, 6),
+            ("OCTP", "OCTP", 8, 8, 7),
+        ]
+        for code, label, min_pax, max_pax, sort_order in configs:
+            cur.execute(
+                "INSERT INTO occupancy_configs (code, label, min_pax, max_pax, sort_order) VALUES (%s, %s, %s, %s, %s) ON CONFLICT (code) DO NOTHING",
+                (code, label, min_pax, max_pax, sort_order),
+            )
+
+        conn.commit()
+        cur.close()
+        release_connection(conn)
+        logger.info("Occupancy configs seeded (7 configs)")
+    except Exception as e:
+        conn.rollback()
+        release_connection(conn)
+        logger.error(f"Error seeding occupancy configs: {e}")
 
 
 def _seed_reservation_plans():
@@ -711,7 +1022,11 @@ def _seed_hotel_structure():
             ("PH", "Penthouse", 3, 4),
         ]
 
-        type_map = {0: (2, 50.00), 1: (1, 35.00), 2: (3, 65.00), 3: (4, 90.00)}
+        cur.execute("""
+            SELECT id, name, default_rate_usd FROM room_types
+            WHERE name IN %s
+        """, (('Suite', 'Suite A', 'Suite PB', 'Suite PB A', 'PH Tipo B', 'PH Tipo A'),))
+        type_data = {name: (type_id, rate) for type_id, name, rate in cur.fetchall()}
 
         for mod_num in range(1, 7):
             category = "owner" if mod_num in (1, 6) else "hotel"
@@ -735,7 +1050,15 @@ def _seed_hotel_structure():
                 rooms_per_floor = 4
                 for room_seq in range(1, rooms_per_floor + 1):
                     room_number = f"{mod_num}{floor_digit}{room_seq:02d}"
-                    type_id, rate = type_map[room_seq - 1]
+
+                    if floor_digit == 0:
+                        type_name = "Suite PB A" if room_seq in (1, 4) else "Suite PB"
+                    elif floor_digit == 3:
+                        type_name = "PH Tipo A" if room_seq in (1, 4) else "PH Tipo B"
+                    else:
+                        type_name = "Suite A" if room_seq in (1, 4) else "Suite"
+
+                    type_id, rate = type_data.get(type_name, (None, 50.00))
                     cur.execute("""
                         INSERT INTO rooms (floor_id, room_number, status, category, room_type_id, nightly_rate_usd)
                         VALUES (%s, %s, %s, %s, %s, %s)
@@ -755,52 +1078,48 @@ def _seed_room_type_assignments():
     conn = get_connection()
     try:
         cur = conn.cursor()
-        cur.execute("SELECT COUNT(*) FROM rooms WHERE room_type_id IS NULL")
-        null_count = cur.fetchone()[0]
-        if null_count == 0:
+        cur.execute("""
+            SELECT id, name, default_rate_usd FROM room_types
+            WHERE name IN %s
+        """, (('Suite', 'Suite A', 'Suite PB', 'Suite PB A', 'PH Tipo B', 'PH Tipo A'),))
+        type_data = {name: (type_id, rate) for type_id, name, rate in cur.fetchall()}
+
+        if len(type_data) < 6:
+            logger.warning("Not all 6 room types found, skipping room type assignment update")
             cur.close()
             release_connection(conn)
             return
 
-        type_assignments = {
-            "Individual": (1, 35.00),
-            "Doble": (2, 50.00),
-            "Triple": (3, 65.00),
-            "Suite": (4, 90.00),
-        }
+        cur.execute("SELECT id, room_number FROM rooms")
+        rooms = cur.fetchall()
 
-        cur.execute("SELECT id, name FROM room_types")
-        types_in_db = {name: type_id for type_id, name in cur.fetchall()}
+        updated = 0
+        for room_id, room_number in rooms:
+            if len(room_number) >= 4:
+                room_seq = int(room_number[-2:])
+                floor_digit = int(room_number[-3])
+            else:
+                continue
 
-        for type_name, (expected_id, rate) in type_assignments.items():
-            type_id = types_in_db.get(type_name, expected_id)
+            if floor_digit == 0:
+                type_name = "Suite PB A" if room_seq in (1, 4) else "Suite PB"
+            elif floor_digit == 3:
+                type_name = "PH Tipo A" if room_seq in (1, 4) else "PH Tipo B"
+            else:
+                type_name = "Suite A" if room_seq in (1, 4) else "Suite"
 
-        cur.execute("""
-            UPDATE rooms SET room_type_id = %s, nightly_rate_usd = %s
-            WHERE room_type_id IS NULL AND id %% 4 = 1
-        """, (types_in_db.get("Individual", 1), 35.00))
-        cur.execute("""
-            UPDATE rooms SET room_type_id = %s, nightly_rate_usd = %s
-            WHERE room_type_id IS NULL AND id %% 4 = 2
-        """, (types_in_db.get("Doble", 2), 50.00))
-        cur.execute("""
-            UPDATE rooms SET room_type_id = %s, nightly_rate_usd = %s
-            WHERE room_type_id IS NULL AND id %% 4 = 3
-        """, (types_in_db.get("Triple", 3), 65.00))
-        cur.execute("""
-            UPDATE rooms SET room_type_id = %s, nightly_rate_usd = %s
-            WHERE room_type_id IS NULL AND id %% 4 = 0
-        """, (types_in_db.get("Suite", 4), 90.00))
-
-        remaining = cur.execute("""
-            UPDATE rooms SET room_type_id = 2, nightly_rate_usd = 50.00
-            WHERE room_type_id IS NULL
-        """)
+            type_id, rate = type_data.get(type_name, (None, None))
+            if type_id:
+                cur.execute("""
+                    UPDATE rooms SET room_type_id = %s, nightly_rate_usd = %s
+                    WHERE id = %s
+                """, (type_id, rate, room_id))
+                updated += 1
 
         conn.commit()
         cur.close()
         release_connection(conn)
-        logger.info("Room type assignments updated")
+        logger.info(f"Room type assignments updated ({updated} rooms)")
     except Exception as e:
         conn.rollback()
         release_connection(conn)
@@ -859,3 +1178,281 @@ def _seed_lock_assets():
         conn.rollback()
         release_connection(conn)
         logger.error(f"Error seeding lock assets: {e}")
+
+
+def _seed_housekeeping_staff():
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT COUNT(*) FROM housekeeping_staff")
+        if cur.fetchone()[0] > 0:
+            logger.info("Housekeeping staff already seeded, skipping")
+            cur.close()
+            release_connection(conn)
+            return
+
+        staff = [
+            ("María Elena Pérez", "supervisor", True, "#eab308"),
+            ("Carmen Josefina Rivas", "maid", True, "#ef4444"),
+            ("Yusmari Del Valle Rojas", "maid", True, "#3b82f6"),
+            ("Génesis Carolina Marcano", "maid", True, "#22c55e"),
+            ("Luisana Andreína Figueroa", "maid", True, "#a855f7"),
+            ("Rosa Virginia Salazar", "maid", True, "#f97316"),
+        ]
+        for name, role, active, color in staff:
+            cur.execute(
+                "INSERT INTO housekeeping_staff (full_name, role, is_active, color) VALUES (%s, %s, %s, %s)",
+                (name, role, active, color),
+            )
+
+        conn.commit()
+        cur.close()
+        release_connection(conn)
+        logger.info(f"Housekeeping staff seeded ({len(staff)} members)")
+    except Exception as e:
+        conn.rollback()
+        release_connection(conn)
+        logger.error(f"Error seeding housekeeping staff: {e}")
+
+
+def _seed_linen_types():
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT COUNT(*) FROM linen_types")
+        if cur.fetchone()[0] > 0:
+            logger.info("Linen types already seeded, skipping")
+            cur.close()
+            release_connection(conn)
+            return
+
+        linen_types = [
+            ("Sábana King", "bedding", 96, "unidad"),
+            ("Sábana Queen", "bedding", 48, "unidad"),
+            ("Sábana Full", "bedding", 48, "unidad"),
+            ("Funda de almohada", "bedding", 192, "unidad"),
+            ("Edredón King", "bedding", 96, "unidad"),
+            ("Edredón Queen", "bedding", 48, "unidad"),
+            ("Toalla de baño", "bathroom", 288, "unidad"),
+            ("Toalla de mano", "bathroom", 192, "unidad"),
+            ("Toalla facial", "bathroom", 192, "unidad"),
+            ("Alfombra de baño", "bathroom", 96, "unidad"),
+            ("Bata de baño", "amenity", 96, "unidad"),
+            ("Pantuflas", "amenity", 96, "par"),
+            ("Jabón shampoo", "amenity", 192, "unidad"),
+            ("Jabón corporal", "amenity", 192, "unidad"),
+            ("Acondicionador", "amenity", 192, "unidad"),
+        ]
+        for name, category, par_level, unit in linen_types:
+            cur.execute(
+                "INSERT INTO linen_types (name, category, par_level, unit) VALUES (%s, %s, %s, %s)",
+                (name, category, par_level, unit),
+            )
+
+        conn.commit()
+        cur.close()
+        release_connection(conn)
+        logger.info(f"Linen types seeded ({len(linen_types)} types)")
+    except Exception as e:
+        conn.rollback()
+        release_connection(conn)
+        logger.error(f"Error seeding linen types: {e}")
+
+
+def _seed_demo_data():
+    from datetime import date, timedelta
+    import random
+    import secrets
+
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT COUNT(*) FROM reservations")
+        if cur.fetchone()[0] >= 10:
+            logger.info("Demo data already seeded, skipping")
+            cur.close()
+            release_connection(conn)
+            return
+
+        # Clean up partial data from previous failed attempts
+        cur.execute("DELETE FROM payments")
+        cur.execute("DELETE FROM room_charges")
+        cur.execute("DELETE FROM folios")
+        cur.execute("DELETE FROM reservations")
+        cur.execute("DELETE FROM guests")
+        cur.execute("UPDATE rooms SET housekeeping_status = 'clean', is_blocked = FALSE, blocked_reason = NULL, blocked_until = NULL WHERE status = 'active'")
+
+        guests_data = [
+            ("Carlos Andrés Rodríguez", "V", "12345678", "Venezolano", "+584141234567", "carlos.rodriguez@email.com"),
+            ("María Elena Gutiérrez", "V", "23456789", "Venezolano", "+584142345678", "maria.gutierrez@email.com"),
+            ("Juan Pablo Hernández", "V", "34567890", "Venezolano", "+584143456789", "juan.hernandez@email.com"),
+            ("Ana Carolina Díaz", "V", "45678901", "Venezolano", "+584144567890", "ana.diaz@email.com"),
+            ("Luis Alejandro Morales", "V", "56789012", "Venezolano", "+584145678901", "luis.morales@email.com"),
+            ("Isabella Fernanda Castillo", "V", "67890123", "Venezolano", "+584146789012", "isabella.castillo@email.com"),
+            ("Pedro Antonio Martínez", "V", "78901234", "Venezolano", "+584147890123", "pedro.martinez@email.com"),
+            ("Laura Valentina Torres", "V", "89012345", "Venezolano", "+584148901234", "laura.torres@email.com"),
+            ("Diego Fernando Ruiz", "V", "90123456", "Venezolano", "+584149012345", "diego.ruiz@email.com"),
+            ("Camila Alejandra Vargas", "V", "11223344", "Venezolano", "+584141122334", "camila.vargas@email.com"),
+            ("Robert James Smith", "P", "US123456", "Estadounidense", "+13051234567", "robert.smith@email.com"),
+            ("Emma Louise Johnson", "P", "US234567", "Estadounidense", "+13052345678", "emma.johnson@email.com"),
+            ("Michael Thomas Brown", "P", "US345678", "Estadounidense", "+13053456789", "michael.brown@email.com"),
+            ("Sophia Marie Davis", "P", "US456789", "Estadounidense", "+13054567890", "sophia.davis@email.com"),
+            ("James William Wilson", "P", "US567890", "Estadounidense", "+13055678901", "james.wilson@email.com"),
+            ("Olivia Grace Miller", "P", "US678901", "Estadounidense", "+13056789012", "olivia.miller@email.com"),
+            ("Jean-Pierre Dubois", "P", "FR123456", "Francés", "+33612345678", "jp.dubois@email.com"),
+            ("Marie Claire Lefebvre", "P", "FR234567", "Francesa", "+33623456789", "marie.lefebvre@email.com"),
+            ("Hans Müller", "P", "DE123456", "Alemán", "+491511234567", "hans.muller@email.com"),
+            ("Anna Schmidt", "P", "DE234567", "Alemana", "+491512345678", "anna.schmidt@email.com"),
+            ("Luca Rossi", "P", "IT123456", "Italiano", "+393331234567", "luca.rossi@email.com"),
+            ("Giulia Bianchi", "P", "IT234567", "Italiana", "+393332345678", "giulia.bianchi@email.com"),
+            ("Carlos Mendoza Silva", "E", "87654321", "Colombiano", "+573001234567", "carlos.mendoza@email.com"),
+            ("Ana María López", "E", "76543210", "Colombiana", "+573002345678", "ana.lopez@email.com"),
+            ("Fernando José Pérez", "V", "22334455", "Venezolano", "+584142233445", "fernando.perez@email.com"),
+        ]
+
+        guest_ids = []
+        for name, doc_type, doc_num, nationality, phone, email in guests_data:
+            cur.execute(
+                "INSERT INTO guests (full_name, id_document_type, id_document_number, nationality, phone, email) "
+                "VALUES (%s, %s, %s, %s, %s, %s) RETURNING id",
+                (name, doc_type, doc_num, nationality, phone, email),
+            )
+            guest_ids.append(cur.fetchone()[0])
+
+        cur.execute("SELECT id, nightly_rate_usd FROM rooms WHERE status = 'active' AND is_blocked = FALSE ORDER BY id")
+        available_rooms = cur.fetchall()
+
+        cur.execute("SELECT id FROM reservation_plans ORDER BY id")
+        plan_ids = [r[0] for r in cur.fetchall()]
+
+        today = date.today()
+
+        reservations_config = [
+            # (guest_idx, room_idx, days_ago_checkin, nights, status, plan_idx, source, bracelet)
+            (0, 0, -3, 5, "checked_in", 2, "walk_in", "red"),
+            (1, 1, -2, 4, "checked_in", 1, "whatsapp", "yellow"),
+            (2, 2, -1, 3, "checked_in", 0, "email", "green"),
+            (3, 3, -5, 7, "checked_in", 2, "walk_in", "red"),
+            (4, 4, -4, 6, "checked_in", 1, "online_agency", "yellow"),
+            (5, 5, -2, 3, "checked_in", 0, "whatsapp", "green"),
+            (6, 6, -6, 8, "checked_in", 2, "email", "red"),
+            (7, 7, -1, 2, "checked_in", 1, "walk_in", "blue"),
+            (8, 8, -7, 10, "checked_in", 2, "online_agency", "red"),
+            (9, 9, -3, 4, "checked_in", 0, "whatsapp", "green"),
+            (10, 10, -4, 5, "checked_in", 1, "email", "yellow"),
+            (11, 11, -2, 3, "checked_in", 2, "walk_in", "red"),
+            (12, 12, -8, 12, "checked_in", 0, "online_agency", "green"),
+            (13, 13, -1, 4, "checked_in", 1, "whatsapp", "blue"),
+            (14, 14, -5, 6, "checked_in", 2, "email", "red"),
+            (15, 15, -3, 5, "checked_in", 0, "walk_in", "yellow"),
+            (16, 16, -6, 7, "checked_in", 1, "online_agency", "green"),
+            (17, 17, -2, 3, "checked_in", 2, "whatsapp", "red"),
+            (18, 18, -4, 5, "reserved", 1, "email", None),
+            (19, 19, 0, 4, "reserved", 0, "walk_in", None),
+            (20, 20, 1, 3, "reserved", 2, "whatsapp", None),
+            (21, 21, 2, 5, "reserved", 1, "online_agency", None),
+            (22, 22, -1, 2, "reserved", 0, "email", None),
+            (23, 23, 0, 6, "reserved", 2, "walk_in", None),
+            (24, 24, 3, 4, "reserved", 1, "whatsapp", None),
+            (0, 25, -10, 5, "checked_out", 2, "walk_in", "red"),
+            (1, 26, -12, 7, "checked_out", 1, "online_agency", "yellow"),
+            (2, 27, -15, 4, "checked_out", 0, "email", "green"),
+            (3, 28, -8, 3, "checked_out", 2, "whatsapp", "red"),
+            (4, 29, -20, 10, "checked_out", 1, "walk_in", "blue"),
+            (10, 30, 0, 2, "cancelled", 0, "email", None),
+            (11, 31, -1, 3, "cancelled", 1, "whatsapp", None),
+            (12, 32, 1, 5, "no_show", 2, "online_agency", None),
+        ]
+
+        reservation_ids = []
+        for guest_idx, room_idx, days_offset, nights, status, plan_idx, source, bracelet in reservations_config:
+            if room_idx >= len(available_rooms):
+                continue
+            room_id, nightly_rate = available_rooms[room_idx]
+            guest_id = guest_ids[guest_idx]
+            plan_id = plan_ids[plan_idx] if plan_idx < len(plan_ids) else None
+            check_in = today + timedelta(days=days_offset)
+            check_out = check_in + timedelta(days=nights)
+            quote_token = secrets.token_urlsafe(32)
+
+            cur.execute(
+                "INSERT INTO reservations (quote_token, guest_id, room_id, plan_id, check_in_date, check_out_date, "
+                "num_guests, status, source, bracelet_color, created_by) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NULL) RETURNING id",
+                (quote_token, guest_id, room_id, plan_id, check_in, check_out,
+                 random.randint(1, 4), status, source, bracelet),
+            )
+            reservation_ids.append((cur.fetchone()[0], status, nightly_rate, nights))
+
+        # Create folios and room charges for checked_in reservations
+        for res_id, status, nightly_rate, nights in reservation_ids:
+            if status == "checked_in":
+                control_number = f"CTRL-{random.randint(10000, 99999):05d}"
+                cur.execute(
+                    "SELECT full_name, id_document_number FROM guests g JOIN reservations r ON g.id = r.guest_id "
+                    "WHERE r.id = %s", (res_id,)
+                )
+                guest_row = cur.fetchone()
+                fiscal_name = guest_row[0] if guest_row else None
+                fiscal_id = guest_row[1] if guest_row else None
+                rate = float(nightly_rate)
+                total = rate * nights
+                paid = total * random.uniform(0.3, 0.8)
+                balance = total * random.uniform(0.1, 0.5)
+
+                cur.execute(
+                    "INSERT INTO folios (reservation_id, control_number, fiscal_name, fiscal_id, "
+                    "subtotal_base, tax_iva, total_amount, total_paid, balance) "
+                    "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id",
+                    (res_id, control_number, fiscal_name, fiscal_id,
+                     total, 0, total, paid, balance),
+                )
+                folio_id = cur.fetchone()[0]
+
+                # Add room charges
+                for n in range(nights):
+                    night_date = today + timedelta(days=-n-1)
+                    cur.execute(
+                        "INSERT INTO room_charges (reservation_id, concept, quantity, unit_price_usd, total_usd, "
+                        "charge_type, subtotal_base, tax_iva) VALUES (%s, %s, 1, %s, %s, 'room_night', %s, %s)",
+                        (res_id, f"Noche {n+1} - {night_date.strftime('%d/%m')}", rate, rate, rate, 0),
+                    )
+
+                # Add some payments
+                payment_amount = total * random.uniform(0.3, 0.7)
+                methods = ["cash_usd", "zelle", "credit_card", "bank_transfer", "pago_movil"]
+                cur.execute(
+                    "INSERT INTO payments (reservation_id, amount_usd, currency, payment_method, "
+                    "status, subtotal_base, tax_iva) VALUES (%s, %s, 'USD', %s, 'verified', %s, %s)",
+                    (res_id, payment_amount, random.choice(methods), payment_amount, 0),
+                )
+
+        # Mark some rooms as dirty
+        dirty_room_ids = [available_rooms[i][0] for i in random.sample(range(len(available_rooms)), min(8, len(available_rooms)))]
+        for room_id in dirty_room_ids:
+            cur.execute("UPDATE rooms SET housekeeping_status = 'dirty' WHERE id = %s", (room_id,))
+
+        # Mark some rooms as maintenance
+        maint_room_ids = [available_rooms[i][0] for i in random.sample(range(len(available_rooms)), min(4, len(available_rooms)))]
+        for room_id in maint_room_ids:
+            if room_id not in dirty_room_ids:
+                cur.execute("UPDATE rooms SET housekeeping_status = 'maintenance' WHERE id = %s", (room_id,))
+
+        # Block some rooms
+        block_room_ids = [available_rooms[i][0] for i in random.sample(range(len(available_rooms)), min(3, len(available_rooms)))]
+        for room_id in block_room_ids:
+            if room_id not in dirty_room_ids and room_id not in maint_room_ids:
+                reason = random.choice(["Renovación", "Problema eléctrico", "FDU - Reparación"])
+                cur.execute(
+                    "UPDATE rooms SET is_blocked = TRUE, blocked_reason = %s, blocked_until = %s WHERE id = %s",
+                    (reason, today + timedelta(days=random.randint(3, 14)), room_id),
+                )
+
+        conn.commit()
+        cur.close()
+        release_connection(conn)
+        logger.info(f"Demo data seeded ({len(guest_ids)} guests, {len(reservation_ids)} reservations, folios, payments)")
+    except Exception as e:
+        conn.rollback()
+        release_connection(conn)
+        logger.error(f"Error seeding demo data: {e}")

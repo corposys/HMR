@@ -1,9 +1,10 @@
 """
 Reception routes: rooms rack view, guests, reservations, folios, payments,
-charges, uploads, and dashboard.
+charges, uploads, dashboard, audit, and logbook.
 """
 import os
 import uuid
+import json
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 from typing import Optional, Literal
@@ -14,6 +15,7 @@ from pydantic import BaseModel
 from db import get_connection, release_connection
 from middleware.auth import get_current_user, require_permission
 from services.invoicing import InternalControlAdapter
+from routes.rack import broadcast_room_update, broadcast_full_sync
 
 router = APIRouter(prefix="/api/reception", tags=["reception"])
 
@@ -435,6 +437,21 @@ async def update_room_reception(
         if cur.rowcount == 0:
             raise HTTPException(status_code=404, detail="Habitación no encontrada")
         conn.commit()
+
+        # Broadcast update to Rack Operativo
+        changes = {}
+        if data.housekeeping_status is not None:
+            changes["housekeeping_status"] = data.housekeeping_status
+        if data.is_blocked is not None:
+            changes["is_blocked"] = data.is_blocked
+            if not data.is_blocked:
+                changes["blocked_reason"] = None
+                changes["blocked_until"] = None
+        if data.blocked_reason is not None:
+            changes["blocked_reason"] = data.blocked_reason
+        if changes:
+            await broadcast_room_update(room_id, changes)
+
         return {"success": True}
     except HTTPException:
         raise
@@ -757,6 +774,9 @@ async def create_reservation(
 
         conn.commit()
 
+        # Broadcast to Rack Operativo
+        await broadcast_full_sync()
+
         cur.execute(
             "SELECT res.id, res.status, res.check_in_date, res.check_out_date, res.quote_token "
             "FROM reservations res WHERE res.id = %s",
@@ -945,6 +965,11 @@ async def update_reservation(
         params.append(reservation_id)
         cur.execute(f"UPDATE reservations SET {', '.join(updates)} WHERE id = %s", params)
         conn.commit()
+
+        # Broadcast to Rack Operativo if status changed
+        if data.status is not None:
+            await broadcast_full_sync()
+
         return {"success": True}
     except HTTPException:
         raise
@@ -1020,6 +1045,10 @@ async def checkin_reservation(
             (reservation_id,),
         )
         conn.commit()
+
+        # Broadcast to Rack Operativo
+        await broadcast_full_sync()
+
         return {"success": True, "folio_id": folio_id}
     except HTTPException:
         raise
@@ -1060,7 +1089,18 @@ async def checkout_reservation(
             "UPDATE reservations SET status = 'checked_out', updated_at = CURRENT_TIMESTAMP WHERE id = %s",
             (reservation_id,),
         )
+
+        # Set room to dirty for housekeeping
+        cur.execute(
+            "UPDATE rooms SET housekeeping_status = 'dirty' WHERE id = (SELECT room_id FROM reservations WHERE id = %s)",
+            (reservation_id,),
+        )
+
         conn.commit()
+
+        # Broadcast to Rack Operativo
+        await broadcast_full_sync()
+
         return {"success": True}
     except HTTPException:
         raise
@@ -1599,6 +1639,488 @@ async def get_dashboard(current_user: dict = Depends(get_current_user)):
         }
     except Exception:
         raise HTTPException(status_code=500, detail="Error al obtener dashboard")
+    finally:
+        cur.close()
+        release_connection(conn)
+
+
+# ── Night Audit ────────────────────────────────────────────────────────────────
+
+class AuditRunResponse(BaseModel):
+    success: bool
+    audit_id: int
+    rooms_processed: int
+    total_rent_charges: float
+    occupancy: int
+
+
+@router.post("/audit/run", response_model=AuditRunResponse)
+async def run_night_audit(current_user: dict = Depends(require_permission("reception", "write"))):
+    """Execute night audit: create room_night charges for all checked_in reservations."""
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+        today = date.today()
+
+        # Check if already run today
+        cur.execute("SELECT id FROM night_audits WHERE audit_date = %s", (today,))
+        if cur.fetchone():
+            raise HTTPException(status_code=400, detail="La auditoría nocturna ya fue ejecutada hoy")
+
+        # Get all checked_in reservations
+        cur.execute("""
+            SELECT r.id, r.room_id, ro.nightly_rate_usd
+            FROM reservations r
+            JOIN rooms ro ON r.room_id = ro.id
+            WHERE r.status = 'checked_in'
+        """)
+        checked_in = cur.fetchall()
+
+        total_rent = Decimal("0")
+        rooms_processed = 0
+
+        for res_id, room_id, nightly_rate in checked_in:
+            rate = Decimal(str(nightly_rate)) if nightly_rate else Decimal("0")
+            if rate <= 0:
+                continue
+
+            iva_rate = _get_iva_rate(cur)
+            subtotal = rate
+            tax_iva = subtotal * iva_rate
+
+            cur.execute("""
+                INSERT INTO room_charges (
+                    reservation_id, concept, quantity, unit_price_usd, total_usd,
+                    charge_type, subtotal_base, tax_iva
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            """, (res_id, "Noche de alojamiento", 1, float(rate), float(subtotal + tax_iva),
+                  "room_night", float(subtotal), float(tax_iva)))
+
+            total_rent += subtotal + tax_iva
+            rooms_processed += 1
+
+            # Recalculate folio
+            cur.execute("SELECT id FROM folios WHERE reservation_id = %s", (res_id,))
+            folio_row = cur.fetchone()
+            if folio_row:
+                _recalculate_folio(cur, folio_row[0])
+
+        # Get occupancy count
+        cur.execute("""
+            SELECT COALESCE(SUM(num_guests), 0)
+            FROM reservations WHERE status = 'checked_in'
+        """)
+        occupancy = cur.fetchone()[0] or 0
+
+        # Get total payments today
+        cur.execute("""
+            SELECT COALESCE(SUM(amount_usd), 0)
+            FROM payments WHERE DATE(created_at) = %s AND status = 'verified'
+        """, (today,))
+        total_payments = float(cur.fetchone()[0] or 0)
+
+        # Insert audit record
+        cur.execute("""
+            INSERT INTO night_audits (
+                audit_date, executed_by, status, total_rent_charges,
+                total_occupancy, total_payments, metadata
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s)
+            RETURNING id
+        """, (today, current_user["id"], "completed", float(total_rent),
+              occupancy, total_payments, json.dumps({"rooms_processed": rooms_processed})))
+
+        audit_id = cur.fetchone()[0]
+        conn.commit()
+
+        return {
+            "success": True,
+            "audit_id": audit_id,
+            "rooms_processed": rooms_processed,
+            "total_rent_charges": float(total_rent),
+            "occupancy": occupancy,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=f"Error al ejecutar auditoría: {str(e)}")
+    finally:
+        cur.close()
+        release_connection(conn)
+
+
+@router.get("/audit/status")
+async def get_audit_status(current_user: dict = Depends(get_current_user)):
+    """Get status of the last night audit."""
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT id, audit_date, executed_at, status, total_rent_charges,
+                   total_occupancy, total_payments
+            FROM night_audits ORDER BY audit_date DESC LIMIT 1
+        """)
+        row = cur.fetchone()
+        if not row:
+            return {"last_audit": None}
+        return {
+            "last_audit": {
+                "id": row[0],
+                "audit_date": row[1].isoformat() if row[1] else None,
+                "executed_at": row[2].isoformat() if row[2] else None,
+                "status": row[3],
+                "total_rent_charges": float(row[4]) if row[4] else 0,
+                "total_occupancy": row[5],
+                "total_payments": float(row[6]) if row[6] else 0,
+            }
+        }
+    except Exception:
+        raise HTTPException(status_code=500, detail="Error al obtener estado de auditoría")
+    finally:
+        cur.close()
+        release_connection(conn)
+
+
+@router.get("/audit/occupancy")
+async def get_occupancy_report(current_user: dict = Depends(get_current_user)):
+    """Get current occupancy report."""
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+        # Total guests in hotel
+        cur.execute("SELECT COALESCE(SUM(num_guests), 0) FROM reservations WHERE status = 'checked_in'")
+        total_guests = cur.fetchone()[0] or 0
+
+        # Occupancy by module
+        cur.execute("""
+            SELECT m.id, m.name, COUNT(r.id) as occupied_rooms,
+                   (SELECT COUNT(*) FROM rooms WHERE floor_id IN (
+                       SELECT id FROM floors WHERE module_id = m.id
+                   )) as total_rooms
+            FROM modules m
+            LEFT JOIN floors f ON f.module_id = m.id
+            LEFT JOIN rooms ro ON ro.floor_id = f.id
+            LEFT JOIN reservations r ON r.room_id = ro.id AND r.status = 'checked_in'
+            GROUP BY m.id, m.name
+            ORDER BY m.id
+        """)
+        modules = []
+        for row in cur.fetchall():
+            mod_id, name, occ, total = row
+            pct = round((occ / total * 100), 1) if total else 0
+            modules.append({
+                "module_id": mod_id,
+                "module_name": name,
+                "occupied_rooms": occ,
+                "total_rooms": total,
+                "occupancy_pct": pct,
+            })
+
+        return {
+            "total_guests": total_guests,
+            "total_occupied": sum(m["occupied_rooms"] for m in modules),
+            "total_rooms": sum(m["total_rooms"] for m in modules),
+            "modules": modules,
+        }
+    except Exception:
+        raise HTTPException(status_code=500, detail="Error al obtener reporte de ocupación")
+    finally:
+        cur.close()
+        release_connection(conn)
+
+
+@router.get("/audit/cash")
+async def get_cash_consolidation(
+    date_filter: Optional[str] = Query(None, description="Date in YYYY-MM-DD format"),
+    current_user: dict = Depends(get_current_user),
+):
+    """Get cash consolidation by shift for a given date (default today)."""
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+        target_date = date_filter or date.today().isoformat()
+
+        # Morning shift: 06:00 - 13:59
+        cur.execute("""
+            SELECT COALESCE(SUM(amount_usd), 0), COUNT(*)
+            FROM payments
+            WHERE DATE(created_at) = %s
+              AND EXTRACT(HOUR FROM created_at) >= 6
+              AND EXTRACT(HOUR FROM created_at) < 14
+              AND status = 'verified'
+        """, (target_date,))
+        morning = cur.fetchone()
+
+        # Afternoon shift: 14:00 - 21:59
+        cur.execute("""
+            SELECT COALESCE(SUM(amount_usd), 0), COUNT(*)
+            FROM payments
+            WHERE DATE(created_at) = %s
+              AND EXTRACT(HOUR FROM created_at) >= 14
+              AND EXTRACT(HOUR FROM created_at) < 22
+              AND status = 'verified'
+        """, (target_date,))
+        afternoon = cur.fetchone()
+
+        # Night shift: 22:00 - 05:59
+        cur.execute("""
+            SELECT COALESCE(SUM(amount_usd), 0), COUNT(*)
+            FROM payments
+            WHERE DATE(created_at) = %s
+              AND (EXTRACT(HOUR FROM created_at) >= 22 OR EXTRACT(HOUR FROM created_at) < 6)
+              AND status = 'verified'
+        """, (target_date,))
+        night = cur.fetchone()
+
+        total = float(morning[0] or 0) + float(afternoon[0] or 0) + float(night[0] or 0)
+
+        return {
+            "date": target_date,
+            "shifts": {
+                "morning": {"amount": float(morning[0] or 0), "count": morning[1] or 0},
+                "afternoon": {"amount": float(afternoon[0] or 0), "count": afternoon[1] or 0},
+                "night": {"amount": float(night[0] or 0), "count": night[1] or 0},
+            },
+            "total": total,
+        }
+    except Exception:
+        raise HTTPException(status_code=500, detail="Error al obtener consolidación de caja")
+    finally:
+        cur.close()
+        release_connection(conn)
+
+
+# ── Logbook ────────────────────────────────────────────────────────────────────
+
+class LogbookNoteCreate(BaseModel):
+    shift: Literal["morning", "afternoon", "night"]
+    note_type: Literal["note", "alert", "reminder"] = "note"
+    priority: Literal["low", "normal", "high", "urgent"] = "normal"
+    content: str
+    room_id: Optional[int] = None
+    is_alert: bool = False
+
+
+class LogbookNoteUpdate(BaseModel):
+    content: Optional[str] = None
+    is_resolved: Optional[bool] = None
+    priority: Optional[str] = None
+
+
+@router.get("/logbook")
+async def list_logbook_notes(
+    shift: Optional[str] = Query(None),
+    note_type: Optional[str] = Query(None),
+    is_alert: Optional[bool] = Query(None),
+    is_resolved: Optional[bool] = Query(None),
+    room_id: Optional[int] = Query(None),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    current_user: dict = Depends(get_current_user),
+):
+    """List logbook notes with filters."""
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+        conditions = ["1=1"]
+        params = []
+
+        if shift:
+            conditions.append("shift = %s")
+            params.append(shift)
+        if note_type:
+            conditions.append("note_type = %s")
+            params.append(note_type)
+        if is_alert is not None:
+            conditions.append("is_alert = %s")
+            params.append(is_alert)
+        if is_resolved is not None:
+            conditions.append("is_resolved = %s")
+            params.append(is_resolved)
+        if room_id:
+            conditions.append("room_id = %s")
+            params.append(room_id)
+
+        where_clause = " AND ".join(conditions)
+
+        cur.execute(f"""
+            SELECT ln.id, ln.shift, ln.note_type, ln.priority, ln.content,
+                   ln.room_id, ln.is_alert, ln.is_resolved, ln.resolved_at,
+                   ln.created_by, u.full_name as author_name,
+                   ln.created_at, ln.updated_at
+            FROM logbook_notes ln
+            LEFT JOIN users u ON ln.created_by = u.id
+            WHERE {where_clause}
+            ORDER BY ln.created_at DESC
+            LIMIT %s OFFSET %s
+        """, params + [limit, offset])
+
+        notes = []
+        for row in cur.fetchall():
+            notes.append({
+                "id": row[0],
+                "shift": row[1],
+                "note_type": row[2],
+                "priority": row[3],
+                "content": row[4],
+                "room_id": row[5],
+                "is_alert": row[6],
+                "is_resolved": row[7],
+                "resolved_at": row[8].isoformat() if row[8] else None,
+                "created_by": row[9],
+                "author_name": row[10],
+                "created_at": row[11].isoformat() if row[11] else None,
+                "updated_at": row[12].isoformat() if row[12] else None,
+            })
+
+        # Count total
+        cur.execute(f"SELECT COUNT(*) FROM logbook_notes WHERE {where_clause}", params)
+        total = cur.fetchone()[0]
+
+        return {"notes": notes, "total": total}
+    except Exception:
+        raise HTTPException(status_code=500, detail="Error al obtener notas")
+    finally:
+        cur.close()
+        release_connection(conn)
+
+
+@router.post("/logbook")
+async def create_logbook_note(
+    data: LogbookNoteCreate,
+    current_user: dict = Depends(require_permission("reception", "write")),
+):
+    """Create a new logbook note."""
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO logbook_notes (
+                shift, note_type, priority, content, room_id,
+                is_alert, created_by
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s)
+            RETURNING id
+        """, (data.shift, data.note_type, data.priority, data.content,
+              data.room_id, data.is_alert, current_user["id"]))
+
+        note_id = cur.fetchone()[0]
+        conn.commit()
+
+        return {"success": True, "note": {"id": note_id}}
+    except Exception:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail="Error al crear nota")
+    finally:
+        cur.close()
+        release_connection(conn)
+
+
+@router.patch("/logbook/{note_id}")
+async def update_logbook_note(
+    note_id: int,
+    data: LogbookNoteUpdate,
+    current_user: dict = Depends(require_permission("reception", "write")),
+):
+    """Update a logbook note (content, resolved status, priority)."""
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+        updates = []
+        params = []
+
+        if data.content is not None:
+            updates.append("content = %s")
+            params.append(data.content)
+        if data.is_resolved is not None:
+            updates.append("is_resolved = %s")
+            params.append(data.is_resolved)
+            if data.is_resolved:
+                updates.append("resolved_at = CURRENT_TIMESTAMP")
+            else:
+                updates.append("resolved_at = NULL")
+        if data.priority is not None:
+            updates.append("priority = %s")
+            params.append(data.priority)
+
+        if not updates:
+            raise HTTPException(status_code=400, detail="No hay campos para actualizar")
+
+        updates.append("updated_at = CURRENT_TIMESTAMP")
+        params.append(note_id)
+
+        cur.execute(f"""
+            UPDATE logbook_notes SET {', '.join(updates)} WHERE id = %s
+        """, params)
+
+        if cur.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Nota no encontrada")
+
+        conn.commit()
+        return {"success": True}
+    except HTTPException:
+        raise
+    except Exception:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail="Error al actualizar nota")
+    finally:
+        cur.close()
+        release_connection(conn)
+
+
+@router.delete("/logbook/{note_id}")
+async def delete_logbook_note(
+    note_id: int,
+    current_user: dict = Depends(require_permission("reception", "write")),
+):
+    """Delete a logbook note."""
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute("DELETE FROM logbook_notes WHERE id = %s", (note_id,))
+        if cur.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Nota no encontrada")
+        conn.commit()
+        return {"success": True, "message": "Nota eliminada"}
+    except HTTPException:
+        raise
+    except Exception:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail="Error al eliminar nota")
+    finally:
+        cur.close()
+        release_connection(conn)
+
+
+@router.get("/logbook/alerts")
+async def get_active_alerts(current_user: dict = Depends(get_current_user)):
+    """Get unresolved alerts for display in navbar."""
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT ln.id, ln.content, ln.priority, ln.room_id, r.room_number,
+                   ln.created_at, u.full_name as author_name
+            FROM logbook_notes ln
+            LEFT JOIN rooms r ON ln.room_id = r.id
+            LEFT JOIN users u ON ln.created_by = u.id
+            WHERE ln.is_alert = TRUE AND ln.is_resolved = FALSE
+            ORDER BY ln.created_at DESC
+            LIMIT 20
+        """)
+        alerts = []
+        for row in cur.fetchall():
+            alerts.append({
+                "id": row[0],
+                "content": row[1],
+                "priority": row[2],
+                "room_id": row[3],
+                "room_number": row[4],
+                "created_at": row[5].isoformat() if row[5] else None,
+                "author_name": row[6],
+            })
+        return {"alerts": alerts, "count": len(alerts)}
+    except Exception:
+        raise HTTPException(status_code=500, detail="Error al obtener alertas")
     finally:
         cur.close()
         release_connection(conn)

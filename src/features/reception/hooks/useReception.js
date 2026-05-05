@@ -117,6 +117,11 @@ export function useGuests(params = {}) {
     return { guests, total, isLoading, error, fetchGuests, createGuest, updateGuest };
 }
 
+export async function getGuestDetail(guestId) {
+    const data = await apiFetch(`/api/reception/guests/${guestId}`);
+    return data.guest || data;
+}
+
 export function useReservations(params = {}) {
     const [reservations, setReservations] = useState([]);
     const [isLoading, setIsLoading] = useState(true);

@@ -10,12 +10,31 @@ const LockTimelinePage = lazy(() => import('@features/maintenance/locks/pages/Lo
 const LocksRackPage = lazy(() => import('@features/maintenance/locks/pages/LocksRackPage'));
 const VehicleControl = lazy(() => import('@features/security/pages/VehicleControl'));
 const Linen = lazy(() => import('@features/housekeeping/pages/Linen'));
-const Reservations = lazy(() => import('@features/reception/pages/Reservations'));
-const RackPage = lazy(() => import('@features/reception/pages/RackPage'));
+const HousekeepingPage = lazy(() => import('@features/housekeeping/pages/Housekeeping'));
+const MaidPanel = lazy(() => import('@features/housekeeping/pages/MaidPanel'));
+const InspectionPage = lazy(() => import('@features/housekeeping/pages/InspectionPage'));
+const IncidentsPage = lazy(() => import('@features/housekeeping/pages/IncidentsPage'));
+const StaffPage = lazy(() => import('@features/housekeeping/pages/StaffPage'));
+const HousekeepingDashboard = lazy(() => import('@features/housekeeping/pages/HousekeepingDashboard'));
+const Reservations = lazy(() => import('@features/reservations/pages/Reservations'));
+const RatesPage = lazy(() => import('@features/reservations/pages/RatesPage'));
+const RackOperativo = lazy(() => import('@features/rack/pages/RackOperativo'));
+const OperationsPage = lazy(() => import('@features/reception/pages/OperationsPage'));
+const FoliosPage = lazy(() => import('@features/reception/pages/FoliosPage'));
+const WalkInsPage = lazy(() => import('@features/reception/pages/WalkInsPage'));
+const AuditPage = lazy(() => import('@features/reception/pages/AuditPage'));
+const LogbookPage = lazy(() => import('@features/reception/pages/LogbookPage'));
 
 export const protectedRoutes = [
     { index: true, element: <Dashboard /> },
-    { path: 'reception/rack', element: <RackPage /> },
+    { path: 'rack', element: <RackOperativo /> },
+    { path: 'reception/operations', element: <OperationsPage /> },
+    { path: 'reception/folios', element: <FoliosPage /> },
+    { path: 'reception/walkins', element: <WalkInsPage /> },
+    { path: 'reception/audit', element: <AuditPage /> },
+    { path: 'reception/logbook', element: <LogbookPage /> },
+    { path: 'reservaciones', element: <Reservations /> },
+    { path: 'reservaciones/tarifas', element: <RatesPage /> },
     { path: 'reception/reservas', element: <Reservations /> },
     { path: 'signatures', element: <SignaturesHistory /> },
     { path: 'signatures/new', element: <Signatures /> },
@@ -25,6 +44,12 @@ export const protectedRoutes = [
     { path: 'maintenance/rooms', element: <LocksRackPage /> },
     { path: 'maintenance/dashboard', element: <LockHealthDashboard /> },
     { path: 'security/vehicle-control', element: <VehicleControl /> },
+    { path: 'housekeeping', element: <HousekeepingPage /> },
+    { path: 'housekeeping/dashboard', element: <HousekeepingDashboard /> },
+    { path: 'housekeeping/panel', element: <MaidPanel /> },
+    { path: 'housekeeping/inspeccion', element: <InspectionPage /> },
+    { path: 'housekeeping/incidencias', element: <IncidentsPage /> },
+    { path: 'housekeeping/personal', element: <StaffPage /> },
     { path: 'housekeeping/lenceria', element: <Linen /> },
     { path: 'settings', element: <Settings /> },
 ];

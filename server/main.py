@@ -17,6 +17,10 @@ from routes.maintenance import router as maintenance_router
 from routes.reception import router as reception_router
 from routes.settings import router as settings_router
 from routes.roles import router as roles_router
+from routes.rack import router as rack_router
+from routes.housekeeping import router as housekeeping_router
+from routes.linen import router as linen_router
+from routes.rates import router as rates_router
 
 UPLOADS_DIR = os.path.join(os.path.dirname(__file__), "uploads")
 os.makedirs(os.path.join(UPLOADS_DIR, "payments"), exist_ok=True)
@@ -47,6 +51,10 @@ app.include_router(maintenance_router)
 app.include_router(reception_router)
 app.include_router(settings_router)
 app.include_router(roles_router)
+app.include_router(rack_router)
+app.include_router(housekeeping_router)
+app.include_router(linen_router)
+app.include_router(rates_router)
 
 app.mount("/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
 

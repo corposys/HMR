@@ -71,7 +71,7 @@ export function compressImage(file, maxWidth = 1200, quality = 0.8) {
     });
 }
 
-export async function uploadPaymentScreenshot(file, onProgress) {
+export async function uploadPaymentScreenshot(file) {
     let compressed = file;
 
     if (file.type.startsWith('image/')) {

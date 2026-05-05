@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Navbar from './Navbar';
+import WhatsAppButton from '@shared/common/WhatsAppButton';
 
 /**
  * Layout - Contenedor principal de la aplicación (Sidebar + Topbar)
@@ -37,6 +38,7 @@ export default function Layout() {
                 {/* Content Area*/}
                 <main className="flex-1 overflow-y-auto bg-[var(--color-bg-primary)] scroll-smooth p-0 relative">
                     <Outlet />
+                    <WhatsAppButton />
                 </main>
             </div>
         </div>

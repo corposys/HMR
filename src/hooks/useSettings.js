@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { apiFetch } from '@utils/api';
 import { DEFAULT_SETTINGS } from '@utils/constants';
 
@@ -10,69 +10,72 @@ function notifyListeners() {
     listeners.forEach((fn) => fn(settingsCache));
 }
 
+async function fetchSettingsFromApi(setIsLoading, setError, setSettings, mountedRef) {
+    if (settingsPromise) {
+        try {
+            const result = await settingsPromise;
+            if (mountedRef.current) {
+                setSettings(result);
+                setIsLoading(false);
+            }
+        } catch {
+            // already handled
+        }
+        return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+    settingsPromise = apiFetch('/api/settings')
+        .then((data) => {
+            settingsCache = data.settings;
+            notifyListeners();
+            return data.settings;
+        })
+        .catch((err) => {
+            setError(err.message);
+            settingsCache = { ...DEFAULT_SETTINGS };
+            notifyListeners();
+            return settingsCache;
+        })
+        .finally(() => {
+            settingsPromise = null;
+            setIsLoading(false);
+        });
+
+    const result = await settingsPromise;
+    if (mountedRef.current) setSettings(result);
+}
+
 export function useSettings() {
-    const [settings, setSettings] = useState(settingsCache);
-    const [isLoading, setIsLoading] = useState(!settingsCache);
+    const [settings, setSettings] = useState(() => settingsCache);
+    const [isLoading, setIsLoading] = useState(() => !settingsCache);
     const [error, setError] = useState(null);
+    const mountedRef = useRef(true);
+    const initializedRef = useRef(false);
+
+    const loadSettings = useCallback(() => {
+        return fetchSettingsFromApi(setIsLoading, setError, setSettings, mountedRef);
+    }, []);
 
     useEffect(() => {
-        let mounted = true;
-
         const listener = (newSettings) => {
-            if (mounted) setSettings(newSettings);
+            if (mountedRef.current) setSettings(newSettings);
         };
         listeners.push(listener);
 
-        if (settingsCache) {
-            setSettings(settingsCache);
-            setIsLoading(false);
-        } else {
-            fetchSettings();
+        if (!initializedRef.current) {
+            initializedRef.current = true;
+            if (!settingsCache) {
+                loadSettings();
+            }
         }
 
         return () => {
-            mounted = false;
+            mountedRef.current = false;
             listeners = listeners.filter((l) => l !== listener);
         };
-    }, []);
-
-    async function fetchSettings() {
-        if (settingsPromise) {
-            try {
-                const result = await settingsPromise;
-                if (mounted) {
-                    setSettings(result);
-                    setIsLoading(false);
-                }
-            } catch (e) {
-                // already handled
-            }
-            return;
-        }
-
-        setIsLoading(true);
-        setError(null);
-        settingsPromise = apiFetch('/api/settings')
-            .then((data) => {
-                settingsCache = data.settings;
-                notifyListeners();
-                return data.settings;
-            })
-            .catch((err) => {
-                setError(err.message);
-                settingsCache = { ...DEFAULT_SETTINGS };
-                notifyListeners();
-                return settingsCache;
-            })
-            .finally(() => {
-                settingsPromise = null;
-                setIsLoading(false);
-            });
-
-        const result = await settingsPromise;
-        setSettings(result);
-        return result;
-    }
+    }, [loadSettings]);
 
     async function updateSettings(updates) {
         setError(null);
@@ -111,7 +114,7 @@ export function useSettings() {
     async function refreshSettings() {
         settingsPromise = null;
         settingsCache = null;
-        return fetchSettings();
+        return loadSettings();
     }
 
     function getSetting(key, fallback = '') {
@@ -157,24 +160,23 @@ function findCategoryForKey(key) {
 export function useBcvRate() {
     const [bcvRate, setBcvRate] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
+    const mountedRef = useRef(true);
 
     useEffect(() => {
-        let mounted = true;
         apiFetch('/api/settings/bcv')
             .then((data) => {
-                if (mounted && data.rate) {
+                if (mountedRef.current && data.rate) {
                     setBcvRate(data.rate);
                 }
             })
             .catch(() => {
-                // fallback to default
-                if (mounted) setBcvRate({ rate: 36.50, source: 'fallback' });
+                if (mountedRef.current) setBcvRate({ rate: 36.50, source: 'fallback' });
             })
             .finally(() => {
-                if (mounted) setIsLoading(false);
+                if (mountedRef.current) setIsLoading(false);
             });
 
-        return () => { mounted = false; };
+        return () => { mountedRef.current = false; };
     }, []);
 
     async function updateBcvRate(rate, source = 'manual') {
@@ -193,21 +195,21 @@ export function useBcvRate() {
 export function useRoomTypes() {
     const [roomTypes, setRoomTypes] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
+    const mountedRef = useRef(true);
 
     useEffect(() => {
-        let mounted = true;
         apiFetch('/api/settings/room-types')
             .then((data) => {
-                if (mounted) setRoomTypes(data.room_types);
+                if (mountedRef.current) setRoomTypes(data.room_types);
             })
             .catch(() => {
-                if (mounted) setRoomTypes([]);
+                if (mountedRef.current) setRoomTypes([]);
             })
             .finally(() => {
-                if (mounted) setIsLoading(false);
+                if (mountedRef.current) setIsLoading(false);
             });
 
-        return () => { mounted = false; };
+        return () => { mountedRef.current = false; };
     }, []);
 
     return { roomTypes, isLoading };
@@ -216,21 +218,21 @@ export function useRoomTypes() {
 export function useReservationPlans() {
     const [plans, setPlans] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
+    const mountedRef = useRef(true);
 
     useEffect(() => {
-        let mounted = true;
         apiFetch('/api/settings/reservation-plans')
             .then((data) => {
-                if (mounted) setPlans(data.plans);
+                if (mountedRef.current) setPlans(data.plans);
             })
             .catch(() => {
-                if (mounted) setPlans([]);
+                if (mountedRef.current) setPlans([]);
             })
             .finally(() => {
-                if (mounted) setIsLoading(false);
+                if (mountedRef.current) setIsLoading(false);
             });
 
-        return () => { mounted = false; };
+        return () => { mountedRef.current = false; };
     }, []);
 
     return { plans, isLoading };
