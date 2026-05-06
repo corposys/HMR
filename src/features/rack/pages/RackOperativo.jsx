@@ -39,7 +39,7 @@ export default function RackOperativo() {
         return rooms;
     }, [rooms, arrivals, departures, filters.quickFilter]);
 
-    const { groupedRooms, stats, uniqueFloors, uniqueTypes } = useRackData(filteredRoomsForData, filters);
+    const { groupedRooms, stats } = useRackData(filteredRoomsForData, filters);
 
     const modules = useMemo(() => {
         const list = groupedRooms.map(m => ({
@@ -84,10 +84,11 @@ export default function RackOperativo() {
                 <RackHeader
                     filters={filters}
                     onFilterChange={handleFilterChange}
-                    uniqueFloors={uniqueFloors}
-                    uniqueTypes={uniqueTypes}
                     onRefresh={refetch}
                     bcvRate={bcvRate}
+                    arrivalsCount={arrivals.length}
+                    departuresCount={departures.length}
+                    dirtyCount={stats.dirty}
                 />
 
                 {error && (
@@ -101,8 +102,6 @@ export default function RackOperativo() {
                     activeModule={activeModule}
                     onModuleChange={setActiveModule}
                     stats={stats}
-                    arrivalsCount={arrivals.length}
-                    departuresCount={departures.length}
                     filters={filters}
                     onFilterChange={handleFilterChange}
                 />

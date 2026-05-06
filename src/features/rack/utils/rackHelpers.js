@@ -46,6 +46,7 @@ export const RACK_STATE_COLORS = {
         hover: 'hover:bg-emerald-500/20',
         dot: 'bg-emerald-400',
         pill: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+        glow: '#34d399',
     },
     occupied: {
         bg: 'bg-blue-500/15',
@@ -54,6 +55,7 @@ export const RACK_STATE_COLORS = {
         hover: 'hover:bg-blue-500/20',
         dot: 'bg-blue-400',
         pill: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+        glow: '#60a5fa',
     },
     reserved: {
         bg: 'bg-amber-500/15',
@@ -62,6 +64,7 @@ export const RACK_STATE_COLORS = {
         hover: 'hover:bg-amber-500/20',
         dot: 'bg-amber-400',
         pill: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+        glow: '#fbbf24',
     },
     dirty: {
         bg: 'bg-red-500/15',
@@ -70,6 +73,7 @@ export const RACK_STATE_COLORS = {
         hover: 'hover:bg-red-500/20',
         dot: 'bg-red-400',
         pill: 'bg-red-500/10 text-red-400 border-red-500/20',
+        glow: '#f87171',
     },
     maintenance: {
         bg: 'bg-orange-500/15',
@@ -78,6 +82,7 @@ export const RACK_STATE_COLORS = {
         hover: 'hover:bg-orange-500/20',
         dot: 'bg-orange-400',
         pill: 'bg-orange-500/10 text-orange-400 border-orange-500/20',
+        glow: '#fb923c',
     },
     blocked: {
         bg: 'bg-gray-500/15',
@@ -86,6 +91,7 @@ export const RACK_STATE_COLORS = {
         hover: 'hover:bg-gray-500/20',
         dot: 'bg-gray-400',
         pill: 'bg-gray-500/10 text-gray-400 border-gray-500/20',
+        glow: '#9ca3af',
     },
     fdu: {
         bg: 'bg-purple-500/15',
@@ -94,6 +100,7 @@ export const RACK_STATE_COLORS = {
         hover: 'hover:bg-purple-500/20',
         dot: 'bg-purple-400',
         pill: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
+        glow: '#c084fc',
     },
 };
 

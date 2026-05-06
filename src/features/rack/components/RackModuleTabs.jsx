@@ -1,9 +1,22 @@
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RACK_STATE_LABELS, getStateColors } from '../utils/rackHelpers';
 
-const STAT_ORDER = ['available', 'occupied', 'reserved', 'dirty', 'maintenance', 'blocked', 'fdu'];
+const STAT_ORDER = ['available', 'occupied', 'reserved', 'maintenance', 'blocked', 'fdu'];
 
-export default function RackModuleTabs({ modules, activeModule, onModuleChange, stats, arrivalsCount, departuresCount, filters, onFilterChange }) {
+export default function RackModuleTabs({ modules, activeModule, onModuleChange, stats, filters, onFilterChange }) {
+    const handleStatClick = (key) => {
+        if (key === 'all') {
+            onFilterChange({ stateFilter: '', quickFilter: '', searchQuery: '' });
+        } else {
+            onFilterChange({ stateFilter: filters.stateFilter === key ? '' : key, quickFilter: '' });
+        }
+    };
+
+    const isStatActive = (key) => {
+        if (key === 'all') return !filters.stateFilter && !filters.quickFilter;
+        return filters.stateFilter === key;
+    };
+
     return (
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
             <Tabs value={activeModule} onValueChange={onModuleChange} className="w-full sm:w-auto">
@@ -23,49 +36,33 @@ export default function RackModuleTabs({ modules, activeModule, onModuleChange, 
                 </TabsList>
             </Tabs>
 
-            {/* Stats pills aligned to the right */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide sm:ml-auto">
-                <StatPill value={stats.total} label="Total" color="text-[var(--color-text-primary)]" />
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-hide sm:ml-auto">
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] text-xs shrink-0">
+                    <span className="font-bold text-[var(--color-text-primary)]">{stats.total}</span>
+                    <span className="text-[var(--color-text-muted)]">Total</span>
+                </div>
                 {STAT_ORDER.map(key => {
                     const count = stats[key] || 0;
                     if (!count) return null;
                     const colors = getStateColors(key);
+                    const isActive = isStatActive(key);
                     return (
-                        <StatPill
+                        <button
                             key={key}
-                            value={count}
-                            label={RACK_STATE_LABELS[key]}
-                            color={colors.text}
-                            active={filters.stateFilter === key}
-                            onClick={() => onFilterChange({ stateFilter: filters.stateFilter === key ? '' : key, quickFilter: '' })}
-                        />
+                            onClick={() => handleStatClick(key)}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-xs font-medium whitespace-nowrap shrink-0 transition-all
+                                ${isActive
+                                    ? `${colors.bg} ${colors.border} ${colors.text}`
+                                    : `bg-[var(--color-bg-secondary)] border-[var(--color-border)] text-[var(--color-text-secondary)] hover:${colors.bg} hover:${colors.border}`
+                                }
+                            `}
+                        >
+                            <span className={`font-bold ${colors.text}`}>{count}</span>
+                            <span className="text-[var(--color-text-muted)]">{RACK_STATE_LABELS[key]}</span>
+                        </button>
                     );
                 })}
-                {arrivalsCount > 0 && (
-                    <StatPill value={arrivalsCount} label="Entradas" color="text-emerald-400" />
-                )}
-                {departuresCount > 0 && (
-                    <StatPill value={departuresCount} label="Salidas" color="text-red-400" />
-                )}
             </div>
         </div>
-    );
-}
-
-function StatPill({ value, label, color, active, onClick }) {
-    return (
-        <button
-            onClick={onClick}
-            className={`flex items-center gap-1.5 px-2 py-1 rounded-md border text-xs font-medium transition-all shrink-0
-                ${active
-                    ? 'bg-[var(--color-bg-tertiary)] border-[var(--color-primary)]/40 ring-1 ring-[var(--color-primary)]/20'
-                    : 'bg-[var(--color-bg-secondary)] border-[var(--color-border)] hover:border-[var(--color-border-hover)]'
-                }
-                ${onClick ? 'cursor-pointer' : 'cursor-default'}
-            `}
-        >
-            <span className={`font-bold ${color}`}>{value}</span>
-            <span className="text-[var(--color-text-muted)]">{label}</span>
-        </button>
     );
 }
