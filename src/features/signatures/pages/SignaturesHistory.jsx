@@ -127,7 +127,7 @@ export default function SignaturesHistory() {
             id: sig.id, fullName: sig.full_name, jobTitle: sig.job_title,
             email: sig.email, mobilePhone: sig.mobile_phone || '', extension: sig.extension || '',
         });
-        navigate(`/signatures/new?${params.toString()}`);
+        navigate(`/systems/signatures/new?${params.toString()}`);
     };
 
     const thisMonth = signatures.filter(s => {
@@ -177,7 +177,7 @@ export default function SignaturesHistory() {
                                 )}
                             </div>
                         )}
-                        <Button variant="register" icon={Plus} onClick={() => navigate('/signatures/new')}>
+                        <Button variant="register" icon={Plus} onClick={() => navigate('/systems/signatures/new')}>
                             Nueva firma
                         </Button>
                     </div>
@@ -189,7 +189,7 @@ export default function SignaturesHistory() {
             ) : error ? (
                 <ErrorState message={error} onRetry={fetchSignatures} />
             ) : signatures.length === 0 ? (
-                <EmptyState icon={FileSignature} title="No hay firmas guardadas" description="Crea la primera firma para empezar a usar el historial." actionLabel="Nueva firma" onAction={() => navigate('/signatures/new')} />
+                <EmptyState icon={FileSignature} title="No hay firmas guardadas" description="Crea la primera firma para empezar a usar el historial." actionLabel="Nueva firma" onAction={() => navigate('/systems/signatures/new')} />
             ) : filtered.length === 0 ? (
                 <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] px-6 py-16 text-center text-sm text-[var(--color-text-secondary)] shadow-sm">
                     Sin resultados para <strong>"{search}"</strong>

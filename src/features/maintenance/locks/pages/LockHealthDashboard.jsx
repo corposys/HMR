@@ -33,7 +33,7 @@ export default function LockHealthDashboard() {
                 <div className="mb-6">
                     <div className="flex items-center gap-3 mb-1">
                         <button
-                            onClick={() => navigate('/maintenance/rooms')}
+                            onClick={() => navigate('/systems/rooms')}
                             aria-label="Volver al historial"
                             title="Volver al historial"
                             className="p-2.5 rounded-xl bg-[var(--color-primary)]/10 text-[var(--color-primary)] hover:bg-[var(--color-primary)]/20 transition-colors"

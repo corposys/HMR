@@ -89,8 +89,8 @@ const sidebarConfig = [
         icon: ServerCog,
         label: 'Sistemas',
         items: [
-            { to: '/signatures', label: 'Firmas' },
-            { to: '/maintenance/rooms', label: 'Cerraduras' },
+            { to: '/systems/signatures', label: 'Firmas' },
+            { to: '/systems/rooms', label: 'Cerraduras' },
         ],
     },
 ];

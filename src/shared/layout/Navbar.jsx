@@ -135,7 +135,7 @@ export default function Navbar({ onMenuClick, isMobileSidebarOpen }) {
             title: 'Lencería',
             icon: Hotel,
         },
-        '/maintenance/rooms': {
+        '/systems/rooms': {
             title: 'Control de Cerraduras',
             icon: DoorOpen,
         },
@@ -151,7 +151,7 @@ export default function Navbar({ onMenuClick, isMobileSidebarOpen }) {
             title: 'Control de Vehículos',
             icon: Shield,
         },
-        '/signatures': {
+        '/systems/signatures': {
             title: 'Firmas Corporativas',
             icon: FileSignature,
         },
@@ -167,16 +167,16 @@ export default function Navbar({ onMenuClick, isMobileSidebarOpen }) {
             return pageMeta[location.pathname];
         }
 
-        if (location.pathname.startsWith('/maintenance/room/')) {
-            return pageMeta['/maintenance/rooms'];
+        if (location.pathname.startsWith('/systems/room/')) {
+            return pageMeta['/systems/rooms'];
         }
 
         if (location.pathname.startsWith('/maintenance/habitaciones')) {
             return pageMeta['/maintenance/habitaciones'];
         }
 
-        if (location.pathname.startsWith('/signatures/')) {
-            return pageMeta['/signatures'];
+        if (location.pathname.startsWith('/systems/signatures/')) {
+            return pageMeta['/systems/signatures'];
         }
 
         return null;

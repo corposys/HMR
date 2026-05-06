@@ -140,7 +140,7 @@ export default function LockTimelinePage() {
                     <div className="flex items-center gap-3">
                         <button
                             type="button"
-                            onClick={() => navigate('/maintenance/rooms')}
+                            onClick={() => navigate('/systems/rooms')}
                             aria-label="Volver al rack"
                             title="Volver al rack"
                             className="p-2.5 rounded-xl bg-[var(--color-primary)]/10 text-[var(--color-primary)] hover:bg-[var(--color-primary)]/20 transition-colors"

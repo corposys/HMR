@@ -47,7 +47,7 @@ export default function SignatureForm({ formData, setFormData, handleClear, fixe
             <div className="flex justify-between items-center pb-4">
                 <h2 className="text-lg font-medium text-[var(--color-text-primary)] flex items-center gap-2 m-0">
                     <button
-                        onClick={() => navigate('/signatures')}
+                        onClick={() => navigate('/systems/signatures')}
                         aria-label="Volver al historial"
                         title="Volver al historial"
                         className="p-2.5 rounded-xl bg-[var(--color-primary)]/10 text-[var(--color-primary)] hover:bg-[var(--color-primary)]/20 transition-colors"
