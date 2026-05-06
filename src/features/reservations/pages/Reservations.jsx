@@ -124,6 +124,8 @@ export default function Reservations() {
                                 onChange={(v) => setStatusFilter(v)}
                                 options={STATUS_FILTERS}
                                 placeholder="Estado"
+                                className="min-w-[170px]"
+                                buttonClassName="h-8"
                             />
 
                             <div className="relative w-full sm:w-64 h-8">

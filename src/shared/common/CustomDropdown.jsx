@@ -10,6 +10,7 @@ export default function CustomDropdown({
     disabled = false,
     className = '',
     menuClassName = '',
+    buttonClassName = '',
 }) {
     const [isOpen, setIsOpen] = useState(false);
     const rootRef = useRef(null);
@@ -40,7 +41,7 @@ export default function CustomDropdown({
                 type="button"
                 onClick={() => !disabled && setIsOpen((prev) => !prev)}
                 disabled={disabled}
-                className="w-full px-3 py-2 text-sm text-left bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded-lg text-[var(--color-text-primary)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)] transition-colors flex items-center justify-between gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                className={`w-full px-3 py-2 text-sm text-left bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded-lg text-[var(--color-text-primary)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)] transition-colors flex items-center justify-between gap-3 disabled:opacity-50 disabled:cursor-not-allowed ${buttonClassName}`}
             >
                 <span className={`truncate ${selected ? '' : 'text-[var(--color-text-muted)]'}`}>
                     {label}
