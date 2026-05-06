@@ -1,12 +1,13 @@
 import {
-    BedDouble, User, Calendar,
-    DollarSign, Tag, ArrowRight, LogIn, LogOut, Receipt, ShieldAlert,
+    BedDouble, User, Calendar, Tag, DollarSign, ShieldAlert,
+    StickyNote, Users, Clock, ArrowRight,
 } from 'lucide-react';
 import {
     Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getRackState, RACK_STATE_LABELS, formatCurrency, formatShortDate } from '../utils/rackHelpers';
 
 const stateBadgeConfig = {
@@ -19,116 +20,165 @@ const stateBadgeConfig = {
     fdu: { label: 'FDU', className: 'bg-purple-500/15 text-purple-400 border-purple-500/30' },
 };
 
-export default function RackRoomDialog({ room, isOpen, onClose }) {
-    if (!room) return null;
-
-    const state = getRackState(room);
-
-    return (
-        <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
-            <DialogContent className="bg-[var(--color-bg-secondary)] border-[var(--color-border)] text-[var(--color-text-primary)] max-w-sm sm:max-w-md">
-                <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2 text-lg">
-                        <BedDouble className="w-5 h-5 text-[var(--color-primary)]" />
-                        Habitación {room.room_number}
-                    </DialogTitle>
-                    <DialogDescription className="text-[var(--color-text-muted)]">
-                        Detalle de la habitación
-                    </DialogDescription>
-                </DialogHeader>
-
-                <div className="space-y-4">
-                    <div className="flex items-center gap-2 flex-wrap">
-                        <Badge variant="outline" className={`${stateBadgeConfig[state].className}`}>
-                            {stateBadgeConfig[state].label}
-                        </Badge>
-                        {room.room_type_name && (
-                            <span className="text-sm text-[var(--color-text-secondary)]">
-                                {room.room_type_name} · {room.max_occupancy} pax
-                            </span>
-                        )}
-                    </div>
-
-                    <Separator className="bg-[var(--color-border)]" />
-
-                    <div className="grid grid-cols-2 gap-3">
-                        <InfoItem icon={DollarSign} label="Tarifa" value={formatCurrency(room.nightly_rate_usd) + '/noche'} />
-                        <InfoItem icon={Calendar} label="Piso" value={room.floor_code} />
-                    </div>
-
-                    {room.guest_name && (
-                        <>
-                            <Separator className="bg-[var(--color-border)]" />
-                            <div className="space-y-2">
-                                <p className="text-sm font-medium text-[var(--color-text-primary)]">Información del huésped</p>
-                                <InfoItem icon={User} label="Nombre" value={room.guest_name} />
-                                {room.plan_name && <InfoItem icon={Tag} label="Plan" value={room.plan_name} />}
-                                {room.reservation_check_in && (
-                                    <InfoItem icon={Calendar} label="Estadía" value={`${formatShortDate(room.reservation_check_in)} → ${formatShortDate(room.reservation_check_out)}`} />
-                                )}
-                            </div>
-
-                            <div className="flex flex-wrap gap-2 pt-1">
-                                {state === 'reserved' && (
-                                    <a
-                                        href={`/reception/checkin?reservation=${room.reservation_id}`}
-                                        className="inline-flex items-center gap-1 text-xs text-[var(--color-primary)] hover:underline"
-                                    >
-                                        <LogIn className="w-3 h-3" />
-                                        Ir a Check-in
-                                        <ArrowRight className="w-3 h-3" />
-                                    </a>
-                                )}
-                                {state === 'occupied' && (
-                                    <>
-                                        <a
-                                            href={`/reception/checkout?room=${room.room_number}&reservation=${room.reservation_id}`}
-                                            className="inline-flex items-center gap-1 text-xs text-red-400 hover:underline"
-                                        >
-                                            <LogOut className="w-3 h-3" />
-                                            Check-out
-                                            <ArrowRight className="w-3 h-3" />
-                                        </a>
-                                        <a
-                                            href={`/reception/folios?reservation=${room.reservation_id}`}
-                                            className="inline-flex items-center gap-1 text-xs text-[var(--color-primary)] hover:underline"
-                                        >
-                                            <Receipt className="w-3 h-3" />
-                                            Ver Folio
-                                            <ArrowRight className="w-3 h-3" />
-                                        </a>
-                                    </>
-                                )}
-                            </div>
-                        </>
-                    )}
-
-                    {room.blocked_reason && (
-                        <div className="flex items-start gap-2 p-2.5 rounded-lg bg-red-500/5 border border-red-500/10">
-                            <ShieldAlert className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-                            <div>
-                                <p className="text-xs font-medium text-red-400">Bloqueada</p>
-                                <p className="text-xs text-[var(--color-text-secondary)]">{room.blocked_reason}</p>
-                            </div>
-                        </div>
-                    )}
-
-
-                </div>
-            </DialogContent>
-        </Dialog>
-    );
-}
-
-function InfoItem({ icon, label, value }) {
+function InfoItem({ icon, label, value, tone = 'text-[var(--color-text-primary)]' }) {
     const IconComponent = icon;
     return (
         <div className="flex items-start gap-2">
             <IconComponent className="w-4 h-4 text-[var(--color-text-muted)] mt-0.5 shrink-0" />
             <div>
                 <p className="text-[10px] text-[var(--color-text-muted)] uppercase tracking-wide">{label}</p>
-                <p className="text-sm text-[var(--color-text-primary)] font-medium">{value}</p>
+                <p className={`text-sm font-medium ${tone}`}>{value}</p>
             </div>
         </div>
+    );
+}
+
+function SectionBox({ children, className = '' }) {
+    return (
+        <div className={`rounded-lg border border-[var(--color-border)]/60 bg-[var(--color-bg-primary)]/30 p-3 ${className}`}>
+            {children}
+        </div>
+    );
+}
+
+export default function RackRoomDialog({ room, isOpen, onClose }) {
+    if (!room) return null;
+
+    const state = getRackState(room);
+    const config = stateBadgeConfig[state];
+
+    const hasReservation = Boolean(room.active_reservation_id);
+    const hasGuest = Boolean(room.guest_name);
+    const hasBlockedReason = Boolean(room.blocked_reason);
+
+    const nights = room.reservation_check_in && room.reservation_check_out
+        ? Math.ceil((new Date(room.reservation_check_out) - new Date(room.reservation_check_in)) / (1000 * 60 * 60 * 24))
+        : null;
+
+    return (
+        <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+            <DialogContent className="bg-[var(--color-bg-secondary)] border-[var(--color-border)] text-[var(--color-text-primary)] max-w-md">
+                <DialogHeader className="pb-2">
+                    <div className="flex items-center justify-between">
+                        <DialogTitle className="flex items-center gap-2 text-lg">
+                            <BedDouble className="w-5 h-5 text-[var(--color-primary)]" />
+                            Habitación {room.room_number}
+                        </DialogTitle>
+                        <Badge variant="outline" className={`text-xs ${config.className}`}>
+                            {config.label}
+                        </Badge>
+                    </div>
+                    <DialogDescription className="text-[var(--color-text-muted)]">
+                        {room.room_type_name} · {room.max_occupancy} pax
+                    </DialogDescription>
+                </DialogHeader>
+
+                <Tabs defaultValue="habitacion" className="w-full">
+                    <TabsList className="w-full bg-[var(--color-bg-primary)]/50 border border-[var(--color-border)]/60">
+                        <TabsTrigger value="habitacion" className="text-xs flex-1 data-[state=active]:bg-[var(--color-bg-secondary)] data-[state=active]:text-[var(--color-text-primary)]">
+                            Habitación
+                        </TabsTrigger>
+                        {hasGuest && (
+                            <TabsTrigger value="huesped" className="text-xs flex-1 data-[state=active]:bg-[var(--color-bg-secondary)] data-[state=active]:text-[var(--color-text-primary)]">
+                                Huésped
+                            </TabsTrigger>
+                        )}
+                        {hasReservation && (
+                            <TabsTrigger value="fechas" className="text-xs flex-1 data-[state=active]:bg-[var(--color-bg-secondary)] data-[state=active]:text-[var(--color-text-primary)]">
+                                Fechas
+                            </TabsTrigger>
+                        )}
+                        {hasBlockedReason && (
+                            <TabsTrigger value="notas" className="text-xs flex-1 data-[state=active]:bg-[var(--color-bg-secondary)] data-[state=active]:text-[var(--color-text-primary)]">
+                                Notas
+                            </TabsTrigger>
+                        )}
+                    </TabsList>
+
+                    <TabsContent value="habitacion" className="mt-3 space-y-3">
+                        <SectionBox>
+                            <div className="grid grid-cols-2 gap-3">
+                                <InfoItem icon={BedDouble} label="Número" value={room.room_number} />
+                                <InfoItem icon={Tag} label="Tipo" value={room.room_type_name || '—'} />
+                                <InfoItem icon={DollarSign} label="Tarifa" value={formatCurrency(room.nightly_rate_usd) + '/noche'} />
+                                <InfoItem icon={Users} label="Capacidad" value={`${room.max_occupancy} personas`} />
+                            </div>
+                        </SectionBox>
+
+                        <SectionBox>
+                            <InfoItem icon={ShieldAlert} label="Estado" value={config.label} tone={config.className.split(' ')[1]} />
+                        </SectionBox>
+
+                        {room.category && (
+                            <SectionBox>
+                                <InfoItem icon={StickyNote} label="Categoría" value={room.category} />
+                            </SectionBox>
+                        )}
+                    </TabsContent>
+
+                    {hasGuest && (
+                        <TabsContent value="huesped" className="mt-3 space-y-3">
+                            <SectionBox>
+                                <InfoItem icon={User} label="Nombre completo" value={room.guest_name} />
+                            </SectionBox>
+
+                            {room.plan_name && (
+                                <SectionBox>
+                                    <InfoItem icon={Tag} label="Plan" value={room.plan_name} />
+                                </SectionBox>
+                            )}
+
+                            {room.active_reservation_id && (
+                                <SectionBox>
+                                    <InfoItem icon={StickyNote} label="ID Reservación" value={`#${room.active_reservation_id}`} />
+                                </SectionBox>
+                            )}
+                        </TabsContent>
+                    )}
+
+                    {hasReservation && (
+                        <TabsContent value="fechas" className="mt-3 space-y-3">
+                            <SectionBox>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <InfoItem icon={Calendar} label="Entrada" value={formatShortDate(room.reservation_check_in)} />
+                                    <InfoItem icon={Calendar} label="Salida" value={formatShortDate(room.reservation_check_out)} />
+                                </div>
+                            </SectionBox>
+
+                            {nights !== null && (
+                                <SectionBox>
+                                    <InfoItem icon={Clock} label="Noches" value={`${nights} ${nights === 1 ? 'noche' : 'noches'}`} />
+                                </SectionBox>
+                            )}
+
+                            <div className="flex items-center gap-2 text-[10px] text-[var(--color-text-muted)]">
+                                <ArrowRight className="w-3 h-3" />
+                                <span>Estadía: {formatShortDate(room.reservation_check_in)} → {formatShortDate(room.reservation_check_out)}</span>
+                            </div>
+                        </TabsContent>
+                    )}
+
+                    {hasBlockedReason && (
+                        <TabsContent value="notas" className="mt-3 space-y-3">
+                            <SectionBox className="border-red-500/20 bg-red-500/5">
+                                <div className="flex items-start gap-2">
+                                    <ShieldAlert className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                                    <div>
+                                        <p className="text-[10px] text-[var(--color-text-muted)] uppercase tracking-wide">Motivo</p>
+                                        <p className="text-sm font-medium text-red-400">{room.blocked_reason}</p>
+                                    </div>
+                                </div>
+                            </SectionBox>
+
+                            {room.blocked_until && (
+                                <SectionBox>
+                                    <InfoItem icon={Calendar} label="Bloqueada hasta" value={formatShortDate(room.blocked_until)} />
+                                </SectionBox>
+                            )}
+                        </TabsContent>
+                    )}
+                </Tabs>
+            </DialogContent>
+        </Dialog>
     );
 }

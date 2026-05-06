@@ -1,61 +1,59 @@
-import { getRackState, getStateColors, RACK_STATE_LABELS, getGuestShortName, formatCurrency } from '../utils/rackHelpers';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { getRackState, getStateColors, RACK_STATE_LABELS, formatShortDate } from '../utils/rackHelpers';
 
 export default function RackRoomCard({ room, onClick }) {
     const state = getRackState(room);
-    const label = RACK_STATE_LABELS[state];
     const colors = getStateColors(state);
 
-    const tooltipLines = [
-        `Hab. ${room.room_number} — ${label}`,
-        room.room_type_name,
-        room.guest_name ? `Huésped: ${room.guest_name}` : null,
-        room.plan_name ? `Plan: ${room.plan_name}` : null,
-        room.reservation_check_in
-            ? `Fechas: ${room.reservation_check_in} → ${room.reservation_check_out}`
-            : null,
-        room.nightly_rate_usd ? `Tarifa: ${formatCurrency(room.nightly_rate_usd)}/noche` : null,
-        room.is_blocked && room.blocked_reason ? `Motivo: ${room.blocked_reason}` : null,
-    ].filter(Boolean);
+    const hasGuest = Boolean(room.guest_name);
+    const hasDates = Boolean(room.reservation_check_in);
+    const showGuest = hasGuest && (state === 'occupied' || state === 'reserved');
+    const showDates = hasDates && (state === 'occupied' || state === 'reserved');
 
     return (
-        <TooltipProvider delayDuration={200}>
-            <Tooltip>
-                <TooltipTrigger asChild>
-                    <Card
-                        onClick={() => onClick(room)}
-                        className={`cursor-pointer transition-all duration-200 hover:scale-[1.02] hover:shadow-lg bg-[var(--color-bg-secondary)] border ${colors.border} ${colors.hover}`}
-                    >
-                        <CardContent className="p-3 flex flex-col items-center gap-1.5">
-                            <div className="flex items-center justify-between w-full">
-                                <span className="text-lg font-bold text-[var(--color-text-primary)]">
-                                    {room.room_number}
-                                </span>
-                                <Badge variant="outline" className={`text-[9px] px-1 py-0 font-medium border ${colors.bg} ${colors.text} ${colors.border}`}>
-                                    {label}
-                                </Badge>
-                            </div>
+        <button
+            type="button"
+            onClick={() => onClick(room)}
+            className="group relative rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-primary)]/40 p-2.5 text-left transition-all hover:border-[var(--color-primary)]/50 hover:bg-[var(--color-bg-primary)]/60 hover:shadow-md flex flex-col min-h-[130px]"
+        >
+            <div className="flex items-start justify-between">
+                <div className="flex flex-col items-start">
+                    <div className="flex items-center gap-1">
+                        <span className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)]">
+                            {room.floor_code}
+                        </span>
+                        <span className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)]">Hab.</span>
+                    </div>
+                    <div className="mt-1">
+                        <p className="text-base font-bold leading-tight text-[var(--color-text-primary)] text-center w-full">{room.room_number}</p>
+                    </div>
+                </div>
+                <span
+                    className={`mt-0.5 inline-flex h-2.5 w-2.5 rounded-full ${colors.dot}`}
+                    aria-label={RACK_STATE_LABELS[state]}
+                    title={RACK_STATE_LABELS[state]}
+                />
+            </div>
 
-                            <span className="text-[10px] text-[var(--color-text-muted)] truncate max-w-full">
-                                {room.room_type_name}
-                            </span>
+            <div className="flex-1 flex flex-col justify-center gap-1 mt-1">
+                <p className="text-[10px] text-[var(--color-text-muted)] truncate">{room.room_type_name}</p>
 
-                            {room.guest_name && (
-                                <span className="text-[10px] text-[var(--color-text-secondary)] truncate max-w-full">
-                                    {getGuestShortName(room.guest_name)}
-                                </span>
-                            )}
-                        </CardContent>
-                    </Card>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="bg-[var(--color-bg-elevated)] text-[var(--color-text-primary)] border-[var(--color-border)] max-w-xs">
-                    {tooltipLines.map((line, i) => (
-                        <p key={i} className="text-xs">{line}</p>
-                    ))}
-                </TooltipContent>
-            </Tooltip>
-        </TooltipProvider>
+                {showGuest ? (
+                    <p className="text-[10px] font-medium text-[var(--color-text-secondary)] truncate">{room.guest_name}</p>
+                ) : (
+                    <div className="h-4" />
+                )}
+
+                {showDates ? (
+                    <p className="text-[10px] font-medium text-[var(--color-text-secondary)]">
+                        {state === 'occupied'
+                            ? `${formatShortDate(room.reservation_check_in)} → ${formatShortDate(room.reservation_check_out)}`
+                            : `${formatShortDate(room.reservation_check_in)} entrada`
+                        }
+                    </p>
+                ) : (
+                    <div className="h-4" />
+                )}
+            </div>
+        </button>
     );
 }

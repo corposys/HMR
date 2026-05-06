@@ -114,7 +114,7 @@ export default function RackOperativo() {
                         </div>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+                    <div className="grid gap-2 auto-rows-fr [grid-template-columns:repeat(auto-fill,minmax(160px,1fr))]">
                         {displayedRooms.map(room => (
                             <RackRoomCard key={room.id} room={room} onClick={handleRoomClick} />
                         ))}
