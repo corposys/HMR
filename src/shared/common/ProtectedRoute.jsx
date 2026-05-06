@@ -14,10 +14,7 @@ export default function ProtectedRoute({ children }) {
     if (isLoading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg-primary)]">
-                <div className="text-center">
-                    <Loader2 className="w-8 h-8 animate-spin text-[var(--color-primary)] mx-auto" />
-                    <p className="text-[var(--color-text-muted)] mt-4">Verificando sesión...</p>
-                </div>
+                <Loader2 className="w-8 h-8 animate-spin text-[var(--color-primary)]" />
             </div>
         );
     }

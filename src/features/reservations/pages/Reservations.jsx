@@ -147,9 +147,9 @@ export default function Reservations() {
                                 )}
                             </div>
 
-                            <Button variant="ghost" size="sm" onClick={() => loadReservations()} icon={RefreshCw} className="h-8 w-8 p-0" />
+                            <Button variant="ghost" onClick={() => loadReservations()} icon={RefreshCw} className="h-8 w-8 !p-0 text-[var(--color-primary)] hover:text-[var(--color-primary-light)] hover:bg-[var(--color-primary)]/10" />
 
-                            <Button variant="outline" icon={Calculator} size="sm" onClick={() => setShowQuoteModal(true)} className="h-8 text-xs rounded-full bg-[var(--color-bg-secondary)] border-2 border-[var(--color-primary)]/60 hover:border-[var(--color-primary)]">
+                            <Button variant="outline" icon={Calculator} size="sm" onClick={() => setShowQuoteModal(true)} className="h-8 text-xs !rounded-full !px-4 !py-2 bg-[var(--color-bg-secondary)] border-2 border-[var(--color-primary)] hover:border-[var(--color-primary-light)]">
                                 Cotizar
                             </Button>
 

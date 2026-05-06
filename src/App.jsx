@@ -1,19 +1,12 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Suspense } from 'react';
+import { Loader2 } from 'lucide-react';
 import { AuthProvider } from '@context/AuthContext';
 import { ToastProvider } from '@context/ToastContext';
 import ProtectedRoute from '@shared/common/ProtectedRoute';
 import ErrorBoundary from '@shared/common/ErrorBoundary';
 import Layout from '@shared/layout/Layout';
 import { publicRoutes, protectedRoutes, fallbackRoute } from '@app/routes';
-
-function RouteFallback() {
-    return (
-        <div className="min-h-[40vh] flex items-center justify-center p-6 text-[var(--color-text-muted)]">
-            Cargando módulo...
-        </div>
-    );
-}
 
 /**
  * App - Componente raíz de la aplicación
@@ -26,7 +19,11 @@ function App() {
             <BrowserRouter>
                 <ToastProvider>
                     <AuthProvider>
-                        <Suspense fallback={<RouteFallback />}>
+                        <Suspense fallback={(
+                            <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg-primary)]">
+                                <Loader2 className="w-8 h-8 animate-spin text-[var(--color-primary)]" />
+                            </div>
+                        )}>
                             <Routes>
                                 {publicRoutes.map((route) => (
                                     <Route key={route.path} path={route.path} element={route.element} />
