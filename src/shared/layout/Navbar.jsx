@@ -36,13 +36,40 @@ export default function Navbar({ onMenuClick, isMobileSidebarOpen }) {
     const [bcvRate, setBcvRate] = useState(null);
     const [bcvLoading, setBcvLoading] = useState(false);
     const [bcvTrend, setBcvTrend] = useState('neutral');
-    const [bcvFlash, setBcvFlash] = useState(false);
+    const [displayRate, setDisplayRate] = useState(null);
+    const [isAnimating, setIsAnimating] = useState(false);
+    const animFrameRef = useRef(null);
 
     useEffect(() => {
         loadBcvRate();
         const interval = setInterval(loadBcvRate, 300000);
         return () => clearInterval(interval);
     }, []);
+
+    function animateRate(from, to, trend) {
+        if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+
+        const duration = 800;
+        const start = performance.now();
+        setIsAnimating(true);
+        if (trend) setBcvTrend(trend);
+
+        function step(now) {
+            const elapsed = now - start;
+            const progress = Math.min(elapsed / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 3);
+            const current = from + (to - from) * eased;
+            setDisplayRate(current);
+
+            if (progress < 1) {
+                animFrameRef.current = requestAnimationFrame(step);
+            } else {
+                setIsAnimating(false);
+            }
+        }
+
+        animFrameRef.current = requestAnimationFrame(step);
+    }
 
     async function loadBcvRate() {
         try {
@@ -51,12 +78,11 @@ export default function Navbar({ onMenuClick, isMobileSidebarOpen }) {
                 const newRate = Number(data.rate.rate ?? data.rate);
                 const oldRate = bcvRate ? Number(bcvRate.rate ?? bcvRate) : null;
                 if (oldRate !== null && newRate !== oldRate) {
-                    if (newRate > oldRate) setBcvTrend('up');
-                    else if (newRate < oldRate) setBcvTrend('down');
-                    setBcvFlash(true);
-                    setTimeout(() => setBcvFlash(false), 700);
-                } else if (oldRate !== null) {
-                    setBcvTrend('neutral');
+                    const trend = newRate > oldRate ? 'up' : 'down';
+                    animateRate(oldRate, newRate, trend);
+                } else {
+                    setDisplayRate(newRate);
+                    if (oldRate === null) setBcvTrend('neutral');
                 }
                 setBcvRate(data.rate);
             }
@@ -73,12 +99,10 @@ export default function Navbar({ onMenuClick, isMobileSidebarOpen }) {
                 const newRate = Number(data.rate.rate ?? data.rate);
                 const oldRate = bcvRate ? Number(bcvRate.rate ?? bcvRate) : null;
                 if (oldRate !== null && newRate !== oldRate) {
-                    if (newRate > oldRate) setBcvTrend('up');
-                    else if (newRate < oldRate) setBcvTrend('down');
-                    setBcvFlash(true);
-                    setTimeout(() => setBcvFlash(false), 700);
-                } else if (oldRate !== null) {
-                    setBcvTrend('neutral');
+                    const trend = newRate > oldRate ? 'up' : 'down';
+                    animateRate(oldRate, newRate, trend);
+                } else {
+                    setDisplayRate(newRate);
                 }
                 setBcvRate(data.rate);
             }
@@ -206,13 +230,7 @@ export default function Navbar({ onMenuClick, isMobileSidebarOpen }) {
                 <button
                     onClick={refreshBcvRate}
                     disabled={bcvLoading}
-                    className={`hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full border transition-all duration-500
-                        ${bcvFlash && bcvTrend === 'up'
-                            ? 'scale-105 ring-2 ring-emerald-400/40 bg-emerald-500/10 border-emerald-500/30'
-                            : bcvFlash && bcvTrend === 'down'
-                                ? 'scale-105 ring-2 ring-red-400/40 bg-red-500/10 border-red-500/30'
-                                : 'bg-[var(--color-bg-tertiary)] border-[var(--color-border)] hover:border-[var(--color-primary)]/40'
-                        }`}
+                    className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full border bg-[var(--color-bg-tertiary)] border-[var(--color-border)] hover:border-[var(--color-primary)]/40 transition-colors"
                     title="Clic para actualizar tasa BCV"
                 >
                     {bcvTrend === 'down' ? (
@@ -222,8 +240,8 @@ export default function Navbar({ onMenuClick, isMobileSidebarOpen }) {
                     )}
                     <span className="text-xs font-medium text-[var(--color-text-secondary)]">
                         TASA BCV -{' '}
-                        <span className={`${bcvTrend === 'up' ? 'text-emerald-400' : bcvTrend === 'down' ? 'text-red-400' : 'text-[var(--color-text-primary)]'}`}>
-                            {bcvRate ? `$${Number(bcvRate.rate ?? bcvRate).toLocaleString('es-VE', { minimumFractionDigits: 2 })}` : '—'}
+                        <span className={`${isAnimating && bcvTrend === 'up' ? 'text-emerald-400' : isAnimating && bcvTrend === 'down' ? 'text-red-400' : 'text-[var(--color-text-primary)]'}`}>
+                            {displayRate !== null ? `$${displayRate.toLocaleString('es-VE', { minimumFractionDigits: 2 })}` : '—'}
                         </span>
                     </span>
                     <RefreshCw className={`w-2.5 h-2.5 text-[var(--color-text-muted)] ${bcvLoading ? 'animate-spin' : ''}`} />
