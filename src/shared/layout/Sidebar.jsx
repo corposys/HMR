@@ -31,7 +31,6 @@ const sidebarConfig = [
         icon: CalendarCheck,
         label: 'Reservaciones',
         items: [
-            { to: '/reservaciones/dashboard', label: 'Dashboard' },
             { to: '/reservaciones', label: 'Reservas' },
             { to: '/reservaciones/tarifas', label: 'Temporadas y Tarifas' },
         ],

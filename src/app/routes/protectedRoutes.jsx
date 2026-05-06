@@ -15,7 +15,6 @@ const IncidentsPage = lazy(() => import('@features/housekeeping/pages/IncidentsP
 const StaffPage = lazy(() => import('@features/housekeeping/pages/StaffPage'));
 const HousekeepingDashboard = lazy(() => import('@features/housekeeping/pages/HousekeepingDashboard'));
 const Reservations = lazy(() => import('@features/reservations/pages/Reservations'));
-const ReservationsDashboard = lazy(() => import('@features/reservations/pages/ReservationsDashboard'));
 const RatesPage = lazy(() => import('@features/reservations/pages/RatesPage'));
 const RackOperativo = lazy(() => import('@features/rack/pages/RackOperativo'));
 const OperationsPage = lazy(() => import('@features/reception/pages/OperationsPage'));
@@ -36,9 +35,7 @@ export const protectedRoutes = [
     { path: 'reception/audit', element: <AuditPage /> },
     { path: 'reception/logbook', element: <LogbookPage /> },
     { path: 'reservaciones', element: <Reservations /> },
-    { path: 'reservaciones/dashboard', element: <ReservationsDashboard /> },
     { path: 'reservaciones/tarifas', element: <RatesPage /> },
-    { path: 'reception/reservas', element: <Reservations /> },
     { path: 'systems/signatures', element: <SignaturesHistory /> },
     { path: 'maintenance', element: <Habitaciones /> },
     { path: 'maintenance/habitaciones', element: <Habitaciones /> },

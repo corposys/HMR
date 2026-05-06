@@ -1,19 +1,18 @@
-import { useState, useCallback } from 'react';
-import { Plus, Search, RefreshCw, Eye, XCircle, LogIn, LogOut } from 'lucide-react';
+import { useState, useCallback, useMemo } from 'react';
+import { Plus, Search, RefreshCw, X, Calendar, Users, LogIn, Home } from 'lucide-react';
 import Button from '@shared/common/Button';
-import Badge from '@shared/common/Badge';
-import Card from '@shared/common/Card';
 import CustomDropdown from '@shared/common/CustomDropdown';
-import DataTable from '@shared/common/DataTable';
 import PageWrapper from '@shared/common/PageWrapper';
+import LoadingSpinner from '@shared/common/LoadingSpinner';
+import ErrorState from '@shared/common/ErrorState';
+import EmptyState from '@shared/common/EmptyState';
 import { useReservations } from '@features/reservations/hooks/useReservations';
 import { usePermissions } from '@hooks/usePermissions';
 import { apiFetch } from '@utils/api';
 import ReservationCreateModal from '@features/reservations/components/ReservationCreateModal';
 import ReservationDetailModal from '@features/reservations/components/ReservationDetailModal';
-import CheckinWizard from '@features/reservations/components/CheckinWizard';
-import { RESERVATION_STATUS_LABELS } from '@utils/constants';
-import { formatDate, formatCurrency } from '@utils/formatters';
+import ReservationTable from '@features/reservations/components/ReservationTable';
+import { Card, CardHeader } from '@/components/ui/card';
 
 const STATUS_FILTERS = [
     { value: '', label: 'Todos' },
@@ -24,24 +23,30 @@ const STATUS_FILTERS = [
     { value: 'cancelled', label: 'Cancelada' },
 ];
 
-const STATUS_BADGE_VARIANT = {
-    reserved: 'info',
-    checked_in: 'success',
-    checked_out: 'primary',
-    no_show: 'warning',
-    cancelled: 'danger',
-};
-
-export default function ReservationsPage() {
+export default function Reservations() {
     const [statusFilter, setStatusFilter] = useState('');
     const [search, setSearch] = useState('');
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [selectedReservationId, setSelectedReservationId] = useState(null);
-    const [showCheckinWizard, setShowCheckinWizard] = useState(false);
-    const [checkinReservationId, setCheckinReservationId] = useState(null);
     const { can } = usePermissions();
 
-    const { reservations, isLoading, error, fetchReservations, createReservation, checkout } = useReservations();
+    const { reservations, isLoading, error, fetchReservations, createReservation } = useReservations();
+
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    const stats = useMemo(() => {
+        const pending = reservations.filter(r => r.status === 'reserved').length;
+        const inHouse = reservations.filter(r => r.status === 'checked_in').length;
+        const arrivalsToday = reservations.filter(r => {
+            if (!r.check_in_date) return false;
+            return r.check_in_date.startsWith(todayStr) && r.status !== 'cancelled';
+        }).length;
+        const departuresToday = reservations.filter(r => {
+            if (!r.check_out_date) return false;
+            return r.check_out_date.startsWith(todayStr) && r.status === 'checked_in';
+        }).length;
+        return { pending, inHouse, arrivalsToday, departuresToday };
+    }, [reservations, todayStr]);
 
     const filteredReservations = reservations.filter((r) => {
         if (statusFilter && r.status !== statusFilter) return false;
@@ -72,95 +77,6 @@ export default function ReservationsPage() {
         return result;
     }
 
-    async function handleCheckout(id) {
-        try {
-            await checkout(id);
-            await loadReservations();
-            if (selectedReservationId === id) setSelectedReservationId(id);
-        } catch (err) {
-            alert(err.message || 'Error al hacer check-out');
-        }
-    }
-
-    const columns = [
-        {
-            key: 'room_number',
-            header: 'Hab.',
-            render: (row) => <span className="font-semibold">{row.room_number}</span>,
-        },
-        {
-            key: 'guest_name',
-            header: 'Huésped',
-            render: (row) => (
-                <div>
-                    <div className="font-medium">{row.guest_name}</div>
-                    {row.guest_document && (
-                        <div className="text-xs text-[var(--color-text-muted)]">{row.guest_document}</div>
-                    )}
-                </div>
-            ),
-        },
-        {
-            key: 'check_in_date',
-            header: 'Check-in',
-            render: (row) => formatDate(row.check_in_date),
-        },
-        {
-            key: 'check_out_date',
-            header: 'Check-out',
-            render: (row) => row.check_out_date ? formatDate(row.check_out_date) : '—',
-        },
-        {
-            key: 'plan_name',
-            header: 'Plan',
-            render: (row) => row.plan_name || '—',
-        },
-        {
-            key: 'status',
-            header: 'Estado',
-            render: (row) => (
-                <Badge variant={STATUS_BADGE_VARIANT[row.status] || 'primary'}>
-                    {RESERVATION_STATUS_LABELS[row.status] || row.status}
-                </Badge>
-            ),
-        },
-        {
-            key: 'balance',
-            header: 'Balance',
-            render: (row) => {
-                if (row.folio_balance == null) return '—';
-                const isPositive = Number(row.folio_balance) > 0;
-                return (
-                    <span className={isPositive ? 'text-[var(--color-danger)]' : 'text-[var(--color-success)]'}>
-                        {formatCurrency(row.folio_balance)}
-                    </span>
-                );
-            },
-        },
-        {
-            key: 'actions',
-            header: '',
-            render: (row) => (
-                <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setSelectedReservationId(row.id); }} icon={Eye}>
-                    </Button>
-                    {row.status === 'reserved' && can('reception', 'write') && (
-                        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setCheckinReservationId(row.id); setShowCheckinWizard(true); }} icon={LogIn} title="Check-in">
-                        </Button>
-                    )}
-                    {row.status === 'checked_in' && can('reception', 'write') && (
-                        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleCheckout(row.id); }} icon={LogOut} title="Check-out">
-                        </Button>
-                    )}
-                    {row.status === 'reserved' && can('reception', 'write') && (
-                        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleCancelReservation(row.id); }} icon={XCircle} title="Cancelar">
-                        </Button>
-                    )}
-                </div>
-            ),
-        },
-    ];
-
     async function handleCancelReservation(id) {
         if (!confirm('¿Cancelar esta reserva?')) return;
         try {
@@ -177,63 +93,90 @@ export default function ReservationsPage() {
 
     return (
         <PageWrapper>
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">Reservas</h1>
-                    <p className="text-sm text-[var(--color-text-muted)]">Gestión de reservas del hotel</p>
-                </div>
-                {can('reception', 'write') && (
-                    <div className="flex items-center gap-2">
-                        <Button variant="outline" onClick={() => { setCheckinReservationId(null); setShowCheckinWizard(true); }} icon={LogIn}>
-                            Check-in
-                        </Button>
-                        <Button icon={Plus} onClick={() => setShowCreateModal(true)}>Nueva Reserva</Button>
-                    </div>
-                )}
-            </div>
-
-            <Card>
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
-                    <div className="flex items-center gap-3 flex-1">
-                        <div className="relative flex-1 max-w-xs">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-text-muted)]" />
-                            <input
-                                type="text"
-                                placeholder="Buscar reserva..."
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                                className="input pl-9"
-                            />
+            <Card className="border-[var(--color-border)] bg-[var(--color-bg-secondary)] shadow-sm mb-4">
+                <CardHeader className="py-3 px-4">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                        {/* Izquierda: Estadísticas Compactas */}
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                            <div className="flex items-center gap-3 text-xs">
+                                <div className="flex items-center gap-1.5 text-[var(--color-text-secondary)]">
+                                    <Users className="w-3.5 h-3.5 text-[#009098]" />
+                                    <span><strong className="text-[var(--color-text-primary)]">{reservations.length}</strong> total</span>
+                                </div>
+                                <div className="flex items-center gap-1.5 text-[var(--color-text-secondary)]">
+                                    <Calendar className="w-3.5 h-3.5 text-[var(--color-warning)]" />
+                                    <span><strong className="text-[var(--color-text-primary)]">{stats.pending}</strong> pend.</span>
+                                </div>
+                                <div className="flex items-center gap-1.5 text-[var(--color-text-secondary)]">
+                                    <LogIn className="w-3.5 h-3.5 text-[var(--color-success)]" />
+                                    <span><strong className="text-[var(--color-text-primary)]">{stats.arrivalsToday}</strong> hoy</span>
+                                </div>
+                                <div className="flex items-center gap-1.5 text-[var(--color-text-secondary)]">
+                                    <Home className="w-3.5 h-3.5 text-[var(--color-primary)]" />
+                                    <span><strong className="text-[var(--color-text-primary)]">{stats.inHouse}</strong> en casa</span>
+                                </div>
+                            </div>
                         </div>
-                        <CustomDropdown
-                            value={statusFilter}
-                            onChange={(v) => { setStatusFilter(v); }}
-                            options={STATUS_FILTERS}
-                            placeholder="Estado"
-                        />
-                    </div>
-                    <Button variant="ghost" size="sm" onClick={() => loadReservations()} icon={RefreshCw}>
-                    </Button>
-                </div>
 
-                {isLoading ? (
-                    <div className="flex items-center justify-center py-12">
-                        <RefreshCw className="w-6 h-6 animate-spin text-[var(--color-text-muted)]" />
+                        <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+                            <CustomDropdown
+                                value={statusFilter}
+                                onChange={(v) => setStatusFilter(v)}
+                                options={STATUS_FILTERS}
+                                placeholder="Estado"
+                            />
+
+                            <div className="relative w-full sm:w-64 h-8">
+                                <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--color-text-muted)]" />
+                                <input
+                                    type="text"
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                    placeholder="Buscar reserva..."
+                                    className="w-full h-full pl-8 pr-8 text-xs bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] rounded-md text-[var(--color-text-primary)] focus:border-[var(--color-primary)] focus:outline-none transition-colors"
+                                />
+                                {search && (
+                                    <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text-primary)]">
+                                        <X className="h-3.5 w-3.5" />
+                                    </button>
+                                )}
+                            </div>
+
+                            <Button variant="ghost" size="sm" onClick={() => loadReservations()} icon={RefreshCw} className="h-8 w-8 p-0" />
+
+                            {can('reception', 'write') && (
+                                <Button variant="register" icon={Plus} size="sm" onClick={() => setShowCreateModal(true)} className="h-8 text-xs">
+                                    Nueva Reserva
+                                </Button>
+                            )}
+                        </div>
                     </div>
-                ) : error ? (
-                    <div className="text-center py-12 text-[var(--color-danger)]">
-                        <p>Error al cargar reservas</p>
-                        <Button variant="ghost" size="sm" onClick={() => loadReservations()}>Reintentar</Button>
-                    </div>
-                ) : (
-                    <DataTable
-                        columns={columns}
-                        data={filteredReservations}
-                        emptyText="No se encontraron reservas"
-                        onRowClick={(row) => setSelectedReservationId(row.id)}
-                    />
-                )}
+                </CardHeader>
             </Card>
+
+            {isLoading ? (
+                <LoadingSpinner />
+            ) : error ? (
+                <ErrorState message={error} onRetry={() => loadReservations()} />
+            ) : reservations.length === 0 ? (
+                <EmptyState
+                    icon={Calendar}
+                    title="No hay reservas"
+                    description="Crea una nueva reserva para empezar."
+                    actionLabel="Nueva Reserva"
+                    onAction={() => setShowCreateModal(true)}
+                />
+            ) : filteredReservations.length === 0 ? (
+                <Card className="border-[var(--color-border)] bg-[var(--color-bg-secondary)] px-6 py-16 text-center text-sm text-[var(--color-text-secondary)] shadow-sm">
+                    Sin resultados para <strong>&quot;{search}&quot;</strong>
+                </Card>
+            ) : (
+                <ReservationTable
+                    reservations={filteredReservations}
+                    onRowClick={(row) => setSelectedReservationId(row.id)}
+                    onCancel={(row) => handleCancelReservation(row.id)}
+                />
+            )}
 
             {showCreateModal && (
                 <ReservationCreateModal
@@ -248,18 +191,7 @@ export default function ReservationsPage() {
                     reservationId={selectedReservationId}
                     isOpen={!!selectedReservationId}
                     onClose={() => setSelectedReservationId(null)}
-                    onCheckin={(id) => { setCheckinReservationId(id); setShowCheckinWizard(true); }}
-                    onCheckout={handleCheckout}
                     onRefresh={() => loadReservations()}
-                />
-            )}
-
-            {showCheckinWizard && (
-                <CheckinWizard
-                    isOpen={showCheckinWizard}
-                    onClose={() => setShowCheckinWizard(false)}
-                    preselectedReservationId={checkinReservationId}
-                    onCheckinComplete={() => { loadReservations(); setShowCheckinWizard(false); }}
                 />
             )}
         </PageWrapper>

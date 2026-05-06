@@ -19,7 +19,7 @@ const STATUS_BADGE_VARIANT = {
     cancelled: 'danger',
 };
 
-export default function ReservationDetailModal({ reservationId, isOpen, onClose, onCheckin, onCheckout, onRefresh }) {
+export default function ReservationDetailModal({ reservationId, isOpen, onClose, onRefresh }) {
     const [reservation, setReservation] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -106,18 +106,10 @@ export default function ReservationDetailModal({ reservationId, isOpen, onClose,
                             <div className="flex items-center gap-2">
                                 {status === 'reserved' && can('reception', 'write') && (
                                     <>
-                                        <Button size="sm" variant="primary" onClick={() => onCheckin(reservationId)} icon={LogIn}>
-                                            Check-in
-                                        </Button>
                                         <Button size="sm" variant="danger" onClick={handleCancelReservation} icon={XCircle}>
                                             Cancelar
                                         </Button>
                                     </>
-                                )}
-                                {status === 'checked_in' && can('reception', 'write') && (
-                                    <Button size="sm" variant="primary" onClick={() => onCheckout(reservationId)} icon={LogOut}>
-                                        Check-out
-                                    </Button>
                                 )}
                             </div>
                         </div>

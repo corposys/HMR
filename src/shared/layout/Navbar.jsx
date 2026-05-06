@@ -19,6 +19,7 @@ import {
     TrendingUp,
     TrendingDown,
     LayoutGrid,
+    CalendarCheck,
 } from 'lucide-react';
 import { useAuth } from '@context/AuthContext';
 import { apiFetch } from '@utils/api';
@@ -126,6 +127,10 @@ export default function Navbar({ onMenuClick, isMobileSidebarOpen }) {
         '/rack': {
             title: 'Rack Operativo',
             icon: LayoutGrid,
+        },
+        '/reservaciones': {
+            title: 'Reservaciones',
+            icon: CalendarCheck,
         },
         '/reception/reservas': {
             title: 'Recepción',
