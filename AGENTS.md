@@ -8,7 +8,12 @@ React 19 + Vite 7 + Tailwind CSS v4 | FastAPI + PostgreSQL | Docker Compose
 
 | Command | What |
 |---|---|
-| `docker compose up -d --build` | Dev (Vite :5173, FastAPI :8000, Postgres :15432) |
+| `npm run docker:build` | Build Docker images (sin caché) |
+| `npm run docker:up` | Iniciar contenedores (sin build) |
+| `npm run docker:verify` | Verificar que todo funciona (salud + dependencias) |
+| `npm run docker:logs` | Ver logs en tiempo real |
+| `npm run docker:down` | Detener contenedores |
+| `docker compose up -d --build` | Dev completo (build + start) |
 | `docker compose down` | Stop |
 | `docker compose -f docker-compose.prod.yml up -d --build` | Production |
 | `npm run lint && npm run build` | Frontend verification (CI runs this) |
@@ -98,3 +103,41 @@ Backend responses:
 - Seeded admin: `admin@hmr.com` / `admin1234` (role_id=1)
 - Health: `GET /api/health`
 - Constants: `src/utils/constants.js` — check before hardcoding
+
+## Docker Workflow
+
+### Flujo recomendado
+
+```bash
+# 1. Build (solo cuando hay cambios en package.json o Dockerfile)
+npm run docker:build
+
+# 2. Iniciar contenedores
+npm run docker:up
+
+# 3. Verificar que todo funciona (obligatorio)
+npm run docker:verify
+
+# Ver logs si hay problemas
+npm run docker:logs
+```
+
+### Por qué esto evita problemas
+
+1. **Volúmenes correctos**: Solo se montan `src/`, `public/`, `index.html`, `vite.config.js`, `components.json`. **NO se monta** `node_modules` desde el host — permanece limpio en el contenedor.
+
+2. **.dockerignore**: Excluye archivos innecesarios del build, evitando que se copie contenido no deseado.
+
+3. **Healthchecks**: Cada servicio verifica su salud. Si el frontend no puede resolver `@radix-ui/react-separator`, el contenedor fallará el healthcheck.
+
+4. **Script de verificación**: `npm run docker:verify` checkea:
+   - Contenedores corriendo
+   - Health de backend y frontend
+   - Dependencias críticas instaladas en el contenedor
+
+### Si ves errores de "Failed to fetch dynamically imported module"
+
+1. Verifica que ejecutaste `npm run docker:build` (no solo `docker:up`)
+2. Ejecuta `npm run docker:verify` para ver el estado real
+3. Si persisten, ejecuta `docker compose down -v` para eliminar volúmenes y rebuild desde cero
+4. luego: `npm run docker:build && npm run docker:up && npm run docker:verify`

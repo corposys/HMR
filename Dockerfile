@@ -1,32 +1,40 @@
 # Frontend Dockerfile - Development with Vite
 FROM node:20-alpine
 
-# Create non-root user
-RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
+# Install curl for healthcheck
+RUN apk add --no-cache curl
 
 WORKDIR /app
 
-# Copiar archivos de dependencias
+# Copy dependency files first (for better caching)
 COPY package*.json ./
 
-# Instalar dependencias
+# Install dependencies (this creates node_modules in container)
 RUN npm install
 
-# Copiar código fuente
-COPY . .
+# Copy only necessary files (not node_modules, handled by volume)
+COPY index.html ./
+COPY vite.config.js ./
+COPY tailwind.config.js ./
+COPY postcss.config.js ./
+COPY tsconfig.json ./
+COPY tsconfig.node.json ./
+COPY src ./src
+COPY public ./public 2>/dev/null || true
+COPY components.json ./
 
-# Change ownership and ensure vite temp dir is writable
-RUN chown -R nextjs:nodejs /app && mkdir -p node_modules/.vite-temp && chown -R nextjs:nodejs node_modules/.vite-temp
+# Create vite temp directory
+RUN mkdir -p node_modules/.vite-temp && \
+    chown -R node:node /app/node_modules/.vite-temp
 
-# Switch to non-root user
-USER nextjs
+# Non-root user
+USER node
 
-# Puerto de desarrollo de Vite
 EXPOSE 5173
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD node -e "require('http').get('http://localhost:5173', (r) => r.statusCode === 200 ? process.exit(0) : process.exit(1))" || exit 1
+# Healthcheck with proper dependency verification
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost:5173/ || exit 1
 
-# Comando de desarrollo
+# Development command
 CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]

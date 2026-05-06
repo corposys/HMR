@@ -1,12 +1,43 @@
+# Dependencies
 node_modules
+node_modules/.vite-temp
+
+# Build output
 dist
+build
+
+# Git
 .git
 .gitignore
-__pycache__
-server/__pycache__
-server/**/*.pyc
-*.log
-.DS_Store
-node_modules
-.git
+
+# Environment files
 .env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+coverage
+.nyc_output
+
+# Docs
+*.md
+!README.md
+
+# Misc
+*.local
+.vite
+.cache
