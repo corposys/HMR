@@ -1,13 +1,15 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, User, Settings as SettingsIcon, Mail, Smartphone, PhoneCall, Globe, Eraser } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
-export default function SignatureForm({ formData, setFormData, handleClear, fixedData }) {
+export default function SignatureForm({ formData, setFormData, handleClear, fixedData, readOnly = false }) {
     const navigate = useNavigate();
+
     const handleInputChange = (e) => {
+        if (readOnly) return;
         const { name, value } = e.target;
 
-        // Validación específica para Nombre y Apellido
         if (name === 'fullName') {
             const regex = /[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g;
             const sanitizedValue = value.replace(regex, '');
@@ -15,7 +17,6 @@ export default function SignatureForm({ formData, setFormData, handleClear, fixe
             return;
         }
 
-        // Validación para Cargo/Departamento
         if (name === 'jobTitle') {
             const regex = /[^a-zA-ZáéíóúÁÉÍÓÚñÑ0-9\s\-/.]/g;
             const sanitizedValue = value.replace(regex, '');
@@ -23,7 +24,6 @@ export default function SignatureForm({ formData, setFormData, handleClear, fixe
             return;
         }
 
-        // Validación para Extensión Telefónica
         if (name === 'extension') {
             const regex = /[^0-9\-<>]/g;
             const sanitizedValue = value.replace(regex, '');
@@ -31,7 +31,6 @@ export default function SignatureForm({ formData, setFormData, handleClear, fixe
             return;
         }
 
-        // Validación simple para correo electrónico
         if (name === 'email') {
             const regex = /[^a-zA-Z0-9@._-]/g;
             const sanitizedValue = value.replace(regex, '');
@@ -43,31 +42,25 @@ export default function SignatureForm({ formData, setFormData, handleClear, fixe
     };
 
     return (
-        <div className="lg:col-span-1 bg-[var(--color-bg-secondary)] rounded-xl border border-[var(--color-border)] shadow-sm p-6 overflow-y-auto">
-            <div className="flex justify-between items-center pb-4">
-                <h2 className="text-lg font-medium text-[var(--color-text-primary)] flex items-center gap-2 m-0">
-                    <button
-                        onClick={() => navigate('/systems/signatures')}
-                        aria-label="Volver al historial"
-                        title="Volver al historial"
-                        className="p-2.5 rounded-xl bg-[var(--color-primary)]/10 text-[var(--color-primary)] hover:bg-[var(--color-primary)]/20 transition-colors"
-                    >
-                        <ArrowLeft className="w-5 h-5" />
-                    </button>
-                    <User className="w-7 h-7 text-[var(--color-primary)]" />
-                    Datos del Usuario
-                </h2>
-                <button
-                    onClick={handleClear}
-                    className="flex items-center justify-center p-2 rounded-lg bg-[var(--color-bg-tertiary)] hover:bg-[var(--color-bg-hover)] text-[var(--color-text-secondary)] hover:text-red-500 transition-colors border border-[var(--color-border)] hover:border-red-500/50"
-                    title="Limpiar campos"
-                >
-                    <Eraser className="w-4 h-4" />
-                </button>
-            </div>
-
-            <div className="space-y-4">
-                {/* Nombre y Apellido */}
+        <Card className="border-[var(--color-border)] bg-[var(--color-bg-secondary)] shadow-sm h-fit">
+            <CardHeader className="pb-4">
+                <div className="flex justify-between items-center">
+                    <CardTitle className="text-lg font-medium text-[var(--color-text-primary)] flex items-center gap-2 m-0">
+                        <User className="w-6 h-6 text-[var(--color-primary)]" />
+                        Datos del Usuario
+                    </CardTitle>
+                    {!readOnly && (
+                        <button
+                            onClick={handleClear}
+                            className="flex items-center justify-center p-2 rounded-lg bg-[var(--color-bg-tertiary)] hover:bg-[var(--color-bg-hover)] text-[var(--color-text-secondary)] hover:text-red-500 transition-colors border border-[var(--color-border)] hover:border-red-500/50"
+                            title="Limpiar campos"
+                        >
+                            <Eraser className="w-4 h-4" />
+                        </button>
+                    )}
+                </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
                 <div>
                     <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1.5">
                         Nombre y Apellido
@@ -79,14 +72,14 @@ export default function SignatureForm({ formData, setFormData, handleClear, fixe
                             name="fullName"
                             value={formData.fullName}
                             onChange={handleInputChange}
-                            className="w-full pl-10 pr-3 py-2 text-sm bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] rounded-lg text-[var(--color-text-primary)] focus:border-[var(--color-primary)] focus:outline-none transition-colors"
+                            readOnly={readOnly}
+                            className="w-full pl-10 pr-3 py-2 text-sm bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] rounded-lg text-[var(--color-text-primary)] focus:border-[var(--color-primary)] focus:outline-none transition-colors disabled:opacity-60"
                             placeholder="NOMBRE Y APELLIDO"
                             maxLength={18}
                         />
                     </div>
                 </div>
 
-                {/* Cargo */}
                 <div>
                     <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1.5">
                         Departamento / Cargo
@@ -98,14 +91,14 @@ export default function SignatureForm({ formData, setFormData, handleClear, fixe
                             name="jobTitle"
                             value={formData.jobTitle}
                             onChange={handleInputChange}
-                            className="w-full pl-10 pr-3 py-2 text-sm bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] rounded-lg text-[var(--color-text-primary)] focus:border-[var(--color-primary)] focus:outline-none transition-colors"
+                            readOnly={readOnly}
+                            className="w-full pl-10 pr-3 py-2 text-sm bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] rounded-lg text-[var(--color-text-primary)] focus:border-[var(--color-primary)] focus:outline-none transition-colors disabled:opacity-60"
                             placeholder="CARGO / DEPARTAMENTO"
                             maxLength={18}
                         />
                     </div>
                 </div>
 
-                {/* Correo */}
                 <div>
                     <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1.5">
                         Correo Electrónico
@@ -117,14 +110,14 @@ export default function SignatureForm({ formData, setFormData, handleClear, fixe
                             name="email"
                             value={formData.email}
                             onChange={handleInputChange}
-                            className="w-full pl-10 pr-3 py-2 text-sm bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] rounded-lg text-[var(--color-text-primary)] focus:border-[var(--color-primary)] focus:outline-none transition-colors"
+                            readOnly={readOnly}
+                            className="w-full pl-10 pr-3 py-2 text-sm bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] rounded-lg text-[var(--color-text-primary)] focus:border-[var(--color-primary)] focus:outline-none transition-colors disabled:opacity-60"
                             placeholder="CORREO ELECTRÓNICO"
                             maxLength={40}
                         />
                     </div>
                 </div>
 
-                {/* Celular (Editable) */}
                 <div>
                     <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1.5 flex justify-between items-center">
                         <span>Teléfono Móvil</span>
@@ -137,14 +130,14 @@ export default function SignatureForm({ formData, setFormData, handleClear, fixe
                             name="mobilePhone"
                             value={formData.mobilePhone}
                             onChange={handleInputChange}
-                            className="w-full pl-10 pr-3 py-2 text-sm bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] rounded-lg text-[var(--color-text-primary)] focus:border-[var(--color-primary)] focus:outline-none transition-colors"
+                            readOnly={readOnly}
+                            className="w-full pl-10 pr-3 py-2 text-sm bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] rounded-lg text-[var(--color-text-primary)] focus:border-[var(--color-primary)] focus:outline-none transition-colors disabled:opacity-60"
                             placeholder="+58 414-0000000"
                             maxLength={15}
                         />
                     </div>
                 </div>
 
-                {/* Extensión (Editable) */}
                 <div>
                     <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1.5">
                         Extensión Telefónica
@@ -156,39 +149,34 @@ export default function SignatureForm({ formData, setFormData, handleClear, fixe
                             name="extension"
                             value={formData.extension}
                             onChange={handleInputChange}
-                            className="w-full pl-10 pr-3 py-2 text-sm bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] rounded-lg text-[var(--color-text-primary)] focus:border-[var(--color-primary)] focus:outline-none transition-colors"
+                            readOnly={readOnly}
+                            className="w-full pl-10 pr-3 py-2 text-sm bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] rounded-lg text-[var(--color-text-primary)] focus:border-[var(--color-primary)] focus:outline-none transition-colors disabled:opacity-60"
                             placeholder="0000"
                             maxLength={10}
                         />
                     </div>
                 </div>
 
-                <div className="lg:col-span-1">
+                <div className="pt-2 border-t border-[var(--color-border)]">
                     <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1.5">
                         Teléfono Oficina
                     </label>
-                    {/* Fixed Fields Preview */}
-                    <div className="grid grid-cols-1 gap-3 mb-3">
-                        <div className="p-3 bg-[var(--color-bg-tertiary)] bg-opacity-50 rounded-lg border border-[var(--color-border)] flex items-start gap-3">
-                            <PhoneCall className="w-4 h-4 text-[var(--color-text-muted)] shrink-0" />
-                            <div>
-                                <p className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider font-semibold">{fixedData.officePhone}</p>
-                            </div>
-                        </div>
+                    <div className="p-3 bg-[var(--color-bg-tertiary)]/50 rounded-lg border border-[var(--color-border)] flex items-start gap-3">
+                        <PhoneCall className="w-4 h-4 text-[var(--color-text-muted)] shrink-0" />
+                        <p className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider font-semibold">{fixedData.officePhone}</p>
                     </div>
+                </div>
+
+                <div>
                     <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1.5">
                         Sitio Web
                     </label>
-                    <div className="grid grid-cols-1 gap-3">
-                        <div className="p-3 bg-[var(--color-bg-tertiary)] bg-opacity-50 rounded-lg border border-[var(--color-border)] flex items-start gap-3">
-                            <Globe className="w-4 h-4 text-[var(--color-text-muted)] shrink-0" />
-                            <div>
-                                <p className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider font-semibold">{fixedData.website}</p>
-                            </div>
-                        </div>
+                    <div className="p-3 bg-[var(--color-bg-tertiary)]/50 rounded-lg border border-[var(--color-border)] flex items-start gap-3">
+                        <Globe className="w-4 h-4 text-[var(--color-text-muted)] shrink-0" />
+                        <p className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider font-semibold">{fixedData.website}</p>
                     </div>
                 </div>
-            </div>
-        </div>
+            </CardContent>
+        </Card>
     );
 }
