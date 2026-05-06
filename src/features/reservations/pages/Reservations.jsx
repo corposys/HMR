@@ -1,17 +1,19 @@
 import { useState, useCallback, useMemo } from 'react';
-import { Plus, Search, RefreshCw, X, Calendar, Users, LogIn, Home } from 'lucide-react';
+import { Plus, Search, RefreshCw, X, Calendar, Users, LogIn, Home, Calculator } from 'lucide-react';
 import Button from '@shared/common/Button';
 import CustomDropdown from '@shared/common/CustomDropdown';
 import PageWrapper from '@shared/common/PageWrapper';
 import LoadingSpinner from '@shared/common/LoadingSpinner';
 import ErrorState from '@shared/common/ErrorState';
 import EmptyState from '@shared/common/EmptyState';
+import Modal from '@shared/common/Modal';
 import { useReservations } from '@features/reservations/hooks/useReservations';
 import { usePermissions } from '@hooks/usePermissions';
 import { apiFetch } from '@utils/api';
 import ReservationCreateModal from '@features/reservations/components/ReservationCreateModal';
 import ReservationDetailModal from '@features/reservations/components/ReservationDetailModal';
 import ReservationTable from '@features/reservations/components/ReservationTable';
+import QuoteTester from '@features/reservations/components/QuoteTester';
 import { Card, CardHeader } from '@/components/ui/card';
 
 const STATUS_FILTERS = [
@@ -27,6 +29,7 @@ export default function Reservations() {
     const [statusFilter, setStatusFilter] = useState('');
     const [search, setSearch] = useState('');
     const [showCreateModal, setShowCreateModal] = useState(false);
+    const [showQuoteModal, setShowQuoteModal] = useState(false);
     const [selectedReservationId, setSelectedReservationId] = useState(null);
     const { can } = usePermissions();
 
@@ -146,6 +149,10 @@ export default function Reservations() {
 
                             <Button variant="ghost" size="sm" onClick={() => loadReservations()} icon={RefreshCw} className="h-8 w-8 p-0" />
 
+                            <Button variant="outline" icon={Calculator} size="sm" onClick={() => setShowQuoteModal(true)} className="h-8 text-xs rounded-full bg-[var(--color-bg-secondary)] border-2 border-[var(--color-primary)]/60 hover:border-[var(--color-primary)]">
+                                Cotizar
+                            </Button>
+
                             {can('reception', 'write') && (
                                 <Button variant="register" icon={Plus} size="sm" onClick={() => setShowCreateModal(true)} className="h-8 text-xs">
                                     Nueva Reserva
@@ -186,6 +193,20 @@ export default function Reservations() {
                     onClose={() => setShowCreateModal(false)}
                     onCreated={handleCreateReservation}
                 />
+            )}
+
+            {showQuoteModal && (
+                <Modal
+                    isOpen={showQuoteModal}
+                    onClose={() => setShowQuoteModal(false)}
+                    title="Cotizador Rápido"
+                    icon={Calculator}
+                    size="xl"
+                >
+                    <div className="-mt-4 -mb-4">
+                        <QuoteTester />
+                    </div>
+                </Modal>
             )}
 
             {selectedReservationId && (

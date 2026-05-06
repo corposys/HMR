@@ -1,11 +1,8 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, User, Settings as SettingsIcon, Mail, Smartphone, PhoneCall, Globe, Eraser } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function SignatureForm({ formData, setFormData, handleClear, fixedData, readOnly = false }) {
-    const navigate = useNavigate();
-
     const handleInputChange = (e) => {
         if (readOnly) return;
         const { name, value } = e.target;

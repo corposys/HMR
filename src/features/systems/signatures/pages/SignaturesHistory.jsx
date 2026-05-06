@@ -217,8 +217,6 @@ export default function SignaturesHistory() {
         return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
     }).length;
 
-    const withMobilePhone = signatures.filter(s => Boolean(s.mobile_phone)).length;
-
     const filtered = signatures.filter(s => {
         const q = search.toLowerCase();
         return s.full_name.toLowerCase().includes(q) || s.job_title.toLowerCase().includes(q) || s.email.toLowerCase().includes(q);

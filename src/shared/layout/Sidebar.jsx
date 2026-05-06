@@ -31,8 +31,8 @@ const sidebarConfig = [
         icon: CalendarCheck,
         label: 'Reservaciones',
         items: [
-            { to: '/reservaciones', label: 'Reservas' },
-            { to: '/reservaciones/tarifas', label: 'Temporadas y Tarifas' },
+            { to: '/reservaciones', label: 'Reservas', end: true },
+            { to: '/reservaciones/tarifas', label: 'Tarifario' },
         ],
     },
     {
@@ -125,6 +125,7 @@ function SidebarDropdown({ section, isOpen, onToggle, isActive, onCloseMobile, i
                         <NavLink
                             key={item.to}
                             to={item.to}
+                            end={item.end}
                             onClick={onCloseMobile}
                             className={({ isActive }) =>
                                 `group flex items-center gap-3 py-1.5 pr-2.5 text-sm rounded-lg transition-colors

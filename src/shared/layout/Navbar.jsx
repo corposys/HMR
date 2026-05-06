@@ -132,6 +132,10 @@ export default function Navbar({ onMenuClick, isMobileSidebarOpen }) {
             title: 'Reservaciones',
             icon: CalendarCheck,
         },
+        '/reservaciones/tarifas': {
+            title: 'Tarifario',
+            icon: CalendarCheck,
+        },
         '/reception/reservas': {
             title: 'Recepción',
             icon: Hotel,
