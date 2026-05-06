@@ -41,36 +41,7 @@ export default function RackHeader({
 
     return (
         <div className="space-y-3">
-            {/* Row 1: Title + connection + stats + refresh */}
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--color-primary)]/10 text-[var(--color-primary)]">
-                        <LayoutGrid className="h-5 w-5" />
-                    </div>
-                    <div>
-                        <h1 className="text-xl font-bold text-[var(--color-text-primary)]">Rack Operativo</h1>
-                        <p className="text-sm text-[var(--color-text-muted)]">Vista en tiempo real del estado de habitaciones</p>
-                    </div>
-                </div>
-
-                <div className="flex items-center gap-2 sm:ml-auto">
-                    {bcvRate && (
-                        <div className="hidden lg:flex items-center gap-1 px-2 py-1 rounded-md bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] text-xs shrink-0">
-                            <span className="text-[var(--color-text-muted)]">BCV</span>
-                            <span className="font-semibold text-[var(--color-text-primary)]">${bcvRate.toFixed(2)}</span>
-                        </div>
-                    )}
-                    <button
-                        onClick={onRefresh}
-                        className="p-2 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)] transition-colors shrink-0"
-                        title="Actualizar"
-                    >
-                        <RefreshCw className="w-4 h-4" />
-                    </button>
-                </div>
-            </div>
-
-            {/* Row 2: Quick filters + search + filter toggle */}
+            {/* Row 1: Quick filters + search + filter toggle + refresh */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                 <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
                     {QUICK_FILTERS.map(qf => {
@@ -115,6 +86,19 @@ export default function RackHeader({
                         <Filter className="w-3.5 h-3.5" />
                         <span className="hidden sm:inline">Filtros</span>
                         {showFilters ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                    </button>
+                    {bcvRate && (
+                        <div className="hidden lg:flex items-center gap-1 px-2 py-1.5 rounded-md bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] text-xs shrink-0">
+                            <span className="text-[var(--color-text-muted)]">BCV</span>
+                            <span className="font-semibold text-[var(--color-text-primary)]">${bcvRate.toFixed(2)}</span>
+                        </div>
+                    )}
+                    <button
+                        onClick={onRefresh}
+                        className="p-2 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)] transition-colors shrink-0"
+                        title="Actualizar"
+                    >
+                        <RefreshCw className="w-4 h-4" />
                     </button>
                 </div>
             </div>

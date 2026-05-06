@@ -16,7 +16,9 @@ import {
     SettingsIcon,
     BedDouble,
     RefreshCw,
-    TrendingUp
+    TrendingUp,
+    TrendingDown,
+    LayoutGrid,
 } from 'lucide-react';
 import { useAuth } from '@context/AuthContext';
 import { apiFetch } from '@utils/api';
@@ -33,6 +35,8 @@ export default function Navbar({ onMenuClick, isMobileSidebarOpen }) {
     const dropdownRef = useRef(null);
     const [bcvRate, setBcvRate] = useState(null);
     const [bcvLoading, setBcvLoading] = useState(false);
+    const [bcvTrend, setBcvTrend] = useState('neutral');
+    const [bcvFlash, setBcvFlash] = useState(false);
 
     useEffect(() => {
         loadBcvRate();
@@ -43,7 +47,19 @@ export default function Navbar({ onMenuClick, isMobileSidebarOpen }) {
     async function loadBcvRate() {
         try {
             const data = await apiFetch('/api/settings/bcv');
-            if (data.rate) setBcvRate(data.rate);
+            if (data.rate) {
+                const newRate = Number(data.rate.rate ?? data.rate);
+                const oldRate = bcvRate ? Number(bcvRate.rate ?? bcvRate) : null;
+                if (oldRate !== null && newRate !== oldRate) {
+                    if (newRate > oldRate) setBcvTrend('up');
+                    else if (newRate < oldRate) setBcvTrend('down');
+                    setBcvFlash(true);
+                    setTimeout(() => setBcvFlash(false), 700);
+                } else if (oldRate !== null) {
+                    setBcvTrend('neutral');
+                }
+                setBcvRate(data.rate);
+            }
         } catch {
             // silently fail
         }
@@ -53,7 +69,19 @@ export default function Navbar({ onMenuClick, isMobileSidebarOpen }) {
         setBcvLoading(true);
         try {
             const data = await apiFetch('/api/settings/bcv/refresh', { method: 'POST' });
-            if (data.rate) setBcvRate(data.rate);
+            if (data.rate) {
+                const newRate = Number(data.rate.rate ?? data.rate);
+                const oldRate = bcvRate ? Number(bcvRate.rate ?? bcvRate) : null;
+                if (oldRate !== null && newRate !== oldRate) {
+                    if (newRate > oldRate) setBcvTrend('up');
+                    else if (newRate < oldRate) setBcvTrend('down');
+                    setBcvFlash(true);
+                    setTimeout(() => setBcvFlash(false), 700);
+                } else if (oldRate !== null) {
+                    setBcvTrend('neutral');
+                }
+                setBcvRate(data.rate);
+            }
         } catch {
             // silently fail
         } finally {
@@ -70,6 +98,10 @@ export default function Navbar({ onMenuClick, isMobileSidebarOpen }) {
         '/': {
             title: 'Dashboard HMR',
             icon: LayoutDashboard,
+        },
+        '/rack': {
+            title: 'Rack Operativo',
+            icon: LayoutGrid,
         },
         '/reception/reservas': {
             title: 'Recepción',
@@ -174,12 +206,25 @@ export default function Navbar({ onMenuClick, isMobileSidebarOpen }) {
                 <button
                     onClick={refreshBcvRate}
                     disabled={bcvLoading}
-                    className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 bg-[var(--color-bg-tertiary)] rounded-full border border-[var(--color-border)] hover:border-[var(--color-primary)]/40 transition-colors"
+                    className={`hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full border transition-all duration-500
+                        ${bcvFlash && bcvTrend === 'up'
+                            ? 'scale-105 ring-2 ring-emerald-400/40 bg-emerald-500/10 border-emerald-500/30'
+                            : bcvFlash && bcvTrend === 'down'
+                                ? 'scale-105 ring-2 ring-red-400/40 bg-red-500/10 border-red-500/30'
+                                : 'bg-[var(--color-bg-tertiary)] border-[var(--color-border)] hover:border-[var(--color-primary)]/40'
+                        }`}
                     title="Clic para actualizar tasa BCV"
                 >
-                    <TrendingUp className="w-3 h-3 text-emerald-400" />
+                    {bcvTrend === 'down' ? (
+                        <TrendingDown className="w-3 h-3 text-red-400" />
+                    ) : (
+                        <TrendingUp className="w-3 h-3 text-emerald-400" />
+                    )}
                     <span className="text-xs font-medium text-[var(--color-text-secondary)]">
-                        BCV {bcvRate ? `$${Number(bcvRate.rate).toLocaleString('es-VE', { minimumFractionDigits: 2 })}` : '—'}
+                        TASA BCV -{' '}
+                        <span className={`${bcvTrend === 'up' ? 'text-emerald-400' : bcvTrend === 'down' ? 'text-red-400' : 'text-[var(--color-text-primary)]'}`}>
+                            {bcvRate ? `$${Number(bcvRate.rate ?? bcvRate).toLocaleString('es-VE', { minimumFractionDigits: 2 })}` : '—'}
+                        </span>
                     </span>
                     <RefreshCw className={`w-2.5 h-2.5 text-[var(--color-text-muted)] ${bcvLoading ? 'animate-spin' : ''}`} />
                 </button>
