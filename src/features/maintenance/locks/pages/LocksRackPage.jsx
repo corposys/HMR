@@ -241,37 +241,27 @@ export default function LocksRackPage() {
                                 ))}
                             </div>
                         ) : (
-                            <div className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)]/90">
-                                <div className="flex items-center justify-between border-b border-[var(--color-border)]/70 bg-[var(--color-bg-primary)]/45 px-3 py-2">
-                                    <div className="flex items-center gap-2">
-                                        <div className="flex items-center gap-1.5 text-xs font-semibold text-[var(--color-text-primary)]">
-                                            <DoorOpen className="h-3 w-3 text-[var(--color-primary)]" />
-                                            <span>Rack de prioridad</span>
+        
+                            <div className=" rounded-xl space-y-3">
+                                {groupedPriorityByModule.map((module) => (
+                                    <section key={module.moduleId || module.moduleName} className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)]/90">
+                                        <div className="flex items-center justify-between border-b border-[var(--color-border)]/70 bg-[var(--color-bg-primary)]/45 px-3 py-2">
+                                            <div className="flex items-center gap-1.5 text-xs font-semibold text-[var(--color-text-primary)]">
+                                                <DoorOpen className="h-3 w-3 text-[var(--color-primary)]" />
+                                                <span>{module.moduleName || `Módulo ${module.moduleNumber || module.moduleId}`}</span>
+                                            </div>
+                                            <span className="text-[10px] text-[var(--color-text-muted)]">{module.rooms.length} hab.</span>
                                         </div>
-                                    </div>
-                                    <span className="text-[10px] text-[var(--color-text-muted)]">{groupedPriorityByModule.reduce((total, module) => total + module.rooms.length, 0)} hab.</span>
-                                </div>
 
-                                <div className="space-y-3 p-2">
-                                    {groupedPriorityByModule.map((module) => (
-                                        <section key={module.moduleId || module.moduleName} className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)]/90">
-                                            <div className="flex items-center justify-between border-b border-[var(--color-border)]/70 bg-[var(--color-bg-primary)]/45 px-3 py-2">
-                                                <div className="flex items-center gap-1.5 text-xs font-semibold text-[var(--color-text-primary)]">
-                                                    <DoorOpen className="h-3 w-3 text-[var(--color-primary)]" />
-                                                    <span>{module.moduleName || `Módulo ${module.moduleNumber || module.moduleId}`}</span>
-                                                </div>
-                                                <span className="text-[10px] text-[var(--color-text-muted)]">{module.rooms.length} hab.</span>
-                                            </div>
-
-                                            <div className="grid gap-2 p-2 [grid-template-columns:repeat(auto-fit,minmax(160px,1fr))]">
-                                                {module.rooms.map((item) => (
-                                                    <LockSummaryCard key={item.id} item={item} prediction={item.prediction} onOpen={openLockDetail} />
-                                                ))}
-                                            </div>
-                                        </section>
-                                    ))}
-                                </div>
+                                        <div className="grid gap-2 p-2 [grid-template-columns:repeat(auto-fit,minmax(160px,1fr))]">
+                                            {module.rooms.map((item) => (
+                                                <LockSummaryCard key={item.id} item={item} prediction={item.prediction} onOpen={openLockDetail} />
+                                            ))}
+                                        </div>
+                                    </section>
+                                ))}
                             </div>
+        
                         )
                     )}
                 </div>

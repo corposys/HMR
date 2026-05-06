@@ -26,6 +26,7 @@ const WalkInsPage = lazy(() => import('@features/reception/pages/WalkInsPage'));
 const AuditPage = lazy(() => import('@features/reception/pages/AuditPage'));
 const LogbookPage = lazy(() => import('@features/reception/pages/LogbookPage'));
 const ReceptionDashboard = lazy(() => import('@features/reception/pages/ReceptionDashboard'));
+const DemoRackPage = lazy(() => import('@features/demo-rack/pages/DemoRackPage'));
 
 export const protectedRoutes = [
     { index: true, element: <Dashboard /> },
@@ -56,4 +57,5 @@ export const protectedRoutes = [
     { path: 'housekeeping/personal', element: <StaffPage /> },
     { path: 'housekeeping/lenceria', element: <Linen /> },
     { path: 'settings', element: <Settings /> },
+    { path: 'demo-rack', element: <DemoRackPage /> },
 ];

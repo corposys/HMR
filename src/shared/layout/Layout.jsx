@@ -31,7 +31,7 @@ export default function Layout() {
             <Sidebar isMobileOpen={isMobileSidebarOpen} onCloseMobile={closeMobileSidebar} />
 
             {/* Main Content Wrapper*/}
-            <div className="flex-1 flex flex-col h-full min-w-0">
+            <div className="flex-1 flex flex-col h-full min-w-0 md:pl-14">
                 {/* Topbar */}
                 <Navbar onMenuClick={toggleMobileSidebar} isMobileSidebarOpen={isMobileSidebarOpen} />
 

@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { Monitor } from 'lucide-react';
 import PageWrapper from '@shared/common/PageWrapper';
 import LoadingSpinner from '@shared/common/LoadingSpinner';
@@ -6,13 +6,13 @@ import { useRackOperativo } from '../hooks/useRackOperativo';
 import { useRackData } from '../hooks/useRackData';
 import { useBcvRate } from '@hooks/useSettings';
 import RackHeader from '../components/RackHeader';
-import RackGrid from '../components/RackGrid';
-import RackRoomDetail from '../components/RackRoomDetail';
+import RackModuleTabs from '../components/RackModuleTabs';
+import RackRoomCard from '../components/RackRoomCard';
+import RackRoomDialog from '../components/RackRoomDialog';
 
 export default function RackOperativo() {
-    const { rooms, arrivals, departures, loading, connected, error, refetch } = useRackOperativo();
+    const { rooms, arrivals, departures, loading, error, refetch } = useRackOperativo();
     const { rate: bcvRate } = useBcvRate();
-    const [viewMode, setViewMode] = useState('normal');
     const [filters, setFilters] = useState({
         floorFilter: '',
         typeFilter: '',
@@ -21,17 +21,12 @@ export default function RackOperativo() {
         quickFilter: '',
     });
     const [selectedRoom, setSelectedRoom] = useState(null);
-    const [isMobile, setIsMobile] = useState(false);
+    const [activeModule, setActiveModule] = useState('todos');
 
-    // Track mobile viewport
-    useEffect(() => {
-        const checkMobile = () => setIsMobile(window.innerWidth < 768);
-        checkMobile();
-        window.addEventListener('resize', checkMobile);
-        return () => window.removeEventListener('resize', checkMobile);
+    const handleFilterChange = useCallback((updates) => {
+        setFilters(prev => ({ ...prev, ...updates }));
     }, []);
 
-    // Apply quick filters before passing to useRackData
     const filteredRoomsForData = useMemo(() => {
         if (filters.quickFilter === 'arrivals') {
             const arrivalRoomNumbers = new Set(arrivals.map(a => a.room_number));
@@ -46,9 +41,22 @@ export default function RackOperativo() {
 
     const { groupedRooms, stats, uniqueFloors, uniqueTypes } = useRackData(filteredRoomsForData, filters);
 
-    const handleFilterChange = useCallback((updates) => {
-        setFilters(prev => ({ ...prev, ...updates }));
-    }, []);
+    const modules = useMemo(() => {
+        const list = groupedRooms.map(m => ({
+            id: String(m.module_id),
+            name: m.module_name,
+            count: m.floors.reduce((s, f) => s + f.rooms.length, 0),
+        }));
+        return [{ id: 'todos', name: 'Todos', count: stats.total }, ...list];
+    }, [groupedRooms, stats.total]);
+
+    const displayedRooms = useMemo(() => {
+        if (activeModule === 'todos') {
+            return groupedRooms.flatMap(m => m.floors.flatMap(f => f.rooms));
+        }
+        const mod = groupedRooms.find(m => String(m.module_id) === activeModule);
+        return mod ? mod.floors.flatMap(f => f.rooms) : [];
+    }, [groupedRooms, activeModule]);
 
     const handleRoomClick = useCallback((room) => {
         setSelectedRoom(room);
@@ -58,13 +66,11 @@ export default function RackOperativo() {
         setSelectedRoom(null);
     }, []);
 
-    const handleRoomUpdated = useCallback(() => {
-        refetch();
-    }, [refetch]);
+
 
     if (loading && !rooms.length) {
         return (
-            <PageWrapper title="Rack Operativo" subtitle="Vista en tiempo real del estado de habitaciones" icon={Monitor}>
+            <PageWrapper title="Rack Operativo" icon={Monitor}>
                 <div className="flex items-center justify-center h-96">
                     <LoadingSpinner size="lg" />
                 </div>
@@ -73,44 +79,54 @@ export default function RackOperativo() {
     }
 
     return (
-        <PageWrapper title="Rack Operativo" subtitle="Vista en tiempo real del estado de habitaciones" icon={Monitor}>
-            <div className={`transition-all duration-300 ${selectedRoom && !isMobile ? 'mr-80' : ''}`}>
-                <div className="space-y-4">
-                    <RackHeader
-                        stats={stats}
-                        arrivalsCount={arrivals.length}
-                        departuresCount={departures.length}
-                        connected={connected}
-                        filters={filters}
-                        onFilterChange={handleFilterChange}
-                        uniqueFloors={uniqueFloors}
-                        uniqueTypes={uniqueTypes}
-                        onRefresh={refetch}
-                        viewMode={viewMode}
-                        onViewModeChange={setViewMode}
-                        bcvRate={bcvRate}
-                    />
+        <PageWrapper title="Rack Operativo" icon={Monitor}>
+            <div className="space-y-4">
+                <RackHeader
+                    filters={filters}
+                    onFilterChange={handleFilterChange}
+                    uniqueFloors={uniqueFloors}
+                    uniqueTypes={uniqueTypes}
+                    onRefresh={refetch}
+                    bcvRate={bcvRate}
+                />
 
-                    {error && (
-                        <div className="rounded-lg bg-red-500/10 border border-red-500/20 px-4 py-3 text-sm text-red-400">
-                            {error}
+                {error && (
+                    <div className="rounded-lg bg-red-500/10 border border-red-500/20 px-4 py-3 text-sm text-red-400">
+                        {error}
+                    </div>
+                )}
+
+                <RackModuleTabs
+                    modules={modules}
+                    activeModule={activeModule}
+                    onModuleChange={setActiveModule}
+                    stats={stats}
+                    arrivalsCount={arrivals.length}
+                    departuresCount={departures.length}
+                    filters={filters}
+                    onFilterChange={handleFilterChange}
+                />
+
+                {displayedRooms.length === 0 ? (
+                    <div className="flex items-center justify-center h-96 text-[var(--color-text-muted)]">
+                        <div className="text-center">
+                            <p className="text-lg font-medium">No hay habitaciones que coincidan</p>
+                            <p className="text-sm mt-1">Ajusta los filtros para ver resultados</p>
                         </div>
-                    )}
-
-                    <RackGrid
-                        groupedRooms={groupedRooms}
-                        viewMode={viewMode}
-                        onRoomClick={handleRoomClick}
-                    />
-                </div>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+                        {displayedRooms.map(room => (
+                            <RackRoomCard key={room.id} room={room} onClick={handleRoomClick} />
+                        ))}
+                    </div>
+                )}
             </div>
 
-            <RackRoomDetail
+            <RackRoomDialog
                 room={selectedRoom}
                 isOpen={!!selectedRoom}
                 onClose={handleCloseDetail}
-                onUpdated={handleRoomUpdated}
-                isMobile={isMobile}
             />
         </PageWrapper>
     );
