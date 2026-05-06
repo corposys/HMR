@@ -139,6 +139,10 @@ export default function Navbar({ onMenuClick, isMobileSidebarOpen }) {
             title: 'Control de Cerraduras',
             icon: DoorOpen,
         },
+        '/systems/dashboard': {
+            title: 'Dashboard Cerraduras',
+            icon: DoorOpen,
+        },
         '/maintenance': {
             title: 'Habitaciones',
             icon: BedDouble,

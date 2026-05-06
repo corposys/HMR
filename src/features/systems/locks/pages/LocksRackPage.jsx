@@ -4,15 +4,15 @@ import { DoorOpen } from 'lucide-react';
 import { apiFetch } from '@utils/api';
 import LoadingSpinner from '@shared/common/LoadingSpinner';
 import { useToast } from '@context/ToastContext';
-import { useLocksOverview } from '@features/maintenance/locks/hooks/useLocks';
-import { useLockRackData } from '@features/maintenance/locks/hooks/useLockRackData';
-import { RACK_VIEW_MODES } from '@features/maintenance/locks/utils/lockConstants';
-import { formatFloorCode } from '@features/maintenance/locks/utils/lockHelpers';
-import { LockSummaryCard } from '@features/maintenance/locks/components/LockSharedComponents';
-import CreateLockEventModal from '@features/maintenance/locks/components/CreateLockEventModal';
-import LockRackHeader from '@features/maintenance/locks/components/LockRackHeader';
-import LockTimelineModal from '@features/maintenance/locks/components/LockTimelineModal';
-import ReportModal from '@features/maintenance/locks/components/ReportModal';
+import { useLocksOverview } from '@features/systems/locks/hooks/useLocks';
+import { useLockRackData } from '@features/systems/locks/hooks/useLockRackData';
+import { RACK_VIEW_MODES } from '@features/systems/locks/utils/lockConstants';
+import { formatFloorCode } from '@features/systems/locks/utils/lockHelpers';
+import { LockSummaryCard } from '@features/systems/locks/components/LockSharedComponents';
+import CreateLockEventModal from '@features/systems/locks/components/CreateLockEventModal';
+import LockRackHeader from '@features/systems/locks/components/LockRackHeader';
+import LockTimelineModal from '@features/systems/locks/components/LockTimelineModal';
+import ReportModal from '@features/systems/locks/components/ReportModal';
 
 export default function LocksRackPage() {
     const navigate = useNavigate();
@@ -121,7 +121,7 @@ export default function LocksRackPage() {
         if (!roomId) {
             return;
         }
-        navigate(`/maintenance/room/${roomId}`);
+        navigate(`/systems/room/${roomId}`);
     };
 
     const handleCreateReport = async (data) => {

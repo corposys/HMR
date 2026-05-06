@@ -19,10 +19,10 @@ import {
 } from 'lucide-react';
 import { apiFetch } from '@utils/api';
 import LoadingSpinner from '@shared/common/LoadingSpinner';
-import CreateLockEventModal from '@features/maintenance/locks/components/CreateLockEventModal';
-import { LOCK_STATUS_STYLES, LOCK_STATUS_LABELS } from '@features/maintenance/locks/utils/lockConstants';
-import { formatDate } from '@features/maintenance/locks/utils/lockHelpers';
-import { HealthBar, DetailMetric, SectionTitle } from '@features/maintenance/locks/components/LockSharedComponents';
+import CreateLockEventModal from '@features/systems/locks/components/CreateLockEventModal';
+import { LOCK_STATUS_STYLES, LOCK_STATUS_LABELS } from '@features/systems/locks/utils/lockConstants';
+import { formatDate } from '@features/systems/locks/utils/lockHelpers';
+import { HealthBar, DetailMetric, SectionTitle } from '@features/systems/locks/components/LockSharedComponents';
 
 export default function LockTimelinePage() {
     const { id } = useParams();

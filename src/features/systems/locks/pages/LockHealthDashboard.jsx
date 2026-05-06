@@ -5,9 +5,9 @@ import {
     DoorOpen, AlertCircle, ChevronRight
 } from 'lucide-react';
 import LoadingSpinner from '@shared/common/LoadingSpinner';
-import { formatDate } from '@features/maintenance/locks/utils/lockHelpers';
-import { HealthBar } from '@features/maintenance/locks/components/LockSharedComponents';
-import { useLockDashboard } from '@features/maintenance/locks/hooks/useLocks';
+import { formatDate } from '@features/systems/locks/utils/lockHelpers';
+import { HealthBar } from '@features/systems/locks/components/LockSharedComponents';
+import { useLockDashboard } from '@features/systems/locks/hooks/useLocks';
 
 export default function LockHealthDashboard() {
     const navigate = useNavigate();
@@ -83,7 +83,7 @@ export default function LockHealthDashboard() {
                         <div className="divide-y divide-[var(--color-border)]">
                             {alerts.map(a => (
                                 <div key={a.room_id} className="px-4 py-3 flex items-center gap-4 hover:bg-[var(--color-bg-tertiary)] transition-colors cursor-pointer"
-                                    onClick={() => navigate(`/maintenance/room/${a.room_id}`)}>
+                                    onClick={() => navigate(`/systems/room/${a.room_id}`)}>
                                     <div className={`p-2 rounded-lg shrink-0 ${a.days_remaining <= 0 ? 'bg-red-500/10' : 'bg-yellow-500/10'}`}>
                                         <DoorOpen className={`w-4 h-4 ${a.days_remaining <= 0 ? 'text-red-500' : 'text-yellow-500'}`} />
                                     </div>
@@ -121,7 +121,7 @@ export default function LockHealthDashboard() {
                         <div className="max-h-96 overflow-y-auto divide-y divide-[var(--color-border)]">
                             {predictions.sort((a, b) => a.health_score - b.health_score).map(p => (
                                 <div key={p.room_id} className="px-4 py-2.5 flex items-center gap-3 hover:bg-[var(--color-bg-tertiary)] cursor-pointer"
-                                    onClick={() => navigate(`/maintenance/room/${p.room_id}`)}>
+                                    onClick={() => navigate(`/systems/room/${p.room_id}`)}>
                                     <span className="text-xs font-mono font-medium text-[var(--color-text-primary)] w-12">{p.room_number}</span>
                                     <div className="flex-1">
                                         <HealthBar score={p.health_score} />

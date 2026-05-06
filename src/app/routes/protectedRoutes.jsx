@@ -2,12 +2,12 @@ import { lazy } from 'react';
 
 const Dashboard = lazy(() => import('@features/dashboard/pages/Dashboard'));
 const Settings = lazy(() => import('@features/settings/pages/SettingsPage'));
-const Signatures = lazy(() => import('@features/signatures/pages/Signatures'));
-const SignaturesHistory = lazy(() => import('@features/signatures/pages/SignaturesHistory'));
+const Signatures = lazy(() => import('@features/systems/signatures/pages/Signatures'));
+const SignaturesHistory = lazy(() => import('@features/systems/signatures/pages/SignaturesHistory'));
 const Habitaciones = lazy(() => import('@features/maintenance/pages/Habitaciones'));
-const LockHealthDashboard = lazy(() => import('@features/maintenance/locks/pages/LockHealthDashboard'));
-const LockTimelinePage = lazy(() => import('@features/maintenance/locks/pages/LockTimelinePage'));
-const LocksRackPage = lazy(() => import('@features/maintenance/locks/pages/LocksRackPage'));
+const LockHealthDashboard = lazy(() => import('@features/systems/locks/pages/LockHealthDashboard'));
+const LockTimelinePage = lazy(() => import('@features/systems/locks/pages/LockTimelinePage'));
+const LocksRackPage = lazy(() => import('@features/systems/locks/pages/LocksRackPage'));
 const VehicleControl = lazy(() => import('@features/security/pages/VehicleControl'));
 const Linen = lazy(() => import('@features/housekeeping/pages/Linen'));
 const HousekeepingPage = lazy(() => import('@features/housekeeping/pages/Housekeeping'));
@@ -45,9 +45,9 @@ export const protectedRoutes = [
     { path: 'systems/signatures/new', element: <Signatures /> },
     { path: 'maintenance', element: <Habitaciones /> },
     { path: 'maintenance/habitaciones', element: <Habitaciones /> },
-    { path: 'maintenance/room/:id', element: <LockTimelinePage /> },
+    { path: 'systems/room/:id', element: <LockTimelinePage /> },
     { path: 'systems/rooms', element: <LocksRackPage /> },
-    { path: 'maintenance/dashboard', element: <LockHealthDashboard /> },
+    { path: 'systems/dashboard', element: <LockHealthDashboard /> },
     { path: 'security/vehicle-control', element: <VehicleControl /> },
     { path: 'housekeeping', element: <HousekeepingPage /> },
     { path: 'housekeeping/dashboard', element: <HousekeepingDashboard /> },

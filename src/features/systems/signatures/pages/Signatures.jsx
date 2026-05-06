@@ -2,9 +2,9 @@ import React, { useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import html2canvas from 'html2canvas';
 
-import SignatureForm from '@features/signatures/components/SignatureForm';
-import SignaturePreview from '@features/signatures/components/SignaturePreview';
-import SignatureInstructions from '@features/signatures/components/SignatureInstructions';
+import SignatureForm from '@features/systems/signatures/components/SignatureForm';
+import SignaturePreview from '@features/systems/signatures/components/SignaturePreview';
+import SignatureInstructions from '@features/systems/signatures/components/SignatureInstructions';
 import { useToast } from '@context/ToastContext';
 
 export default function Signatures() {

@@ -91,6 +91,7 @@ const sidebarConfig = [
         items: [
             { to: '/systems/signatures', label: 'Firmas' },
             { to: '/systems/rooms', label: 'Cerraduras' },
+            { to: '/systems/dashboard', label: 'Dashboard' },
         ],
     },
 ];
