@@ -1,16 +1,16 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { DoorOpen } from 'lucide-react';
+import { DoorOpen, Lock } from 'lucide-react';
 import { apiFetch } from '@utils/api';
+import PageWrapper from '@shared/common/PageWrapper';
 import LoadingSpinner from '@shared/common/LoadingSpinner';
 import { useToast } from '@context/ToastContext';
 import { useLocksOverview } from '@features/systems/locks/hooks/useLocks';
 import { useLockRackData } from '@features/systems/locks/hooks/useLockRackData';
-import { RACK_VIEW_MODES } from '@features/systems/locks/utils/lockConstants';
-import { formatFloorCode } from '@features/systems/locks/utils/lockHelpers';
 import { LockSummaryCard } from '@features/systems/locks/components/LockSharedComponents';
 import CreateLockEventModal from '@features/systems/locks/components/CreateLockEventModal';
 import LockRackHeader from '@features/systems/locks/components/LockRackHeader';
+import LockModuleTabs from '@features/systems/locks/components/LockModuleTabs';
 import LockTimelineModal from '@features/systems/locks/components/LockTimelineModal';
 import ReportModal from '@features/systems/locks/components/ReportModal';
 
@@ -26,7 +26,7 @@ export default function LocksRackPage() {
     const [showCreate, setShowCreate] = useState(false);
     const [showTimelineModal, setShowTimelineModal] = useState(false);
     const [showReport, setShowReport] = useState(false);
-    const [rackViewMode] = useState(RACK_VIEW_MODES.priority);
+    const [activeModule, setActiveModule] = useState('todos');
     const [savingEvent, setSavingEvent] = useState(false);
     const [savingReport, setSavingReport] = useState(false);
     const [updatingStatus, setUpdatingStatus] = useState(false);
@@ -34,14 +34,28 @@ export default function LocksRackPage() {
     const { locks, predictionsByRoom, loading, error, fetchLocksOverview } = useLocksOverview();
 
     const {
-        groupedLocks,
-        groupedPriorityByModule,
         groupedByModule,
-        groupedByStructure,
         operationalSummary,
         priorityLocks,
         filteredLocks
     } = useLockRackData(locks, predictionsByRoom, search, statusFilter);
+
+    const modules = useMemo(() => {
+        const list = groupedByModule.map(m => ({
+            id: String(m.moduleId),
+            name: m.moduleName || `Módulo ${m.moduleNumber || m.moduleId}`,
+            count: m.rooms.length,
+        }));
+        return [{ id: 'todos', name: 'Todos', count: filteredLocks.length }, ...list];
+    }, [groupedByModule, filteredLocks.length]);
+
+    const displayedRooms = useMemo(() => {
+        if (activeModule === 'todos') {
+            return groupedByModule.flatMap(m => m.rooms);
+        }
+        const mod = groupedByModule.find(m => String(m.moduleId) === activeModule);
+        return mod ? mod.rooms : [];
+    }, [groupedByModule, activeModule]);
 
     useEffect(() => {
         fetchLocksOverview();
@@ -150,18 +164,21 @@ export default function LocksRackPage() {
     };
 
     if (loading) {
-        return <LoadingSpinner />;
+        return (
+            <PageWrapper title="Control de Cerraduras" icon={Lock}>
+                <div className="flex items-center justify-center h-96">
+                    <LoadingSpinner size="lg" />
+                </div>
+            </PageWrapper>
+        );
     }
 
     return (
-        <div className="py-5 w-full px-5">
-            <div className="mx-auto max-w-auto space-y-4">
+        <PageWrapper title="Control de Cerraduras" icon={Lock}>
+            <div className="space-y-4">
                 <LockRackHeader
-                    statusFilter={statusFilter}
-                    setStatusFilter={setStatusFilter}
                     search={search}
                     setSearch={setSearch}
-                    operationalSummary={operationalSummary}
                     priorityLocks={priorityLocks}
                     onOpenCreateEvent={() => {
                         setSelectedLockId(null);
@@ -170,99 +187,41 @@ export default function LocksRackPage() {
                     }}
                     onOpenReport={() => setShowReport(true)}
                     onOpenLockDetail={openLockDetail}
-                    failureCount={filteredLocks.filter((item) => item.status === 'failure').length}
-                    outOfServiceCount={filteredLocks.filter((item) => item.status === 'out_of_service').length}
+                    onRefresh={fetchLocksOverview}
                 />
 
                 {error && (
-                    <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-300">
+                    <div className="rounded-lg bg-red-500/10 border border-red-500/20 px-4 py-3 text-sm text-red-400">
                         {error}
                     </div>
                 )}
 
+                <LockModuleTabs
+                    modules={modules}
+                    activeModule={activeModule}
+                    onModuleChange={setActiveModule}
+                    statusFilter={statusFilter}
+                    setStatusFilter={setStatusFilter}
+                    operationalSummary={operationalSummary}
+                    failureCount={filteredLocks.filter((item) => item.status === 'failure').length}
+                    outOfServiceCount={filteredLocks.filter((item) => item.status === 'out_of_service').length}
+                />
+
                 {/* ── Rack ── */}
                 <div className="space-y-2">
-                    {groupedLocks.length === 0 ? (
-                        <div className="rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-10 text-center">
-                            <p className="text-sm text-[var(--color-text-muted)]">No hay cerraduras para mostrar con los filtros actuales.</p>
+                    {displayedRooms.length === 0 ? (
+                        <div className="flex items-center justify-center h-96 text-[var(--color-text-muted)]">
+                            <div className="text-center">
+                                <p className="text-lg font-medium">No hay cerraduras para mostrar con los filtros actuales.</p>
+                                <p className="text-sm mt-1">Ajusta los filtros para ver resultados.</p>
+                            </div>
                         </div>
                     ) : (
-                        rackViewMode === RACK_VIEW_MODES.structure ? (
-                            <div className="space-y-3">
-                                {groupedByStructure.map((module) => (
-                                    <section key={module.moduleId} className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)]/90">
-                                        <div className="flex items-center justify-between border-b border-[var(--color-border)]/70 bg-[var(--color-bg-primary)]/45 px-3 py-2">
-                                            <div className="flex items-center gap-1.5 text-xs font-semibold text-[var(--color-text-primary)]">
-                                                <DoorOpen className="h-3 w-3 text-[var(--color-primary)]" />
-                                                <span>{module.moduleName || `Módulo ${module.moduleNumber || module.moduleId}`}</span>
-                                            </div>
-                                            <span className="text-[10px] text-[var(--color-text-muted)]">{module.floors.length} pisos</span>
-                                        </div>
-
-                                        <div className="space-y-2 p-2">
-                                            {module.floors.map((floor) => (
-                                                <article key={`${module.moduleId}-${floor.floorCode}`} className="overflow-hidden rounded-xl border border-[var(--color-border)]/80 bg-[var(--color-bg-primary)]/35">
-                                                    <div className="flex items-center justify-between border-b border-[var(--color-border)]/60 px-2.5 py-1.5">
-                                                        <div className="flex items-center gap-1.5 text-xs font-medium text-[var(--color-text-primary)]">
-                                                            <span className="font-semibold">{formatFloorCode(floor.floorCode)}</span>
-                                                            <span className="text-[var(--color-text-muted)] text-[10px]">·</span>
-                                                            <span className="text-[var(--color-text-secondary)] text-[10px]">{module.moduleName}</span>
-                                                        </div>
-                                                        <span className="text-[10px] text-[var(--color-text-muted)]">{floor.rooms.length} hab.</span>
-                                                    </div>
-                                                    <div className="grid gap-1.5 p-1.5 [grid-template-columns:repeat(auto-fit,minmax(160px,1fr))]">
-                                                        {floor.rooms.map((item) => (
-                                                            <LockSummaryCard key={item.id} item={item} prediction={item.prediction} onOpen={openLockDetail} />
-                                                        ))}
-                                                    </div>
-                                                </article>
-                                            ))}
-                                        </div>
-                                    </section>
-                                ))}
-                            </div>
-                        ) : rackViewMode === RACK_VIEW_MODES.module ? (
-                            <div className="space-y-3">
-                                {groupedByModule.map((module) => (
-                                    <section key={module.moduleId} className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)]/90">
-                                        <div className="flex items-center justify-between border-b border-[var(--color-border)]/70 bg-[var(--color-bg-primary)]/45 px-3 py-2">
-                                            <div className="flex items-center gap-1.5 text-xs font-semibold text-[var(--color-text-primary)]">
-                                                <DoorOpen className="h-3 w-3 text-[var(--color-primary)]" />
-                                                <span>{module.moduleName || `Módulo ${module.moduleNumber || module.moduleId}`}</span>
-                                            </div>
-                                            <span className="text-[10px] text-[var(--color-text-muted)]">{module.rooms.length} hab.</span>
-                                        </div>
-                                        <div className="grid gap-2 p-2 [grid-template-columns:repeat(auto-fit,minmax(160px,1fr))]">
-                                            {module.rooms.map((item) => (
-                                                <LockSummaryCard key={item.id} item={item} prediction={item.prediction} onOpen={openLockDetail} />
-                                            ))}
-                                        </div>
-                                    </section>
-                                ))}
-                            </div>
-                        ) : (
-        
-                            <div className=" rounded-xl space-y-3">
-                                {groupedPriorityByModule.map((module) => (
-                                    <section key={module.moduleId || module.moduleName} className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)]/90">
-                                        <div className="flex items-center justify-between border-b border-[var(--color-border)]/70 bg-[var(--color-bg-primary)]/45 px-3 py-2">
-                                            <div className="flex items-center gap-1.5 text-xs font-semibold text-[var(--color-text-primary)]">
-                                                <DoorOpen className="h-3 w-3 text-[var(--color-primary)]" />
-                                                <span>{module.moduleName || `Módulo ${module.moduleNumber || module.moduleId}`}</span>
-                                            </div>
-                                            <span className="text-[10px] text-[var(--color-text-muted)]">{module.rooms.length} hab.</span>
-                                        </div>
-
-                                        <div className="grid gap-2 p-2 [grid-template-columns:repeat(auto-fit,minmax(160px,1fr))]">
-                                            {module.rooms.map((item) => (
-                                                <LockSummaryCard key={item.id} item={item} prediction={item.prediction} onOpen={openLockDetail} />
-                                            ))}
-                                        </div>
-                                    </section>
-                                ))}
-                            </div>
-        
-                        )
+                        <div className="grid gap-2 auto-rows-fr [grid-template-columns:repeat(auto-fill,minmax(160px,1fr))]">
+                            {displayedRooms.map((item) => (
+                                <LockSummaryCard key={item.id} item={item} prediction={item.prediction} onOpen={openLockDetail} />
+                            ))}
+                        </div>
                     )}
                 </div>
             </div>
@@ -301,6 +260,6 @@ export default function LocksRackPage() {
                     saving={savingReport}
                 />
             )}
-        </div>
+        </PageWrapper>
     );
 }

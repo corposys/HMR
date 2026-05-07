@@ -69,9 +69,9 @@ export function LockSummaryCard({ item, prediction, onOpen, showFloorBadge = tru
         <button
             type="button"
             onClick={() => onOpen(item.room_id || item.id)}
-            className="group relative rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-primary)]/40 p-2.5 text-left transition-all hover:border-[var(--color-primary)]/50 hover:bg-[var(--color-bg-primary)]/60 hover:shadow-md"
+            className="group relative rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-primary)]/40 p-2.5 text-left transition-all hover:border-[var(--color-primary)]/50 hover:bg-[var(--color-bg-primary)]/60 hover:shadow-md flex flex-col min-h-[130px]"
         >
-            <div className="mb-2 flex items-start justify-between">
+            <div className="flex items-start justify-between">
                 <div className="flex flex-col items-start">
                     <div className="flex items-center gap-1">
                         {showFloorBadge && (
@@ -79,11 +79,11 @@ export function LockSummaryCard({ item, prediction, onOpen, showFloorBadge = tru
                                 {floorLabel}
                             </span>
                         )}
-                        <p className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)]">Hab.</p>
+                        <span className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)]">Hab.</span>
                     </div>
 
                     <div className="mt-1">
-                        <p className="text-base font-bold leading-tight text-[var(--color-text-primary)] text-center">{item.room_number}</p>
+                        <p className="text-base font-bold leading-tight text-[var(--color-text-primary)] text-center w-full">{item.room_number}</p>
                     </div>
                 </div>
 
@@ -94,34 +94,36 @@ export function LockSummaryCard({ item, prediction, onOpen, showFloorBadge = tru
                 />
             </div>
 
-            <div className="mb-2">
-                <div className="mb-1 flex items-center justify-between">
-                    <span className="flex items-center gap-1 text-[10px] text-[var(--color-text-muted)]">
-                        <Battery className="h-3 w-3" />
-                        Batería
-                    </span>
-                    <span className="text-[10px] font-semibold text-[var(--color-text-secondary)]">
-                        {healthScore !== null ? `${healthScore}%` : '—'}
-                    </span>
+            <div className="flex-1 flex flex-col justify-center gap-1.5 mt-2">
+                <div>
+                    <div className="mb-1 flex items-center justify-between">
+                        <span className="flex items-center gap-1 text-[10px] text-[var(--color-text-muted)]">
+                            <Battery className="h-3 w-3" />
+                            Batería
+                        </span>
+                        <span className="text-[10px] font-semibold text-[var(--color-text-secondary)]">
+                            {healthScore !== null ? `${healthScore}%` : '—'}
+                        </span>
+                    </div>
+                    <div className="h-1 w-full rounded-full bg-[var(--color-border)]">
+                        <div
+                            className={`h-1 rounded-full transition-all ${batteryBarColor}`}
+                            style={{ width: `${healthScore ?? 0}%` }}
+                        />
+                    </div>
                 </div>
-                <div className="h-1 w-full rounded-full bg-[var(--color-border)]">
-                    <div
-                        className={`h-1 rounded-full transition-all ${batteryBarColor}`}
-                        style={{ width: `${healthScore ?? 0}%` }}
-                    />
+
+                <div className={`flex items-center gap-1 text-[10px] font-semibold ${daysColor}`}>
+                    <ShieldAlert className="h-3 w-3" />
+                    {prediction
+                        ? (prediction.days_remaining <= 0
+                            ? `Vencida ${Math.abs(prediction.days_remaining)}d`
+                            : `${prediction.days_remaining}d restantes`)
+                        : 'Sin predicción'}
                 </div>
             </div>
 
-            <div className={`mb-2 flex items-center gap-1 text-[10px] font-semibold ${daysColor}`}>
-                <ShieldAlert className="h-3 w-3" />
-                {prediction
-                    ? (prediction.days_remaining <= 0
-                        ? `Vencida ${Math.abs(prediction.days_remaining)}d`
-                        : `${prediction.days_remaining}d restantes`)
-                    : 'Sin predicción'}
-            </div>
-
-            <div className="flex items-center justify-between border-t border-[var(--color-border)]/40 pt-2 text-[10px] text-[var(--color-text-muted)]">
+            <div className="mt-auto flex items-center justify-between border-t border-[var(--color-border)]/40 pt-2 text-[10px] text-[var(--color-text-muted)]">
                 <span className="flex items-center gap-1">
                     <Calendar className="h-3 w-3" />
                     {item.last_maintenance_at ? formatShortDate(item.last_maintenance_at) : 'Sin mant.'}
