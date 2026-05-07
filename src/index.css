@@ -1,51 +1,52 @@
 @import "tailwindcss";
 
 /* ============================================================================
-   HMR Design System
+   HMR Design System - Light & Dark Theme
    ============================================================================ */
-@theme {
-  /* Shadcn CSS Variables */
+
+:root {
+  /* Shadcn CSS Variables - Light Mode */
   --radius: 0.5rem;
-  --background: #0f0f0f;
-  --foreground: #fafafa;
-  --card: #171717;
-  --card-foreground: #fafafa;
-  --popover: #171717;
-  --popover-foreground: #fafafa;
-  --primary: #009098;
+  --background: #f3f4f6;
+  --foreground: #1f2937;
+  --card: #ffffff;
+  --card-foreground: #1f2937;
+  --popover: #ffffff;
+  --popover-foreground: #1f2937;
+  --primary: #00808a;
   --primary-foreground: #ffffff;
-  --secondary: #1f1f1f;
-  --secondary-foreground: #fafafa;
-  --muted: #1f1f1f;
-  --muted-foreground: #a3a3a3;
-  --accent: #1f1f1f;
-  --accent-foreground: #fafafa;
+  --secondary: #e5e7eb;
+  --secondary-foreground: #1f2937;
+  --muted: #e5e7eb;
+  --muted-foreground: #6b7280;
+  --accent: #e5e7eb;
+  --accent-foreground: #1f2937;
   --destructive: #ef4444;
-  --destructive-foreground: #fafafa;
-  --border: #2a2a2a;
-  --input: #2a2a2a;
-  --ring: #009098;
+  --destructive-foreground: #ffffff;
+  --border: #d1d5db;
+  --input: #d1d5db;
+  --ring: #00808a;
 
-  /* Paleta de colores - Rojo opaco como color principal */
-  --color-primary: #009098;
-  --color-primary-light: #25d2db;
-  --color-primary-dark: #1b9096;
-  --color-primary-muted: #1b787d;
+  /* Paleta de colores */
+  --color-primary: #00808a;
+  --color-primary-light: #14b8c4;
+  --color-primary-dark: #006c75;
+  --color-primary-muted: #0e7480;
 
-  /* Background colors - Dark theme */
-  --color-bg-primary: #0f0f0f;
-  --color-bg-secondary: #171717;
-  --color-bg-tertiary: #1f1f1f;
-  --color-bg-elevated: #262626;
+  /* Background colors - Light theme */
+  --color-bg-primary: #f3f4f6;
+  --color-bg-secondary: #ffffff;
+  --color-bg-tertiary: #e5e7eb;
+  --color-bg-elevated: #f9fafb;
 
   /* Text colors */
-  --color-text-primary: #fafafa;
-  --color-text-secondary: #a3a3a3;
-  --color-text-muted: #737373;
+  --color-text-primary: #1f2937;
+  --color-text-secondary: #4b5563;
+  --color-text-muted: #9ca3af;
 
   /* Border colors */
-  --color-border: #2a2a2a;
-  --color-border-hover: #404040;
+  --color-border: #d1d5db;
+  --color-border-hover: #9ca3af;
 
   /* Accent colors */
   --color-success: #22c55e;
@@ -73,6 +74,77 @@
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
   --shadow-glow: 0 0 20px rgb(185 28 28 / 0.15);
+}
+
+/* Dark Mode Override */
+.dark {
+  --radius: 0.5rem;
+  --background: #0f0f0f;
+  --foreground: #fafafa;
+  --card: #171717;
+  --card-foreground: #fafafa;
+  --popover: #171717;
+  --popover-foreground: #fafafa;
+  --primary: #009098;
+  --primary-foreground: #ffffff;
+  --secondary: #1f1f1f;
+  --secondary-foreground: #fafafa;
+  --muted: #1f1f1f;
+  --muted-foreground: #a3a3a3;
+  --accent: #1f1f1f;
+  --accent-foreground: #fafafa;
+  --destructive: #ef4444;
+  --destructive-foreground: #fafafa;
+  --border: #2a2a2a;
+  --input: #2a2a2a;
+  --ring: #009098;
+
+  /* Background colors - Dark theme */
+  --color-bg-primary: #0f0f0f;
+  --color-bg-secondary: #171717;
+  --color-bg-tertiary: #1f1f1f;
+  --color-bg-elevated: #262626;
+
+  /* Text colors */
+  --color-text-primary: #fafafa;
+  --color-text-secondary: #a3a3a3;
+  --color-text-muted: #737373;
+
+  /* Border colors */
+  --color-border: #2a2a2a;
+  --color-border-hover: #404040;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.3);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.3);
+}
+
+@theme {
+  --color-primary: var(--color-primary);
+  --color-primary-light: var(--color-primary-light);
+  --color-primary-dark: var(--color-primary-dark);
+  --color-primary-muted: var(--color-primary-muted);
+
+  --color-bg-primary: var(--color-bg-primary);
+  --color-bg-secondary: var(--color-bg-secondary);
+  --color-bg-tertiary: var(--color-bg-tertiary);
+  --color-bg-elevated: var(--color-bg-elevated);
+
+  --color-text-primary: var(--color-text-primary);
+  --color-text-secondary: var(--color-text-secondary);
+  --color-text-muted: var(--color-text-muted);
+
+  --color-border: var(--color-border);
+  --color-border-hover: var(--color-border-hover);
+
+  --color-success: var(--color-success);
+  --color-warning: var(--color-warning);
+  --color-danger: var(--color-danger);
+  --color-info: var(--color-info);
+
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
 }
 
 /* Base styles */
@@ -111,29 +183,12 @@ h6 {
   margin: 0;
 }
 
-h1 {
-  font-size: 1.5rem;
-}
-
-h2 {
-  font-size: 1.25rem;
-}
-
-h3 {
-  font-size: 1.25rem;
-}
-
-h4 {
-  font-size: 1rem;
-}
-
-h5 {
-  font-size: 1rem;
-}
-
-h6 {
-  font-size: 1rem;
-}
+h1 { font-size: 1.5rem; }
+h2 { font-size: 1.25rem; }
+h3 { font-size: 1.25rem; }
+h4 { font-size: 1rem; }
+h5 { font-size: 1rem; }
+h6 { font-size: 1rem; }
 
 p {
   margin: 0;
@@ -377,7 +432,6 @@ p {
     opacity: 0;
     transform: translateY(8px);
   }
-
   to {
     opacity: 1;
     transform: translateY(0);
@@ -385,15 +439,8 @@ p {
 }
 
 @keyframes pulse-subtle {
-
-  0%,
-  100% {
-    opacity: 1;
-  }
-
-  50% {
-    opacity: 0.7;
-  }
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
 }
 
 .animate-fade-in {
@@ -437,29 +484,13 @@ p {
    ============================================================================ */
 
 @media (max-width: 1024px) {
-  h1 {
-    font-size: 1.875rem;
-  }
-
-  h2 {
-    font-size: 1.5rem;
-  }
-
-  .container {
-    padding: 0 1rem;
-  }
+  h1 { font-size: 1.875rem; }
+  h2 { font-size: 1.5rem; }
+  .container { padding: 0 1rem; }
 }
 
 @media (max-width: 768px) {
-  h1 {
-    font-size: 1.5rem;
-  }
-
-  h2 {
-    font-size: 1.25rem;
-  }
-
-  .section {
-    padding: 3rem 0;
-  }
+  h1 { font-size: 1.5rem; }
+  h2 { font-size: 1.25rem; }
+  .section { padding: 3rem 0; }
 }

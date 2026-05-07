@@ -20,8 +20,11 @@ import {
     TrendingDown,
     LayoutGrid,
     CalendarCheck,
+    Sun,
+    Moon,
 } from 'lucide-react';
 import { useAuth } from '@context/AuthContext';
+import { useTheme } from '@context/ThemeContext';
 import { apiFetch } from '@utils/api';
 
 /**
@@ -33,6 +36,7 @@ export default function Navbar({ onMenuClick, isMobileSidebarOpen }) {
     const navigate = useNavigate();
     const location = useLocation();
     const { user, logout } = useAuth();
+    const { theme, toggleTheme } = useTheme();
     const dropdownRef = useRef(null);
     const [bcvRate, setBcvRate] = useState(null);
     const [bcvLoading, setBcvLoading] = useState(false);
@@ -260,6 +264,15 @@ export default function Navbar({ onMenuClick, isMobileSidebarOpen }) {
                 <button className="relative p-1.5 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)] rounded-full transition-colors">
                     <Bell className="w-4 h-4" />
                     <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-[var(--color-primary)] rounded-full border-2 border-[var(--color-bg-primary)]"></span>
+                </button>
+
+                {/* Theme Toggle */}
+                <button
+                    onClick={toggleTheme}
+                    className="p-1.5 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)] rounded-full transition-colors"
+                    title={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+                >
+                    {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
                 </button>
 
                 {/* Divider */}

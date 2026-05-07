@@ -3,6 +3,7 @@ import { Suspense } from 'react';
 import { Loader2 } from 'lucide-react';
 import { AuthProvider } from '@context/AuthContext';
 import { ToastProvider } from '@context/ToastContext';
+import { ThemeProvider } from '@context/ThemeContext';
 import ProtectedRoute from '@shared/common/ProtectedRoute';
 import ErrorBoundary from '@shared/common/ErrorBoundary';
 import Layout from '@shared/layout/Layout';
@@ -18,37 +19,39 @@ function App() {
         <ErrorBoundary>
             <BrowserRouter>
                 <ToastProvider>
-                    <AuthProvider>
-                        <Suspense fallback={(
-                            <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg-primary)]">
-                                <Loader2 className="w-8 h-8 animate-spin text-[var(--color-primary)]" />
-                            </div>
-                        )}>
-                            <Routes>
-                                {publicRoutes.map((route) => (
-                                    <Route key={route.path} path={route.path} element={route.element} />
-                                ))}
-
-                                {/* Rutas protegidas */}
-                                <Route
-                                    path="/"
-                                    element={
-                                        <ProtectedRoute>
-                                            <Layout />
-                                        </ProtectedRoute>
-                                    }
-                                >
-                                    {protectedRoutes.map((route) => (
-                                        route.index
-                                            ? <Route key="index" index element={route.element} />
-                                            : <Route key={route.path} path={route.path} element={route.element} />
+                    <ThemeProvider>
+                        <AuthProvider>
+                            <Suspense fallback={(
+                                <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg-primary)]">
+                                    <Loader2 className="w-8 h-8 animate-spin text-[var(--color-primary)]" />
+                                </div>
+                            )}>
+                                <Routes>
+                                    {publicRoutes.map((route) => (
+                                        <Route key={route.path} path={route.path} element={route.element} />
                                     ))}
-                                </Route>
 
-                                <Route path={fallbackRoute.path} element={fallbackRoute.element} />
-                            </Routes>
-                        </Suspense>
-                    </AuthProvider>
+                                    {/* Rutas protegidas */}
+                                    <Route
+                                        path="/"
+                                        element={
+                                            <ProtectedRoute>
+                                                <Layout />
+                                            </ProtectedRoute>
+                                        }
+                                    >
+                                        {protectedRoutes.map((route) => (
+                                            route.index
+                                                ? <Route key="index" index element={route.element} />
+                                                : <Route key={route.path} path={route.path} element={route.element} />
+                                        ))}
+                                    </Route>
+
+                                    <Route path={fallbackRoute.path} element={fallbackRoute.element} />
+                                </Routes>
+                            </Suspense>
+                        </AuthProvider>
+                    </ThemeProvider>
                 </ToastProvider>
             </BrowserRouter>
         </ErrorBoundary>
