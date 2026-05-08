@@ -3,6 +3,7 @@ import { Wrench, Battery, Cog, Plus, Search, X, Loader2, Radio, HelpCircle } fro
 import { apiFetch } from '@utils/api';
 import Modal from '@shared/common/Modal';
 import CustomDropdown from '@shared/common/CustomDropdown';
+import DateTimePicker from '@shared/common/DateTimePicker';
 
 function Tooltip({ children, text }) {
     return (
@@ -21,23 +22,39 @@ function Tooltip({ children, text }) {
 export default function CreateLockEventModal({ onSave, onCancel, saving, initialRoomId = null, lockRoomSelection = false }) {
     const [rooms, setRooms] = useState([]);
     const [partTypes, setPartTypes] = useState([]);
-    const [form, setForm] = useState({
-        room_id: initialRoomId || '', type: 'battery', part_type_id: '', description: '',
-        performed_at: new Date().toISOString().split('T')[0],
+    const [form, setForm] = useState(() => {
+        const now = new Date();
+        const tzOffset = now.getTimezoneOffset();
+        const local = new Date(now.getTime() - tzOffset * 60000);
+        const defaultDatetime = local.toISOString().slice(0, 16);
+        return {
+            room_id: initialRoomId || '',
+            type: 'battery',
+            part_type_id: '',
+            description: '',
+            performed_at: defaultDatetime,
+        };
     });
 
     const [roomQuery, setRoomQuery] = useState('');
-    const [selectedRoom, setSelectedRoom] = useState(() => {
-        if (!initialRoomId) return null;
-        return null;
-    });
+    const [selectedRoom, setSelectedRoom] = useState(null);
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [activeIdx, setActiveIdx] = useState(-1);
     const inputRef = useRef(null);
 
     useEffect(() => {
         apiFetch('/api/structure/rooms?status=active')
-            .then(d => setRooms(d.rooms || []));
+            .then(d => {
+                const roomsData = d.rooms || [];
+                setRooms(roomsData);
+                if (initialRoomId) {
+                    const match = roomsData.find(r => r.id === initialRoomId);
+                    if (match) {
+                        setSelectedRoom(match);
+                        setForm(f => ({ ...f, room_id: initialRoomId }));
+                    }
+                }
+            });
         apiFetch('/api/maintenance/part-types')
             .then(d => {
                 const activeParts = (d.part_types || []).filter(p => p.is_active !== false);
@@ -123,7 +140,7 @@ export default function CreateLockEventModal({ onSave, onCancel, saving, initial
         <Modal
             isOpen={true}
             onClose={onCancel}
-            title="Registrar mantenimiento"
+                title="Registrar evento"
             icon={Wrench}
             size="md"
             footer={
@@ -136,6 +153,7 @@ export default function CreateLockEventModal({ onSave, onCancel, saving, initial
                             ...form,
                             room_id: parseInt(form.room_id),
                             part_type_id: form.part_type_id ? parseInt(form.part_type_id) : null,
+                            performed_at: form.performed_at ? form.performed_at + ':00' : form.performed_at,
                         })}
                         disabled={saving || !form.room_id}
                         className="flex-1 py-2 text-sm rounded-xl bg-[var(--color-primary)] hover:bg-[var(--color-primary-light)] text-white font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
@@ -279,12 +297,10 @@ export default function CreateLockEventModal({ onSave, onCancel, saving, initial
                 )}
 
                 <div>
-                    <label className="text-xs font-medium text-[var(--color-text-secondary)] mb-1 block">Fecha</label>
-                    <input
-                        type="date"
+                    <label className="text-xs font-medium text-[var(--color-text-secondary)] mb-1 block">Fecha y Hora</label>
+                    <DateTimePicker
                         value={form.performed_at}
-                        onChange={e => setForm(f => ({ ...f, performed_at: e.target.value }))}
-                        className="w-full px-3 py-2 text-sm bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] rounded-lg text-[var(--color-text-primary)] focus:border-[var(--color-primary)] focus:outline-none [color-scheme:dark]"
+                        onChange={(val) => setForm(f => ({ ...f, performed_at: val }))}
                     />
                 </div>
 

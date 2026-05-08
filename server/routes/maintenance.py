@@ -3,7 +3,7 @@ Maintenance routes: CRUD for maintenance logs, stats, predictions, alerts,
 operational reports, and part types.
 Handles battery, mechanical, and reprogramming maintenance tracking for hotel room locks.
 """
-from datetime import date, timedelta
+from datetime import datetime, date, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from typing import Optional, Literal
@@ -21,7 +21,7 @@ class MaintenanceCreate(BaseModel):
     part_type_id: Optional[int] = None
     type: Literal["battery", "mechanical", "reprogramming"]
     description: Optional[str] = None
-    performed_at: Optional[str] = None  # ISO date string
+    performed_at: Optional[str] = None  # ISO datetime string (YYYY-MM-DDTHH:MM)
 
 
 class LockUpdate(BaseModel):
@@ -155,7 +155,7 @@ async def create_maintenance(
         cur = conn.cursor()
         lock_asset_id = _ensure_lock_asset(cur, data.room_id)
 
-        perf_date = data.performed_at or date.today().isoformat()
+        perf_date = data.performed_at or datetime.now().isoformat()
 
         cur.execute("""
             INSERT INTO maintenance_logs (room_id, lock_asset_id, part_type_id, type, description, performed_by, performed_at)

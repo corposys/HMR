@@ -16,6 +16,7 @@ import {
     Clock3,
     MapPin,
     Hash,
+    Radio,
 } from 'lucide-react';
 import { apiFetch } from '@utils/api';
 import LoadingSpinner from '@shared/common/LoadingSpinner';
@@ -104,8 +105,8 @@ export default function LockTimelinePage() {
 
             setShowCreate(false);
             await fetchDetail();
-        } catch {
-            // Keep current view state if save fails.
+        } catch (err) {
+            setError(err.message || 'Error al registrar evento');
         } finally {
             setSavingEvent(false);
         }
@@ -194,7 +195,7 @@ export default function LockTimelinePage() {
                 )}
 
                 <div className="grid gap-4 sm:grid-cols-1 lg:grid-cols-[0.85fr_1.65fr] items-start">
-                    <aside className="grid gap-4 sm:grid-cols-2 lg:space-y-0">
+                    <aside className="grid gap-4 sm:grid-cols-1 lg:space-y-0">
                         <section className="overflow-hidden rounded-xl border border-[var(--color-border)]/80 bg-[var(--color-bg-secondary)] shadow-sm">
                             <SectionTitle icon={BatteryFull} title="Predicción de batería" />
                             <div className="p-3 space-y-3">
@@ -254,7 +255,7 @@ export default function LockTimelinePage() {
                                     <DetailMetric label="Código" value={lock?.code || `ROOM-${roomId}`} icon={Hash} />
                                     <DetailMetric label="Últ. mant." value={formatDate(lock?.last_maintenance_at)} icon={Calendar} />
                                     <DetailMetric label="Eventos" value={orderedEvents.length} icon={Activity} />
-                                    <DetailMetric label="Últ. tipo" value={lastEvent?.type === 'battery' ? 'Batería' : lastEvent?.type === 'mechanical' ? 'Mecánico' : '—'} icon={Wrench} />
+                                    <DetailMetric label="Últ. tipo" value={(() => { if (!lastEvent) return '—'; if (lastEvent.type === 'battery') return 'Batería'; if (lastEvent.type === 'reprogramming') return 'Reprogramación'; return 'Mecánico'; })()} icon={Wrench} />
                                 </div>
                             </div>
                         </section>
@@ -280,22 +281,28 @@ export default function LockTimelinePage() {
                             ) : (
                                 <div className="relative space-y-0 before:absolute before:inset-y-0 before:left-4 before:w-px before:border-l before:border-dashed before:border-[var(--color-border)]/60">
                                     {orderedEvents.map((event, index) => {
-                                        const isBattery = event.type === 'battery';
+                                        const eventType = event.type === 'battery' ? 'battery' : event.type === 'reprogramming' ? 'reprogramming' : 'mechanical';
+                                        const eventColors = {
+                                            battery: { border: 'border-emerald-500/30', bg: 'bg-emerald-500/15', text: 'text-emerald-400', icon: Battery },
+                                            reprogramming: { border: 'border-purple-500/30', bg: 'bg-purple-500/15', text: 'text-purple-400', icon: Radio },
+                                            mechanical: { border: 'border-amber-500/30', bg: 'bg-amber-500/15', text: 'text-amber-400', icon: Wrench },
+                                        };
+                                        const EventIcon = eventColors[eventType].icon;
                                         const isLast = index === orderedEvents.length - 1;
 
                                         return (
                                             <div key={event.id} className={`relative flex gap-4 ${isLast ? '' : 'pb-5'}`}>
-                                                <div className={`relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border bg-[var(--color-bg-secondary)] shadow-sm ${isBattery ? 'border-emerald-500/30' : 'border-amber-500/30'}`}>
-                                                    <div className={`flex h-5 w-5 items-center justify-center rounded-full ${isBattery ? 'bg-emerald-500/15' : 'bg-amber-500/15'}`}>
-                                                        {isBattery ? <Battery className="h-2.5 w-2.5 text-emerald-400" /> : <Wrench className="h-2.5 w-2.5 text-amber-400" />}
+                                                <div className={`relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border bg-[var(--color-bg-secondary)] shadow-sm ${eventColors[eventType].border}`}>
+                                                    <div className={`flex h-5 w-5 items-center justify-center rounded-full ${eventColors[eventType].bg}`}>
+                                                        <EventIcon className="h-2.5 w-2.5" />
                                                     </div>
                                                 </div>
 
                                                 <div className="group flex-1 overflow-hidden rounded-lg border border-[var(--color-border)]/50 bg-gradient-to-br from-[var(--color-bg-primary)]/30 to-[var(--color-bg-secondary)]/10 transition-all hover:border-[var(--color-primary)]/30 hover:bg-[var(--color-bg-primary)]/40 hover:shadow-sm">
                                                     <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--color-border)]/30 px-3 py-1.5 bg-[var(--color-bg-primary)]/20">
                                                         <div className="flex items-center gap-2">
-                                                            <span className={`text-[11px] font-semibold uppercase tracking-wider ${isBattery ? 'text-emerald-400' : 'text-amber-400'}`}>
-                                                                {isBattery ? 'Batería' : 'Mecánico'}
+                                                            <span className={`text-[11px] font-semibold uppercase tracking-wider ${eventColors[eventType].text}`}>
+                                                                {eventType === 'battery' ? 'Batería' : eventType === 'reprogramming' ? 'Reprogramación' : 'Mecánico'}
                                                             </span>
                                                         </div>
                                                         <div className="flex items-center gap-1 text-[10px] text-[var(--color-text-muted)] font-medium">

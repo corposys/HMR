@@ -1,5 +1,5 @@
 import React from 'react';
-import { DoorOpen, Plus, RefreshCw, ShieldAlert, Calendar, Battery, User, BatteryFull, AlertCircle } from 'lucide-react';
+import { DoorOpen, Plus, RefreshCw, ShieldAlert, Calendar, Battery, User, BatteryFull, AlertCircle, Radio, Wrench } from 'lucide-react';
 import Modal from '@shared/common/Modal';
 import LoadingSpinner from '@shared/common/LoadingSpinner';
 import { LOCK_STATUS_STYLES, LOCK_STATUS_LABELS } from '../utils/lockConstants';
@@ -83,12 +83,12 @@ export default function LockTimelineModal({
                                     {events.map((event) => (
                                         <div key={event.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
                                             <div className="flex h-10 w-10 items-center justify-center rounded-full border-4 border-[var(--color-bg-secondary)] bg-[var(--color-bg-primary)] shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow-sm z-10">
-                                                {event.type === 'battery' ? <Battery className="h-4 w-4 text-emerald-400" /> : <ShieldAlert className="h-4 w-4 text-amber-400" />}
+                                                {event.type === 'battery' ? <Battery className="h-4 w-4 text-emerald-400" /> : event.type === 'reprogramming' ? <Radio className="h-4 w-4 text-purple-400" /> : <Wrench className="h-4 w-4 text-amber-400" />}
                                             </div>
                                             <div className="w-[calc(100%-3.5rem)] md:w-[calc(50%-2rem)] p-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] shadow-sm transition-all hover:shadow-md hover:border-[var(--color-border-hover)]">
                                                 <div className="mb-2 flex items-center justify-between">
-                                                    <span className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider ${event.type === 'battery' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'}`}>
-                                                        {event.type === 'battery' ? 'Batería' : 'Mecánico'}
+                                                    <span className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider ${event.type === 'battery' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : event.type === 'reprogramming' ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'}`}>
+                                                        {event.type === 'battery' ? 'Batería' : event.type === 'reprogramming' ? 'Reprogramación' : 'Mecánico'}
                                                     </span>
                                                     <time className="flex items-center gap-1 text-[9px] font-bold text-[var(--color-text-muted)]">
                                                         <Calendar className="h-3 w-3" />

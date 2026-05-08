@@ -525,6 +525,22 @@ def _run_migrations(cur):
         DO $$
         BEGIN
             IF EXISTS (
+                SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'maintenance_logs'
+                AND column_name = 'performed_at'
+                AND data_type = 'date'
+            ) THEN
+                ALTER TABLE maintenance_logs
+                ALTER COLUMN performed_at TYPE TIMESTAMP WITHOUT TIME ZONE
+                USING performed_at::timestamp;
+            END IF;
+        END $$;
+    """)
+
+    cur.execute("""
+        DO $$
+        BEGIN
+            IF EXISTS (
                 SELECT 1 FROM pg_constraint WHERE conname = 'maintenance_logs_type_check'
             ) THEN
                 ALTER TABLE maintenance_logs DROP CONSTRAINT maintenance_logs_type_check;
@@ -706,6 +722,12 @@ def _run_migrations(cur):
         );
     """)
 
+    cur.execute("""
+        UPDATE roles SET permissions = permissions::jsonb || '{"maintenance": {"read": true, "write": true}}'::jsonb
+        WHERE name IN ('receptionist', 'reception_manager')
+        AND (permissions->'maintenance'->>'write')::boolean = false
+    """)
+
 
 def _seed_all():
     _seed_roles()
@@ -753,7 +775,7 @@ def _seed_roles():
             "guests": {"read": True, "write": True},
             "rooms": {"read": True, "write": True, "block": True},
             "housekeeping": {"read": True, "update_status": True},
-            "maintenance": {"read": True, "write": False},
+            "maintenance": {"read": True, "write": True},
             "reports": {"read": True},
             "financial": {"read": True, "write": True},
         })
@@ -764,7 +786,7 @@ def _seed_roles():
             "guests": {"read": True, "write": True},
             "rooms": {"read": True, "write": True, "block": False},
             "housekeeping": {"read": True, "update_status": False},
-            "maintenance": {"read": True, "write": False},
+            "maintenance": {"read": True, "write": True},
             "reports": {"read": False},
             "financial": {"read": False, "write": False},
         })
