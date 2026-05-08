@@ -119,10 +119,10 @@ export default function RackHeader({
                     )}
                     <button
                         onClick={onRefresh}
-                        className="p-2 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)] transition-colors shrink-0"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)] transition-colors hover:border-[var(--color-primary)]/40 hover:text-[var(--color-primary)] shrink-0"
                         title="Actualizar"
                     >
-                        <RefreshCw className="w-4 h-4" />
+                        <RefreshCw className="h-3.5 w-3.5" />
                     </button>
                 </div>
             </div>

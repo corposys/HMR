@@ -54,7 +54,7 @@ export default function Navbar({ onMenuClick, isMobileSidebarOpen }) {
     function animateRate(from, to, trend) {
         if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
 
-        const duration = 800;
+        const duration = 2500;
         const start = performance.now();
         setIsAnimating(true);
         if (trend) setBcvTrend(trend);

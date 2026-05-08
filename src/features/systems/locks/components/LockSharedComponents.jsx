@@ -69,7 +69,7 @@ export function LockSummaryCard({ item, prediction, onOpen, showFloorBadge = tru
         <button
             type="button"
             onClick={() => onOpen(item.room_id || item.id)}
-            className="group relative rounded-xl border border-[var(--color-border)] bg-white p-2.5 text-left transition-all hover:border-[var(--color-primary)]/50 hover:bg-[var(--color-bg-tertiary)] hover:shadow-md flex flex-col min-h-[130px]"
+            className="group relative rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-2.5 text-left transition-all hover:border-[var(--color-primary)]/50 hover:bg-[var(--color-bg-tertiary)] hover:shadow-md flex flex-col min-h-[130px]"
         >
             <div className="flex items-start justify-between">
                 <div className="flex flex-col items-start">

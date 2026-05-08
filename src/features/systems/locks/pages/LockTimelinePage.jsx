@@ -19,8 +19,10 @@ import {
 } from 'lucide-react';
 import { apiFetch } from '@utils/api';
 import LoadingSpinner from '@shared/common/LoadingSpinner';
+import Button from '@shared/common/Button';
+import { Card, CardHeader } from '@/components/ui/card';
 import CreateLockEventModal from '@features/systems/locks/components/CreateLockEventModal';
-import { LOCK_STATUS_STYLES, LOCK_STATUS_LABELS } from '@features/systems/locks/utils/lockConstants';
+import { LOCK_STATUS_STYLES, LOCK_STATUS_LABELS, LOCK_STATUS_DOT_STYLES } from '@features/systems/locks/utils/lockConstants';
 import { formatDate } from '@features/systems/locks/utils/lockHelpers';
 import { HealthBar, DetailMetric, SectionTitle } from '@features/systems/locks/components/LockSharedComponents';
 
@@ -133,47 +135,57 @@ export default function LockTimelinePage() {
         return <LoadingSpinner />;
     }
 
-    return (
-        <div className="py-5 w-full px-5">
-            <div className="mx-auto max-w-auto space-y-4">
-                <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                        <button
-                            type="button"
-                            onClick={() => navigate('/systems/rooms')}
-                            aria-label="Volver al rack"
-                            title="Volver al rack"
-                            className="p-2.5 rounded-xl bg-[var(--color-primary)]/10 text-[var(--color-primary)] hover:bg-[var(--color-primary)]/20 transition-colors"
-                        >
-                            <ArrowLeft className="w-5 h-5" />
-                        </button>
-                        <div>
-                            <p className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)]">Cerradura</p>
-                            <h1 className="text-xl font-bold text-[var(--color-text-primary)]">
-                                Hab. {lock?.room_number || roomId}
-                            </h1>
-                        </div>
-                    </div>
+    const statusDotClass = LOCK_STATUS_DOT_STYLES[lock?.status] || LOCK_STATUS_DOT_STYLES.operational;
+    const statusLabel = LOCK_STATUS_LABELS[lock?.status] || LOCK_STATUS_LABELS.operational;
 
-                    <div className="flex items-center gap-2">
-                        <button
-                            type="button"
-                            onClick={() => setShowCreate(true)}
-                            className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[var(--color-primary)]/30 bg-[var(--color-primary)]/10 px-3 text-xs font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-primary)]/20"
-                        >
-                            <Plus className="h-3.5 w-3.5" />
-                            Registrar evento
-                        </button>
-                        <button
-                            type="button"
-                            onClick={fetchDetail}
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)] text-[var(--color-text-muted)] transition-colors hover:border-[var(--color-primary)]/40 hover:text-[var(--color-primary)]"
-                            title="Recargar"
-                        >
-                            <RefreshCw className="h-3.5 w-3.5" />
-                        </button>
-                    </div>
-                </div>
+    return (
+        <div className="py-5 w-full px-3 sm:px-5">
+            <div className="mx-auto max-w-auto space-y-4">
+                <Card className="border-[var(--color-border)] bg-[var(--color-bg-secondary)] shadow-sm">
+                    <CardHeader className="py-3 px-4">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="flex items-center gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => navigate('/systems/rooms')}
+                                    aria-label="Volver al rack"
+                                    title="Volver al rack"
+                                    className="p-2.5 rounded-xl bg-[var(--color-primary)]/10 text-[var(--color-primary)] hover:bg-[var(--color-primary)]/20 transition-colors"
+                                >
+                                    <ArrowLeft className="w-5 h-5" />
+                                </button>
+                                <div className="flex items-center gap-2">
+                                    <h1 className="text-lg sm:text-xl font-bold text-[var(--color-text-primary)]">
+                                        Hab. {lock?.room_number || roomId}
+                                    </h1>
+                                    <span className="text-[10px] sm:text-xs uppercase tracking-wider text-[var(--color-text-muted)]">CERRADURA</span>
+                                    <span className={`inline-flex h-2 w-2 rounded-full ${statusDotClass}`} title={statusLabel} />
+                                    <span className="text-[10px] sm:text-xs font-medium text-[var(--color-text-muted)]">{statusLabel}</span>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-2 justify-end">
+                                <Button
+                                    variant="register"
+                                    icon={Plus}
+                                    onClick={() => setShowCreate(true)}
+                                    className="h-8 px-3 sm:px-4 !text-xs"
+                                >
+                                    <span className="hidden sm:inline">Registrar evento</span>
+                                    <span className="sm:hidden">Evento</span>
+                                </Button>
+                                <button
+                                    type="button"
+                                    onClick={fetchDetail}
+                                    className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)] transition-colors hover:border-[var(--color-primary)]/40 hover:text-[var(--color-primary)]"
+                                    title="Recargar"
+                                >
+                                    <RefreshCw className="h-3.5 w-3.5" />
+                                </button>
+                            </div>
+                        </div>
+                    </CardHeader>
+                </Card>
 
                 {error && (
                     <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-300">
@@ -181,8 +193,8 @@ export default function LockTimelinePage() {
                     </div>
                 )}
 
-                <div className="grid gap-4 lg:grid-cols-[0.85fr_1.65fr] items-start">
-                    <aside className="space-y-4">
+                <div className="grid gap-4 sm:grid-cols-1 lg:grid-cols-[0.85fr_1.65fr] items-start">
+                    <aside className="grid gap-4 sm:grid-cols-2 lg:space-y-0">
                         <section className="overflow-hidden rounded-xl border border-[var(--color-border)]/80 bg-[var(--color-bg-secondary)] shadow-sm">
                             <SectionTitle icon={BatteryFull} title="Predicción de batería" />
                             <div className="p-3 space-y-3">

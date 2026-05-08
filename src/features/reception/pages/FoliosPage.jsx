@@ -1,18 +1,18 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
-    Receipt, Search, BedDouble, User, DollarSign, Plus, ArrowRight,
-    RefreshCw, AlertTriangle, CheckCircle, Clock,
+    Search, RefreshCw, AlertTriangle, DollarSign, Plus, User,
 } from 'lucide-react';
 import PageWrapper from '@shared/common/PageWrapper';
 import Button from '@shared/common/Button';
-import Badge from '@shared/common/Badge';
-import Input from '@shared/common/Input';
 import Modal from '@shared/common/Modal';
 import LoadingSpinner from '@shared/common/LoadingSpinner';
+import EmptyState from '@shared/common/EmptyState';
+import { Card, CardHeader } from '@/components/ui/card';
 import { apiFetch } from '@utils/api';
+import { formatCurrency } from '@utils/formatters';
+import FoliosTable from '@features/reception/components/FoliosTable';
 import PaymentModal from '@features/reservations/components/PaymentModal';
 import ChargeModal from '@features/reservations/components/ChargeModal';
-import { formatDate, formatCurrency } from '@utils/formatters';
 
 export default function FoliosPage() {
     const [reservations, setReservations] = useState([]);
@@ -52,6 +52,11 @@ export default function FoliosPage() {
         );
     }, [reservations, search]);
 
+    const pending = useMemo(() => filtered.filter(r => (r.balance || 0) > 0), [filtered]);
+    const totalBalance = useMemo(() => {
+        return filtered.reduce((sum, r) => sum + (r.balance || 0), 0);
+    }, [filtered]);
+
     const openFolio = async (res) => {
         setSelectedRes(res);
         setFolioLoading(true);
@@ -82,79 +87,94 @@ export default function FoliosPage() {
         fetchReservations();
     };
 
-    const totalBalance = useMemo(() => {
-        return filtered.reduce((sum, r) => sum + (r.balance || 0), 0);
-    }, [filtered]);
-
     return (
-        <PageWrapper title="Gestión de Folios" subtitle="Cuentas huésped, cargos y pagos" icon={Receipt}>
-            <div className="space-y-4">
-                {/* Stats */}
-                <div className="flex flex-wrap items-center gap-3">
-                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[var(--color-bg-secondary)] border border-[var(--color-border)]">
-                        <Receipt className="w-4 h-4 text-[var(--color-primary)]" />
-                        <span className="text-sm font-bold">{filtered.length}</span>
-                        <span className="text-xs text-[var(--color-text-muted)]">folios abiertos</span>
-                    </div>
-                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                        <DollarSign className="w-4 h-4 text-amber-400" />
-                        <span className="text-sm font-bold">{formatCurrency(totalBalance)}</span>
-                        <span className="text-xs text-amber-400/70">balance total</span>
-                    </div>
-                    <div className="ml-auto">
-                        <Button variant="ghost" size="sm" icon={RefreshCw} onClick={fetchReservations} title="Actualizar" />
-                    </div>
-                </div>
-
-                {/* Search */}
-                <div className="max-w-md">
-                    <Input
-                        icon={Search}
-                        placeholder="Buscar por huésped, habitación o control..."
-                        value={search}
-                        onChange={e => setSearch(e.target.value)}
-                    />
-                </div>
-
-                {error && (
-                    <div className="rounded-lg bg-red-500/10 border border-red-500/20 px-4 py-3 text-sm text-red-400 flex items-center gap-2">
-                        <AlertTriangle className="w-4 h-4" />
-                        {error}
-                    </div>
-                )}
-
-                {loading ? (
-                    <div className="flex items-center justify-center h-64">
-                        <LoadingSpinner size="lg" />
-                    </div>
-                ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-                        {filtered.map(res => (
-                            <FolioCard
-                                key={res.id}
-                                reservation={res}
-                                onClick={() => openFolio(res)}
-                            />
-                        ))}
-
-                        {filtered.length === 0 && (
-                            <div className="col-span-full flex items-center justify-center h-64 text-[var(--color-text-muted)]">
-                                <div className="text-center">
-                                    <p className="text-lg font-medium">Sin folios abiertos</p>
-                                    <p className="text-sm mt-1">No hay huéspedes actualmente en el hotel</p>
-                                </div>
+        <PageWrapper>
+            <Card className="border-[var(--color-border)] bg-[var(--color-bg-secondary)] shadow-sm">
+                <CardHeader className="py-3 px-4">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                        <div className="flex w-full sm:w-auto items-center gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
+                            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border text-xs font-medium whitespace-nowrap shrink-0 border-blue-500/30 bg-blue-500/10 text-blue-300 shadow-sm">
+                                <DollarSign className="h-3 w-3 shrink-0" />
+                                <span className="hidden sm:inline">Folios</span>
+                                <span className="rounded-full px-1.5 py-0.5 text-[9px] font-bold bg-white/10 text-current">
+                                    {filtered.length}
+                                </span>
                             </div>
-                        )}
-                    </div>
-                )}
-            </div>
+                            {pending.length > 0 && (
+                                <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border text-xs font-medium whitespace-nowrap shrink-0 border-amber-500/30 bg-amber-500/10 text-amber-300 shadow-sm">
+                                    <AlertTriangle className="h-3 w-3 shrink-0" />
+                                    <span className="hidden sm:inline">Pendientes</span>
+                                    <span className="rounded-full px-1.5 py-0.5 text-[9px] font-bold bg-white/10 text-current">
+                                        {pending.length}
+                                    </span>
+                                </div>
+                            )}
+                            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border text-xs font-medium whitespace-nowrap shrink-0 border-emerald-500/30 bg-emerald-500/10 text-emerald-300 shadow-sm">
+                                <DollarSign className="h-3 w-3 shrink-0" />
+                                <span className="hidden sm:inline">Balance</span>
+                                <span className="rounded-full px-1.5 py-0.5 text-[9px] font-bold bg-white/10 text-current">
+                                    {formatCurrency(totalBalance)}
+                                </span>
+                            </div>
+                        </div>
 
-            {/* Folio detail modal */}
+                        <div className="flex items-center gap-2 shrink-0">
+                            <div className="relative flex-1 sm:flex-none">
+                                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--color-text-muted)]" />
+                                <input
+                                    type="text"
+                                    placeholder="Buscar huésped, habitación o control..."
+                                    value={search}
+                                    onChange={e => setSearch(e.target.value)}
+                                    className="h-8 w-full sm:w-56 rounded-full border border-[var(--color-border)] bg-[var(--color-bg-tertiary)] pl-8 pr-3 text-xs text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] outline-none transition-colors focus:border-[var(--color-primary)]/50"
+                                />
+                                {search && (
+                                    <button
+                                        onClick={() => setSearch('')}
+                                        className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text-primary)]"
+                                    >
+                                        <span className="text-xs font-bold">&times;</span>
+                                    </button>
+                                )}
+                            </div>
+                            <button
+                                type="button"
+                                onClick={fetchReservations}
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)] transition-colors hover:border-[var(--color-primary)]/40 hover:text-[var(--color-primary)]"
+                                title="Actualizar"
+                            >
+                                <RefreshCw className="h-3.5 w-3.5" />
+                            </button>
+                        </div>
+                    </div>
+                </CardHeader>
+            </Card>
+
+            {error && (
+                <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400 flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4" />
+                    {error}
+                </div>
+            )}
+
+            {loading ? (
+                <div className="flex items-center justify-center h-64">
+                    <LoadingSpinner size="lg" />
+                </div>
+            ) : filtered.length > 0 ? (
+                <FoliosTable
+                    reservations={filtered}
+                    onRowClick={openFolio}
+                />
+            ) : (
+                <EmptyState title="Sin folios abiertos" description="No hay huéspedes actualmente en el hotel" />
+            )}
+
             <Modal
                 isOpen={!!selectedRes}
                 onClose={closeFolio}
                 title={folio ? `Folio ${folio.control_number}` : 'Detalle de Folio'}
-                icon={Receipt}
+                icon={DollarSign}
                 size="lg"
                 footer={
                     <div className="flex justify-end gap-3">
@@ -169,11 +189,10 @@ export default function FoliosPage() {
             >
                 <div className="space-y-4">
                     {selectedRes && (
-                        <div className="flex items-center gap-3">
-                            <Badge variant="success">En estancia</Badge>
-                            <span className="text-sm text-[var(--color-text-muted)]">
-                                {selectedRes.guest_name} · Hab. {selectedRes.room_number}
-                            </span>
+                        <div className="flex items-center gap-2 text-sm text-[var(--color-text-primary)]">
+                            <User className="w-4 h-4 text-[var(--color-text-muted)]" />
+                            {selectedRes.guest_name}
+                            <span className="text-[var(--color-text-muted)]">· Hab. {selectedRes.room_number}</span>
                         </div>
                     )}
 
@@ -183,17 +202,28 @@ export default function FoliosPage() {
                         </div>
                     ) : folio ? (
                         <div className="space-y-4">
-                            {/* Financial summary */}
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                                <StatBox label="Subtotal" value={formatCurrency(folio.subtotal_base)} />
-                                <StatBox label="IVA" value={formatCurrency(folio.tax_iva)} />
-                                <StatBox label="Total" value={formatCurrency(folio.total_amount)} highlight />
-                                <StatBox label="Pagado" value={formatCurrency(folio.total_paid)} success />
+                                <div className="rounded-lg border border-[var(--color-border)]/50 bg-[var(--color-bg-primary)]/50 p-2 text-center">
+                                    <p className="text-[10px] uppercase tracking-wide text-[var(--color-text-muted)]">Subtotal</p>
+                                    <p className="text-sm font-bold text-[var(--color-text-secondary)]">{formatCurrency(folio.subtotal_base)}</p>
+                                </div>
+                                <div className="rounded-lg border border-[var(--color-border)]/50 bg-[var(--color-bg-primary)]/50 p-2 text-center">
+                                    <p className="text-[10px] uppercase tracking-wide text-[var(--color-text-muted)]">IVA</p>
+                                    <p className="text-sm font-bold text-[var(--color-text-secondary)]">{formatCurrency(folio.tax_iva)}</p>
+                                </div>
+                                <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-tertiary)] p-2 text-center">
+                                    <p className="text-[10px] uppercase tracking-wide text-[var(--color-text-muted)]">Total</p>
+                                    <p className="text-sm font-bold text-[var(--color-text-primary)]">{formatCurrency(folio.total_amount)}</p>
+                                </div>
+                                <div className="rounded-lg border border-emerald-500/10 bg-emerald-500/5 p-2 text-center">
+                                    <p className="text-[10px] uppercase tracking-wide text-emerald-400">Pagado</p>
+                                    <p className="text-sm font-bold text-emerald-400">{formatCurrency(folio.total_paid)}</p>
+                                </div>
                             </div>
 
-                            <div className={`text-center py-2 rounded-lg border ${folio.balance > 0 ? 'bg-red-500/5 border-red-500/20 text-red-400' : 'bg-emerald-500/5 border-emerald-500/20 text-emerald-400'}`}>
-                                <span className="text-xs uppercase tracking-wide">Balance</span>
-                                <p className="text-xl font-bold">{formatCurrency(folio.balance)}</p>
+                            <div className={`text-center py-3 rounded-lg border ${folio.balance > 0 ? 'bg-red-500/5 border-red-500/20 text-red-400' : 'bg-emerald-500/5 border-emerald-500/20 text-emerald-400'}`}>
+                                <span className="text-[10px] uppercase tracking-wide">Balance</span>
+                                <p className="text-lg font-bold">{formatCurrency(folio.balance)}</p>
                             </div>
                         </div>
                     ) : (
@@ -219,65 +249,5 @@ export default function FoliosPage() {
                 </>
             )}
         </PageWrapper>
-    );
-}
-
-function FolioCard({ reservation, onClick }) {
-    const hasBalance = (reservation.balance || 0) > 0;
-
-    return (
-        <button
-            onClick={onClick}
-            className="text-left rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-4 space-y-3 hover:border-[var(--color-border-hover)] transition-colors w-full"
-        >
-            <div className="flex items-start justify-between">
-                <div className="flex items-center gap-2">
-                    <Receipt className="w-4 h-4 text-[var(--color-primary)]" />
-                    <span className="text-xs font-mono text-[var(--color-text-muted)]">{reservation.control_number || '—'}</span>
-                </div>
-                <Badge variant={hasBalance ? 'warning' : 'success'}>
-                    {hasBalance ? 'Pendiente' : 'Pagado'}
-                </Badge>
-            </div>
-
-            <div className="space-y-1.5">
-                <div className="flex items-center gap-2 text-sm font-medium text-[var(--color-text-primary)]">
-                    <User className="w-3.5 h-3.5 text-[var(--color-text-muted)]" />
-                    {reservation.guest_name}
-                </div>
-                <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)]">
-                    <BedDouble className="w-3.5 h-3.5" />
-                    Hab. {reservation.room_number}
-                </div>
-                <div className="flex items-center justify-between text-xs">
-                    <span className="text-[var(--color-text-muted)]">Balance:</span>
-                    <span className={`font-bold ${hasBalance ? 'text-red-400' : 'text-emerald-400'}`}>
-                        {formatCurrency(reservation.balance)}
-                    </span>
-                </div>
-            </div>
-
-            <div className="flex items-center justify-between pt-2 border-t border-[var(--color-border)]/50">
-                <span className="text-[10px] text-[var(--color-text-muted)]">
-                    {formatDate(reservation.check_in_date)} → {formatDate(reservation.check_out_date)}
-                </span>
-                <ArrowRight className="w-3.5 h-3.5 text-[var(--color-text-muted)]" />
-            </div>
-        </button>
-    );
-}
-
-function StatBox({ label, value, highlight, success }) {
-    return (
-        <div className={`rounded-lg border p-2 text-center ${
-            highlight
-                ? 'bg-[var(--color-bg-tertiary)] border-[var(--color-border)]'
-                : success
-                    ? 'bg-emerald-500/5 border-emerald-500/10'
-                    : 'bg-[var(--color-bg-primary)]/50 border-[var(--color-border)]/50'
-        }`}>
-            <p className={`text-[10px] uppercase tracking-wide ${success ? 'text-emerald-400' : 'text-[var(--color-text-muted)]'}`}>{label}</p>
-            <p className={`text-sm font-bold ${highlight ? 'text-[var(--color-text-primary)]' : success ? 'text-emerald-400' : 'text-[var(--color-text-secondary)]'}`}>{value}</p>
-        </div>
     );
 }

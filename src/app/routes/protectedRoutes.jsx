@@ -17,19 +17,17 @@ const HousekeepingDashboard = lazy(() => import('@features/housekeeping/pages/Ho
 const Reservations = lazy(() => import('@features/reservations/pages/Reservations'));
 const RatesPage = lazy(() => import('@features/reservations/pages/RatesPage'));
 const RackOperativo = lazy(() => import('@features/rack/pages/RackOperativo'));
-const OperationsPage = lazy(() => import('@features/reception/pages/OperationsPage'));
+const CheckInOutPage = lazy(() => import('@features/reception/pages/CheckInOutPage'));
 const FoliosPage = lazy(() => import('@features/reception/pages/FoliosPage'));
 const WalkInsPage = lazy(() => import('@features/reception/pages/WalkInsPage'));
 const AuditPage = lazy(() => import('@features/reception/pages/AuditPage'));
 const LogbookPage = lazy(() => import('@features/reception/pages/LogbookPage'));
-const ReceptionDashboard = lazy(() => import('@features/reception/pages/ReceptionDashboard'));
 const DemoRackPage = lazy(() => import('@features/demo-rack/pages/DemoRackPage'));
 
 export const protectedRoutes = [
     { index: true, element: <Dashboard /> },
     { path: 'rack', element: <RackOperativo /> },
-    { path: 'reception/dashboard', element: <ReceptionDashboard /> },
-    { path: 'reception/operations', element: <OperationsPage /> },
+    { path: 'reception/operations', element: <CheckInOutPage /> },
     { path: 'reception/folios', element: <FoliosPage /> },
     { path: 'reception/walkins', element: <WalkInsPage /> },
     { path: 'reception/audit', element: <AuditPage /> },
