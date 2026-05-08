@@ -35,7 +35,7 @@ export const protectedRoutes = [
     { path: 'reception/audit', element: <AuditPage /> },
     { path: 'reception/logbook', element: <LogbookPage /> },
     { path: 'reservaciones', element: <Reservations /> },
-    { path: 'reservaciones/tarifas', element: <RatesPage /> },
+    { path: 'reservaciones/tarifario', element: <RatesPage /> },
     { path: 'systems/signatures', element: <SignaturesHistory /> },
     { path: 'maintenance', element: <Habitaciones /> },
     { path: 'maintenance/habitaciones', element: <Habitaciones /> },

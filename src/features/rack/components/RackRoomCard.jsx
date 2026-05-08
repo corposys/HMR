@@ -13,7 +13,7 @@ export default function RackRoomCard({ room, onClick }) {
         <button
             type="button"
             onClick={() => onClick(room)}
-            className="group relative rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-primary)]/40 p-2.5 text-left transition-all hover:border-[var(--color-primary)]/50 hover:bg-[var(--color-bg-primary)]/60 hover:shadow-md flex flex-col min-h-[130px]"
+            className="group relative rounded-xl border border-[var(--color-border)] bg-white p-2.5 text-left transition-all hover:border-[var(--color-primary)]/50 hover:bg-[var(--color-bg-tertiary)] hover:shadow-md flex flex-col min-h-[130px]"
         >
             <div className="flex items-start justify-between">
                 <div className="flex flex-col items-start">

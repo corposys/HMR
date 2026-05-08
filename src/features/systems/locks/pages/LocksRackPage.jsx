@@ -177,9 +177,12 @@ export default function LocksRackPage() {
         <PageWrapper title="Control de Cerraduras" icon={Lock}>
             <div className="space-y-4">
                 <LockRackHeader
-                    search={search}
-                    setSearch={setSearch}
                     priorityLocks={priorityLocks}
+                    operationalSummary={operationalSummary}
+                    statusFilter={statusFilter}
+                    setStatusFilter={setStatusFilter}
+                    failureCount={filteredLocks.filter((item) => item.status === 'failure').length}
+                    outOfServiceCount={filteredLocks.filter((item) => item.status === 'out_of_service').length}
                     onOpenCreateEvent={() => {
                         setSelectedLockId(null);
                         setSelectedLock(null);
@@ -200,11 +203,9 @@ export default function LocksRackPage() {
                     modules={modules}
                     activeModule={activeModule}
                     onModuleChange={setActiveModule}
-                    statusFilter={statusFilter}
-                    setStatusFilter={setStatusFilter}
-                    operationalSummary={operationalSummary}
-                    failureCount={filteredLocks.filter((item) => item.status === 'failure').length}
-                    outOfServiceCount={filteredLocks.filter((item) => item.status === 'out_of_service').length}
+                    search={search}
+                    setSearch={setSearch}
+                    onRefresh={fetchLocksOverview}
                 />
 
                 {/* ── Rack ── */}

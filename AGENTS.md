@@ -101,3 +101,18 @@ Backend responses:
 ## CI/CD
 
 Self-hosted runner. Push to `main`: `npm ci` → `npm run lint` → `npm run build` → verify `dist/` → `.env` from secrets → `docker compose -f docker-compose.prod.yml up -d --build` → health check → cleanup. On failure: `docker compose down`.
+
+## Theme (Dark/Light Mode)
+
+Implemented via `ThemeContext` (`src/context/ThemeContext.jsx`). Theme toggles by adding/removing `.dark` class to `<html>`.
+- Toggle button in `Navbar.jsx` (Sun/Moon icons)
+- Persists preference in `localStorage` key `theme`
+- Detects system preference on first load
+- CSS variables in `src/index.css` use `:root` for light, `.dark` override for dark
+
+## Locks Module (`/systems/rooms`)
+
+- Uses `LocksRackPage` with tabs navigation (like RackOperativo)
+- `LockSummaryCard` mirrors `RackRoomCard` styling
+- Data via `useLocksOverview` hook → `useLockRackData` for grouping
+- Routes: `/systems/rooms` (rack), `/systems/room/:id` (detail/timeline)

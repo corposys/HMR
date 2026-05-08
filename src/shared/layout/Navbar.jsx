@@ -136,7 +136,7 @@ export default function Navbar({ onMenuClick, isMobileSidebarOpen }) {
             title: 'Reservaciones',
             icon: CalendarCheck,
         },
-        '/reservaciones/tarifas': {
+        '/reservaciones/tarifario': {
             title: 'Tarifario',
             icon: CalendarCheck,
         },
@@ -226,7 +226,7 @@ export default function Navbar({ onMenuClick, isMobileSidebarOpen }) {
                 </button>
 
                 {currentPage && (
-                    <div className="flex min-w-0 items-center gap-2">
+                    <div className="hidden lg:flex min-w-0 items-center gap-2">
                         <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--color-primary)]/10 text-[var(--color-primary)] shrink-0">
                             <currentPage.icon className="h-3.5 w-3.5" />
                         </div>
@@ -243,7 +243,7 @@ export default function Navbar({ onMenuClick, isMobileSidebarOpen }) {
                 <button
                     onClick={refreshBcvRate}
                     disabled={bcvLoading}
-                    className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full border bg-[var(--color-bg-tertiary)] border-[var(--color-border)] hover:border-[var(--color-primary)]/40 transition-colors"
+                    className="flex items-center gap-1.5 px-2 py-1 rounded-full border bg-[var(--color-bg-tertiary)] border-[var(--color-border)] hover:border-[var(--color-primary)]/40 transition-colors"
                     title="Clic para actualizar tasa BCV"
                 >
                     {bcvTrend === 'down' ? (
@@ -252,7 +252,7 @@ export default function Navbar({ onMenuClick, isMobileSidebarOpen }) {
                         <TrendingUp className="w-3 h-3 text-emerald-400" />
                     )}
                     <span className="text-xs font-medium text-[var(--color-text-secondary)]">
-                        TASA BCV -{' '}
+                        <span className="hidden sm:inline">TASA BCV - </span>
                         <span className={`${isAnimating && bcvTrend === 'up' ? 'text-emerald-400' : isAnimating && bcvTrend === 'down' ? 'text-red-400' : 'text-[var(--color-text-primary)]'}`}>
                             {displayRate !== null ? `$${displayRate.toLocaleString('es-VE', { minimumFractionDigits: 2 })}` : '—'}
                         </span>

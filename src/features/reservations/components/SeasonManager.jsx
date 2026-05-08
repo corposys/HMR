@@ -196,7 +196,7 @@ export default function SeasonManager() {
                 <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2">
                     {Array.from({ length: 12 }).map((_, monthIndex) => (
                         <div key={monthIndex} className="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-lg p-2 shadow-sm">
-                            <h3 className="text-[8px] text-[var(--color-text-primary)] mb-0.5 text-center uppercase tracking-wider">{MONTHS[monthIndex]}</h3>
+                            <h3 className="!text-base text-[var(--color-text-primary)] mb-0.5 text-center uppercase tracking-wider">{MONTHS[monthIndex]}</h3>
                             <div className="grid grid-cols-7 gap-0.5 mb-0.5">
                                 {DAYS.map((day, i) => (
                                     <div key={i} className="text-[12px] font-medium text-[var(--color-text-muted)] text-center">
@@ -230,7 +230,7 @@ export default function SeasonManager() {
                 <div className="flex items-center justify-between">
                     <h3 className="text-sm font-bold text-[var(--color-text-primary)]">Temporadas {currentYear}</h3>
                     {can('settings', 'write') && (
-                        <Button variant="ghost" size="sm" icon={Plus} onClick={() => openModal(null)}>
+                        <Button variant="register" icon={Plus} size="sm" onClick={() => openModal(null)} className="h-8 text-xs">
                             Añadir
                         </Button>
                     )}

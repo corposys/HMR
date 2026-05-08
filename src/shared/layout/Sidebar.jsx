@@ -32,7 +32,7 @@ const sidebarConfig = [
         label: 'Reservaciones',
         items: [
             { to: '/reservaciones', label: 'Reservas', end: true },
-            { to: '/reservaciones/tarifas', label: 'Tarifario' },
+            { to: '/reservaciones/tarifario', label: 'Tarifario' },
         ],
     },
     {

@@ -1,76 +1,27 @@
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Activity, CheckCircle2, ShieldAlert, TriangleAlert, X } from 'lucide-react';
-
-const STATUS_FILTERS = [
-    {
-        value: 'all',
-        label: 'Todas',
-        icon: Activity,
-        key: 'total',
-        tone: 'border-cyan-500/30 bg-cyan-500/10 text-cyan-300',
-    },
-    {
-        value: 'operational',
-        label: 'Operativas',
-        icon: CheckCircle2,
-        key: 'healthy',
-        tone: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300',
-    },
-    {
-        value: 'preventive',
-        label: 'Preventivas',
-        icon: ShieldAlert,
-        key: 'preventive',
-        tone: 'border-amber-500/30 bg-amber-500/10 text-amber-300',
-    },
-    {
-        value: 'failure',
-        label: 'Falla',
-        icon: TriangleAlert,
-        key: 'failure',
-        tone: 'border-red-500/30 bg-red-500/10 text-red-300',
-    },
-    {
-        value: 'out_of_service',
-        label: 'Fuera de servicio',
-        icon: X,
-        key: 'out_of_service',
-        tone: 'border-zinc-500/30 bg-zinc-500/10 text-zinc-300',
-    },
-];
+import { Search, RefreshCw, X } from 'lucide-react';
+import Button from '@shared/common/Button';
 
 export default function LockModuleTabs({
     modules,
     activeModule,
     onModuleChange,
-    statusFilter,
-    setStatusFilter,
-    operationalSummary,
-    failureCount,
-    outOfServiceCount
+    search,
+    setSearch,
+    onRefresh
 }) {
-    const handleStatClick = (value) => {
-        setStatusFilter(value);
-    };
-
-    const getCount = (key) => {
-        if (key === 'failure') return failureCount;
-        if (key === 'out_of_service') return outOfServiceCount;
-        return operationalSummary[key] || 0;
-    };
-
     return (
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <Tabs value={activeModule} onValueChange={onModuleChange} className="w-full sm:w-auto">
-                <TabsList className="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] h-auto flex-nowrap gap-1 p-1 justify-start overflow-x-auto scrollbar-hide">
+                <TabsList className="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] h-auto flex-nowrap gap-1 p-1 justify-start overflow-x-auto scrollbar-hide w-full sm:w-auto">
                     {modules.map(mod => (
                         <TabsTrigger
                             key={mod.id}
                             value={mod.id}
-                            className="data-[state=active]:bg-[var(--color-bg-tertiary)] data-[state=active]:text-[var(--color-text-primary)] text-[var(--color-text-secondary)] text-xs px-3 py-1.5 rounded-md whitespace-nowrap shrink-0"
+                            className="flex-1 sm:flex-none data-[state=active]:bg-[var(--color-bg-tertiary)] data-[state=active]:text-[var(--color-text-primary)] text-[var(--color-text-secondary)] text-xs px-2 sm:px-3 py-1.5 rounded-md whitespace-nowrap shrink-0"
                         >
                             <span>{mod.name}</span>
-                            <span className="ml-1.5 text-[10px] text-[var(--color-text-muted)] data-[state=active]:text-[var(--color-text-muted)]">
+                            <span className="ml-1 text-[10px] text-[var(--color-text-muted)] data-[state=active]:text-[var(--color-text-muted)]">
                                 {mod.count}
                             </span>
                         </TabsTrigger>
@@ -78,31 +29,25 @@ export default function LockModuleTabs({
                 </TabsList>
             </Tabs>
 
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-hide sm:ml-auto">
-                {STATUS_FILTERS.map(option => {
-                    const count = getCount(option.key);
-                    const isActive = statusFilter === option.value;
-                    const Icon = option.icon;
-
-                    return (
-                        <button
-                            key={option.value}
-                            type="button"
-                            onClick={() => handleStatClick(option.value)}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-xs font-medium whitespace-nowrap shrink-0 transition-all ${
-                                isActive
-                                    ? `${option.tone} shadow-sm`
-                                    : 'border-[var(--color-border)] bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] hover:border-[var(--color-border-hover)] hover:text-[var(--color-text-primary)]'
-                            }`}
-                        >
-                            <Icon className="h-3 w-3 shrink-0" />
-                            <span>{option.label}</span>
-                            <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${isActive ? 'bg-white/10 text-current' : 'bg-[var(--color-bg-primary)]/80 text-[var(--color-text-muted)]'}`}>
-                                {count}
-                            </span>
+            <div className="flex items-center gap-2 w-full sm:w-auto sm:ml-auto">
+                {/* Search bar - visible en todos los tamaños */}
+                <div className="relative flex-1 sm:flex-none w-full sm:w-64 h-8">
+                    <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--color-text-muted)]" />
+                    <input
+                        type="text"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        placeholder="Buscar..."
+                        className="w-full h-full pl-8 pr-8 text-xs bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] rounded-md text-[var(--color-text-primary)] focus:border-[var(--color-primary)] focus:outline-none transition-colors"
+                    />
+                    {search && (
+                        <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text-primary)]">
+                            <X className="h-3.5 w-3.5" />
                         </button>
-                    );
-                })}
+                    )}
+                </div>
+
+                <Button variant="ghost" onClick={onRefresh} icon={RefreshCw} className="h-8 w-8 !p-0 text-[var(--color-primary)] hover:text-[var(--color-primary-light)] hover:bg-[var(--color-primary)]/10 shrink-0" />
             </div>
         </div>
     );
