@@ -88,7 +88,7 @@ export default function RackOperativo() {
                     bcvRate={bcvRate}
                     arrivalsCount={arrivals.length}
                     departuresCount={departures.length}
-                    dirtyCount={stats.dirty}
+                    stats={stats}
                 />
 
                 {error && (
@@ -101,9 +101,6 @@ export default function RackOperativo() {
                     modules={modules}
                     activeModule={activeModule}
                     onModuleChange={setActiveModule}
-                    stats={stats}
-                    filters={filters}
-                    onFilterChange={handleFilterChange}
                 />
 
                 {displayedRooms.length === 0 ? (

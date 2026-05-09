@@ -1,13 +1,17 @@
-import {
-    RefreshCw, LayoutGrid, Sparkles, LogIn, LogOut,
-    Search
-} from 'lucide-react';
+import { RefreshCw, LayoutGrid, LogIn, LogOut, Search, X, BedDouble, DoorOpen } from 'lucide-react';
+import { Card, CardHeader } from '@/components/ui/card';
+import CustomDropdown from '@shared/common/CustomDropdown';
 
-const QUICK_FILTERS = [
-    { key: 'all', label: 'Todos', icon: LayoutGrid, showCount: false },
+const STATE_FILTERS = [
+    { value: '', label: 'Todos' },
+    { value: 'available', label: 'Disponible' },
+    { value: 'occupied', label: 'Ocupada' },
+    { value: 'reserved', label: 'Reservada' },
+    { value: 'dirty', label: 'Sucia' },
+    { value: 'maintenance', label: 'Mantenimiento' },
+    { value: 'blocked', label: 'Bloqueada' },
+    { value: 'fdu', label: 'FDU' },
 ];
-
-
 
 export default function RackHeader({
     filters,
@@ -16,118 +20,83 @@ export default function RackHeader({
     bcvRate,
     arrivalsCount = 0,
     departuresCount = 0,
-    dirtyCount = 0,
+    stats,
 }) {
-    const isQuickActive = (key) => {
-        if (key === 'all') return !filters.quickFilter && !filters.stateFilter;
-        return filters.quickFilter === key;
-    };
-
-    const handleQuickFilter = (key) => {
-        if (key === 'all') {
-            onFilterChange({ quickFilter: '', stateFilter: '', searchQuery: '' });
-        } else if (key === 'dirty') {
-            onFilterChange({ quickFilter: key, stateFilter: 'dirty', searchQuery: '' });
-        } else {
-            onFilterChange({ quickFilter: key, stateFilter: '', searchQuery: '' });
-        }
-    };
-
     return (
-        <div className="space-y-3">
-            {/* Row 1: Quick filters + search + filter toggle + refresh */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
-                    {QUICK_FILTERS.map(qf => {
-                        const Icon = qf.icon;
-                        const active = isQuickActive(qf.key);
-                        return (
-                            <button
-                                key={qf.key}
-                                onClick={() => handleQuickFilter(qf.key)}
-                                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-all duration-150 shrink-0 border
-                                    ${active
-                                        ? 'bg-[var(--color-primary)]/15 text-[var(--color-primary)] border-[var(--color-primary)]/30'
-                                        : 'bg-[var(--color-bg-secondary)] text-[var(--color-text-muted)] border-[var(--color-border)] hover:border-[var(--color-border-hover)] hover:text-[var(--color-text-secondary)]'
-                                    }`}
-                            >
-                                <Icon className="w-3 h-3" />
-                                {qf.label}
-                            </button>
-                        );
-                    })}
-                    {arrivalsCount > 0 && (
-                        <button
-                            onClick={() => handleQuickFilter('arrivals')}
-                            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-all duration-150 shrink-0 border
-                                ${isQuickActive('arrivals')
-                                    ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
-                                    : 'bg-[var(--color-bg-secondary)] text-[var(--color-text-muted)] border-[var(--color-border)] hover:border-[var(--color-border-hover)] hover:text-[var(--color-text-secondary)]'
-                                }`}
-                        >
-                            <LogIn className="w-3 h-3" />
-                            Entradas
-                            <span className="ml-0.5 font-bold text-emerald-400">{arrivalsCount}</span>
-                        </button>
-                    )}
-                    {departuresCount > 0 && (
-                        <button
-                            onClick={() => handleQuickFilter('departures')}
-                            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-all duration-150 shrink-0 border
-                                ${isQuickActive('departures')
-                                    ? 'bg-red-500/15 text-red-400 border-red-500/30'
-                                    : 'bg-[var(--color-bg-secondary)] text-[var(--color-text-muted)] border-[var(--color-border)] hover:border-[var(--color-border-hover)] hover:text-[var(--color-text-secondary)]'
-                                }`}
-                        >
-                            <LogOut className="w-3 h-3" />
-                            Salidas
-                            <span className="ml-0.5 font-bold text-red-400">{departuresCount}</span>
-                        </button>
-                    )}
-                    {dirtyCount > 0 && (
-                        <button
-                            onClick={() => handleQuickFilter('dirty')}
-                            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-all duration-150 shrink-0 border
-                                ${isQuickActive('dirty')
-                                    ? 'bg-red-500/15 text-red-400 border-red-500/30'
-                                    : 'bg-[var(--color-bg-secondary)] text-[var(--color-text-muted)] border-[var(--color-border)] hover:border-[var(--color-border-hover)] hover:text-[var(--color-text-secondary)]'
-                                }`}
-                        >
-                            <Sparkles className="w-3 h-3" />
-                            Limpieza
-                            <span className="ml-0.5 font-bold text-red-400">{dirtyCount}</span>
-                        </button>
-                    )}
-                </div>
-
-                <div className="flex items-center gap-2 sm:ml-auto">
-                    <div className="relative flex-1 sm:flex-none">
-                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--color-text-muted)]" />
-                        <input
-                            type="text"
-                            placeholder="Buscar..."
-                            value={filters.searchQuery}
-                            onChange={e => onFilterChange({ searchQuery: e.target.value })}
-                            className="w-full sm:w-48 pl-8 pr-3 py-1.5 text-sm rounded-lg bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-primary)] transition-colors"
-                        />
-                    </div>
-                    {bcvRate && (
-                        <div className="hidden lg:flex items-center gap-1 px-2 py-1.5 rounded-md bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] text-xs shrink-0">
-                            <span className="text-[var(--color-text-muted)]">BCV</span>
-                            <span className="font-semibold text-[var(--color-text-primary)]">${bcvRate.toFixed(2)}</span>
+        <Card className="border-[var(--color-border)] bg-[var(--color-bg-secondary)] shadow-sm">
+            <CardHeader className="py-3 px-4">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                        <div className="flex items-center gap-3 text-xs">
+                            <div className="flex items-center gap-1.5 text-[var(--color-text-secondary)]">
+                                <LayoutGrid className="w-3.5 h-3.5 text-[var(--color-primary)]" />
+                                <span><strong className="text-[var(--color-text-primary)]">{stats?.total ?? 0}</strong> total</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 text-[var(--color-text-secondary)]">
+                                <DoorOpen className="w-3.5 h-3.5 text-emerald-400" />
+                                <span><strong className="text-[var(--color-text-primary)]">{stats?.available ?? 0}</strong> disp.</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 text-[var(--color-text-secondary)]">
+                                <BedDouble className="w-3.5 h-3.5 text-blue-400" />
+                                <span><strong className="text-[var(--color-text-primary)]">{stats?.occupied ?? 0}</strong> ocup.</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 text-[var(--color-text-secondary)]">
+                                <LogIn className="w-3.5 h-3.5 text-emerald-400" />
+                                <span><strong className="text-[var(--color-text-primary)]">{arrivalsCount}</strong> hoy</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 text-[var(--color-text-secondary)]">
+                                <LogOut className="w-3.5 h-3.5 text-red-400" />
+                                <span><strong className="text-[var(--color-text-primary)]">{departuresCount}</strong> sal.</span>
+                            </div>
                         </div>
-                    )}
-                    <button
-                        onClick={onRefresh}
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)] transition-colors hover:border-[var(--color-primary)]/40 hover:text-[var(--color-primary)] shrink-0"
-                        title="Actualizar"
-                    >
-                        <RefreshCw className="h-3.5 w-3.5" />
-                    </button>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+                        <CustomDropdown
+                            value={filters.stateFilter}
+                            onChange={(v) => onFilterChange({ stateFilter: v })}
+                            options={STATE_FILTERS}
+                            placeholder="Estado"
+                            className="min-w-[160px]"
+                            buttonClassName="h-8"
+                        />
+
+                        <div className="relative w-full sm:w-56 h-8">
+                            <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--color-text-muted)]" />
+                            <input
+                                type="text"
+                                value={filters.searchQuery}
+                                onChange={e => onFilterChange({ searchQuery: e.target.value })}
+                                placeholder="Buscar habitación..."
+                                className="w-full h-full pl-8 pr-8 text-xs bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] rounded-md text-[var(--color-text-primary)] focus:border-[var(--color-primary)] focus:outline-none transition-colors"
+                            />
+                            {filters.searchQuery && (
+                                <button
+                                    onClick={() => onFilterChange({ searchQuery: '' })}
+                                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text-primary)]"
+                                >
+                                    <X className="h-3.5 w-3.5" />
+                                </button>
+                            )}
+                        </div>
+
+                        {bcvRate && (
+                            <div className="hidden lg:flex items-center gap-1 px-2 py-1.5 rounded-md bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] text-xs shrink-0">
+                                <span className="text-[var(--color-text-muted)]">BCV</span>
+                                <span className="font-semibold text-[var(--color-text-primary)]">${bcvRate.toFixed(2)}</span>
+                            </div>
+                        )}
+
+                        <button
+                            onClick={onRefresh}
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)] transition-colors hover:border-[var(--color-primary)]/40 hover:text-[var(--color-primary)] shrink-0"
+                            title="Actualizar"
+                        >
+                            <RefreshCw className="h-3.5 w-3.5" />
+                        </button>
+                    </div>
                 </div>
-            </div>
-        </div>
+            </CardHeader>
+        </Card>
     );
 }
-
-
