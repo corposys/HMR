@@ -22,6 +22,8 @@ import {
     CalendarCheck,
     Sun,
     Moon,
+    Receipt,
+    ClipboardCheck,
 } from 'lucide-react';
 import { useAuth } from '@context/AuthContext';
 import { useTheme } from '@context/ThemeContext';
@@ -132,6 +134,22 @@ export default function Navbar({ onMenuClick, isMobileSidebarOpen }) {
             title: 'Rack Operativo',
             icon: LayoutGrid,
         },
+        '/demo-rack': {
+            title: 'Demo Rack',
+            icon: LayoutGrid,
+        },
+        '/billing': {
+            title: 'Facturación',
+            icon: Receipt,
+        },
+        '/audit': {
+            title: 'Auditoría',
+            icon: ClipboardCheck,
+        },
+        '/audit/nocturna': {
+            title: 'Auditoría Nocturna',
+            icon: ClipboardCheck,
+        },
         '/reservaciones': {
             title: 'Reservaciones',
             icon: CalendarCheck,
@@ -143,6 +161,22 @@ export default function Navbar({ onMenuClick, isMobileSidebarOpen }) {
         '/reception/reservas': {
             title: 'Recepción',
             icon: Hotel,
+        },
+        '/housekeeping': {
+            title: 'Housekeeping',
+            icon: BedDouble,
+        },
+        '/housekeeping/operaciones': {
+            title: 'Operaciones',
+            icon: BedDouble,
+        },
+        '/housekeeping/control': {
+            title: 'Control',
+            icon: BedDouble,
+        },
+        '/housekeeping/gestion': {
+            title: 'Gestión',
+            icon: BedDouble,
         },
         '/housekeeping/lenceria': {
             title: 'Lencería',
