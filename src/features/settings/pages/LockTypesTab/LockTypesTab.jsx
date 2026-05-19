@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Wrench, Pencil, Trash2, X } from 'lucide-react';
-import Button from '@shared/common/Button';
-import Badge from '@shared/common/Badge';
-import Input from '@shared/common/Input';
-import Modal from '@shared/common/Modal';
-import DataTable from '@shared/common/DataTable';
-import { apiFetch } from '@utils/api';
+import { Plus, Wrench, Pencil, Trash2 } from 'lucide-react';
+import { Button } from '@components/ui/button';
+import { Badge } from '@components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@components/ui/dialog';
+import { SettingsSection } from '@features/settings/components/settings/SettingsSection';
+import { SettingsField } from '@features/settings/components/settings/SettingsField';
+import { apiJson } from '@utils/api';
+import { useToast } from '@context/ToastContext';
+import { usePermissions } from '@hooks/usePermissions';
 
 const PART_CATEGORIES = [
     { value: 'lock', label: 'Cerradura' },
@@ -16,9 +18,11 @@ const PART_CATEGORIES = [
 ];
 
 export default function LockTypesTab() {
+    const { showToast } = useToast();
+    const { can } = usePermissions();
     const [partTypes, setPartTypes] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [showModal, setShowModal] = useState(false);
+    const [showDialog, setShowDialog] = useState(false);
     const [editingPart, setEditingPart] = useState(null);
     const [formData, setFormData] = useState({ name: '', category: 'lock' });
     const [saving, setSaving] = useState(false);
@@ -26,52 +30,55 @@ export default function LockTypesTab() {
     const fetchPartTypes = useCallback(async () => {
         setLoading(true);
         try {
-            const data = await apiFetch('/api/maintenance/part-types');
+            const data = await apiJson('/api/maintenance/part-types');
             setPartTypes(data.part_types || []);
-        } catch (err) {
-            console.error('Error fetching part types:', err);
+        } catch {
+            showToast({ title: 'Error', message: 'No se pudieron cargar los tipos de piezas', type: 'error' });
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [showToast]);
 
-    useEffect(() => {
-        fetchPartTypes();
-    }, [fetchPartTypes]);
+    useEffect(() => { fetchPartTypes(); }, [fetchPartTypes]);
+
+    const isReadOnly = !can('maintenance', 'write');
 
     const openCreate = () => {
         setEditingPart(null);
         setFormData({ name: '', category: 'lock' });
-        setShowModal(true);
+        setShowDialog(true);
     };
 
     const openEdit = (part) => {
         setEditingPart(part);
         setFormData({ name: part.name, category: part.category });
-        setShowModal(true);
+        setShowDialog(true);
     };
 
     const handleSave = async () => {
-        if (!formData.name.trim()) return;
+        if (!formData.name.trim()) {
+            showToast({ title: 'Campo requerido', message: 'El nombre es obligatorio', type: 'error' });
+            return;
+        }
         setSaving(true);
         try {
             if (editingPart) {
-                await apiFetch(`/api/maintenance/part-types/${editingPart.id}`, {
+                await apiJson(`/api/maintenance/part-types/${editingPart.id}`, {
                     method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(formData),
+                    body: formData,
                 });
+                showToast({ title: 'Actualizado', message: 'Tipo de pieza actualizado', type: 'success' });
             } else {
-                await apiFetch('/api/maintenance/part-types', {
+                await apiJson('/api/maintenance/part-types', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(formData),
+                    body: formData,
                 });
+                showToast({ title: 'Creado', message: 'Tipo de pieza creado', type: 'success' });
             }
             await fetchPartTypes();
-            setShowModal(false);
+            setShowDialog(false);
         } catch (err) {
-            console.error('Error saving part type:', err);
+            showToast({ title: 'Error', message: err.message || 'No se pudo guardar', type: 'error' });
         } finally {
             setSaving(false);
         }
@@ -80,121 +87,95 @@ export default function LockTypesTab() {
     const handleDelete = async (part) => {
         if (!window.confirm(`¿Desactivar "${part.name}"?`)) return;
         try {
-            await apiFetch(`/api/maintenance/part-types/${part.id}`, {
-                method: 'DELETE',
-            });
+            await apiJson(`/api/maintenance/part-types/${part.id}`, { method: 'DELETE' });
             await fetchPartTypes();
+            showToast({ title: 'Desactivado', message: `"${part.name}" desactivado`, type: 'success' });
         } catch (err) {
-            console.error('Error deleting part type:', err);
+            showToast({ title: 'Error', message: err.message || 'No se pudo eliminar', type: 'error' });
         }
     };
 
-    const columns = [
-        {
-            key: 'name',
-            header: 'Nombre',
-            render: (part) => <span className="font-medium">{part.name}</span>,
-        },
-        {
-            key: 'category',
-            header: 'Categoría',
-            render: (part) => {
-                const cat = PART_CATEGORIES.find(c => c.value === part.category);
-                return <Badge variant="info">{cat?.label || part.category}</Badge>;
-            },
-        },
-        {
-            key: 'is_active',
-            header: 'Estado',
-            render: (part) => (
-                <Badge variant={part.is_active ? 'success' : 'danger'}>
-                    {part.is_active ? 'Activo' : 'Inactivo'}
-                </Badge>
-            ),
-        },
-        {
-            key: 'actions',
-            header: '',
-            render: (part) => (
-                <div className="flex gap-2">
-                    <button
-                        onClick={() => openEdit(part)}
-                        className="p-1 hover:bg-[var(--color-bg-tertiary)] rounded"
-                        title="Editar"
-                    >
-                        <Pencil className="w-4 h-4" />
-                    </button>
-                    <button
-                        onClick={() => handleDelete(part)}
-                        className="p-1 hover:bg-[var(--color-danger)]/10 rounded text-[var(--color-danger)]"
-                        title={part.is_active ? 'Desactivar' : 'Activar'}
-                    >
-                        <Trash2 className="w-4 h-4" />
-                    </button>
-                </div>
-            ),
-        },
-    ];
+    const getCategoryLabel = (val) => PART_CATEGORIES.find((c) => c.value === val)?.label || val;
 
     return (
-        <div className="space-y-4">
-            <div className="flex justify-between items-center">
+        <div className="p-6 space-y-6">
+            <div className="flex items-center justify-between">
                 <div>
-                    <h3 className="text-lg font-medium">Configuración de Cerraduras</h3>
-                    <p className="text-sm text-[var(--color-text-secondary)]">
-                        Gestión de tipos de componentes para cerraduras
-                    </p>
+                    <p className="text-sm text-[var(--color-text-secondary)]">Gestión de componentes para cerraduras</p>
                 </div>
-                <Button onClick={openCreate} icon={Plus}>
+                <Button onClick={openCreate} disabled={isReadOnly} className="bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90">
+                    <Plus className="w-4 h-4" />
                     Nuevo Tipo
                 </Button>
             </div>
 
-            <DataTable
-                columns={columns}
-                data={partTypes}
-                loading={loading}
-                emptyText="No hay tipos de repuestos definidos"
-            />
+            <SettingsSection title="Tipos de Piezas" description={`${partTypes.length} tipos registrados`} icon={Wrench}>
+                {loading ? (
+                    <div className="text-center py-8 text-sm text-[var(--color-text-muted)]">Cargando...</div>
+                ) : partTypes.length === 0 ? (
+                    <div className="text-center py-8 text-sm text-[var(--color-text-muted)]">No hay tipos de repuestos definidos</div>
+                ) : (
+                    <div className="divide-y divide-[var(--color-border)]">
+                        {partTypes.map((part) => (
+                            <div key={part.id} className="flex items-center justify-between py-3 px-1 hover:bg-[var(--color-bg-tertiary)]/30 transition-colors">
+                                <div className="flex items-center gap-3">
+                                    <div className="flex flex-col">
+                                        <span className="text-sm font-medium text-[var(--color-text-primary)]">{part.name}</span>
+                                        <div className="flex items-center gap-2 mt-0.5">
+                                            <Badge variant="info" className="text-[10px] px-1.5 py-0.5">{getCategoryLabel(part.category)}</Badge>
+                                            <span className={`text-[10px] px-1.5 py-0.5 rounded ${part.is_active ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
+                                                {part.is_active ? 'Activo' : 'Inactivo'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <button onClick={() => openEdit(part)} disabled={isReadOnly} className="p-1.5 rounded-lg hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors disabled:opacity-40" title="Editar">
+                                        <Pencil className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button onClick={() => handleDelete(part)} disabled={isReadOnly} className="p-1.5 rounded-lg hover:bg-red-500/10 text-red-400 transition-colors disabled:opacity-40" title={part.is_active ? 'Desactivar' : 'Activar'}>
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </SettingsSection>
 
-            <Modal
-                isOpen={showModal}
-                onClose={() => setShowModal(false)}
-                title={editingPart ? 'Editar Tipo' : 'Nuevo Tipo'}
-                footer={
-                    <div className="flex gap-2 justify-end">
-                        <Button variant="ghost" onClick={() => setShowModal(false)}>
-                            Cancelar
-                        </Button>
-                        <Button onClick={handleSave} loading={saving}>
-                            Guardar
-                        </Button>
+            <Dialog open={showDialog} onOpenChange={setShowDialog}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>{editingPart ? 'Editar Tipo de Pieza' : 'Nuevo Tipo de Pieza'}</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-2">
+                        <SettingsField label="Nombre">
+                            <input
+                                className="input w-full"
+                                value={formData.name}
+                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                placeholder="Ej: Batería CR123"
+                                autoFocus
+                            />
+                        </SettingsField>
+                        <SettingsField label="Categoría">
+                            <select
+                                value={formData.category}
+                                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                                className="input w-full"
+                            >
+                                {PART_CATEGORIES.map((cat) => (
+                                    <option key={cat.value} value={cat.value}>{cat.label}</option>
+                                ))}
+                            </select>
+                        </SettingsField>
                     </div>
-                }
-            >
-                <div className="space-y-4">
-                    <Input
-                        label="Nombre"
-                        value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        placeholder="Ej: Batería CR123"
-                    />
-                    <div>
-                        <label className="block text-sm font-medium mb-1">Categoría</label>
-                        <select
-                            value={formData.category}
-                            onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                            className="input w-full"
-                        >
-                            {PART_CATEGORIES.map((cat) => (
-                                <option key={cat.value} value={cat.value}>
-                                    {cat.label}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-                </div>
-            </Modal>
+                    <DialogFooter>
+                        <Button variant="ghost" onClick={() => setShowDialog(false)}>Cancelar</Button>
+                        <Button onClick={handleSave} loading={saving} disabled={saving} className="bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90">Guardar</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

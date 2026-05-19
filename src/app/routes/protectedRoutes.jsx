@@ -1,7 +1,16 @@
 import { lazy } from 'react';
+import { Navigate } from 'react-router-dom';
 
 const Dashboard = lazy(() => import('@features/dashboard/pages/Dashboard'));
-const Settings = lazy(() => import('@features/settings/pages/SettingsPage'));
+const SettingsLayout = lazy(() => import('@features/settings/layout/SettingsLayout'));
+const SettingsGeneral = lazy(() => import('@features/settings/pages/GeneralSettingsTab/GeneralSettingsTab'));
+const SettingsFinance = lazy(() => import('@features/settings/pages/FinanceTab/FinanceTab'));
+const SettingsReservations = lazy(() => import('@features/settings/pages/ReservationsTab/ReservationsTab'));
+const SettingsStructure = lazy(() => import('@features/settings/pages/StructureTab/StructureTab'));
+const SettingsLocks = lazy(() => import('@features/settings/pages/LockTypesTab/LockTypesTab'));
+const SettingsIntegrations = lazy(() => import('@features/settings/pages/IntegrationsTab/IntegrationsTab'));
+const SettingsUsers = lazy(() => import('@features/settings/pages/UsersTab/UsersTab'));
+const SettingsSystem = lazy(() => import('@features/settings/pages/SystemTab/SystemTab'));
 const SignaturesHistory = lazy(() => import('@features/systems/signatures/pages/SignaturesHistory'));
 const Habitaciones = lazy(() => import('@features/maintenance/pages/Habitaciones'));
 const LockTimelinePage = lazy(() => import('@features/systems/locks/pages/LockTimelinePage'));
@@ -47,6 +56,20 @@ export const protectedRoutes = [
     { path: 'housekeeping/incidencias', element: <IncidentsPage /> },
     { path: 'housekeeping/personal', element: <StaffPage /> },
     { path: 'housekeeping/lenceria', element: <Linen /> },
-    { path: 'settings', element: <Settings /> },
+    {
+        path: 'settings',
+        element: <SettingsLayout />,
+        children: [
+            { index: true, element: <Navigate to="general" replace /> },
+            { path: 'general', element: <SettingsGeneral /> },
+            { path: 'finance', element: <SettingsFinance /> },
+            { path: 'reservations', element: <SettingsReservations /> },
+            { path: 'structure', element: <SettingsStructure /> },
+            { path: 'locks', element: <SettingsLocks /> },
+            { path: 'integrations', element: <SettingsIntegrations /> },
+            { path: 'users', element: <SettingsUsers /> },
+            { path: 'system', element: <SettingsSystem /> },
+        ],
+    },
     { path: 'demo-rack', element: <DemoRackPage /> },
 ];

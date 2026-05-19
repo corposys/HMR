@@ -9,6 +9,20 @@ import ErrorBoundary from '@shared/common/ErrorBoundary';
 import Layout from '@shared/layout/Layout';
 import { publicRoutes, protectedRoutes, fallbackRoute } from '@app/routes';
 
+function renderRoute(route) {
+    if (route.index) {
+        return <Route key="index" index element={route.element} />;
+    }
+    if (route.children) {
+        return (
+            <Route key={route.path} path={route.path} element={route.element}>
+                {route.children.map((child) => renderRoute(child))}
+            </Route>
+        );
+    }
+    return <Route key={route.path} path={route.path} element={route.element} />;
+}
+
 /**
  * App - Componente raíz de la aplicación
  * Enrutamiento con React Router v7
@@ -40,11 +54,7 @@ function App() {
                                             </ProtectedRoute>
                                         }
                                     >
-                                        {protectedRoutes.map((route) => (
-                                            route.index
-                                                ? <Route key="index" index element={route.element} />
-                                                : <Route key={route.path} path={route.path} element={route.element} />
-                                        ))}
+                                        {protectedRoutes.map((route) => renderRoute(route))}
                                     </Route>
 
                                     <Route path={fallbackRoute.path} element={fallbackRoute.element} />

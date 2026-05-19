@@ -252,9 +252,8 @@ export default function Navbar({ onMenuClick, isMobileSidebarOpen }) {
                         <TrendingUp className="w-3 h-3 text-emerald-400" />
                     )}
                     <span className="text-xs font-medium text-[var(--color-text-secondary)]">
-                        <span className="hidden sm:inline">TASA BCV - </span>
                         <span className={`${isAnimating && bcvTrend === 'up' ? 'text-emerald-400' : isAnimating && bcvTrend === 'down' ? 'text-red-400' : 'text-[var(--color-text-primary)]'}`}>
-                            {displayRate !== null ? `$${displayRate.toLocaleString('es-VE', { minimumFractionDigits: 2 })}` : '—'}
+                            {displayRate !== null ? `Bs ${displayRate.toLocaleString('es-VE', { minimumFractionDigits: 2 })}` : '—'}
                         </span>
                     </span>
                     <RefreshCw className={`w-2.5 h-2.5 text-[var(--color-text-muted)] ${bcvLoading ? 'animate-spin' : ''}`} />

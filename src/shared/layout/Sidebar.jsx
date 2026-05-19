@@ -256,7 +256,7 @@ export default function Sidebar({ isMobileOpen = false, onCloseMobile }) {
 
                 <div className="mt-auto pt-3">
                     <NavLink
-                        to="/settings"
+                        to="/settings/general"
                         onClick={onCloseMobile}
                         className={({ isActive }) =>
                             `flex items-center rounded-lg border transition-colors text-sm

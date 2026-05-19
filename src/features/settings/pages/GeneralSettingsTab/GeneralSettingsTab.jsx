@@ -1,23 +1,13 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Globe, Building2, UploadCloud, Save } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Globe, Building2, UploadCloud } from 'lucide-react';
+import { SettingsSection } from '@features/settings/components/settings/SettingsSection';
+import { SettingsField } from '@features/settings/components/settings/SettingsField';
+import { SettingsGroup } from '@features/settings/components/settings/SettingsGroup';
+import SettingsSaveBar from '@features/settings/components/settings/SettingsSaveBar';
 import CustomDropdown from '@shared/common/CustomDropdown';
-import Button from '@shared/common/Button';
-import Input from '@shared/common/Input';
-
-const STORAGE_KEY = 'hmr_general_profile';
-
-const EMPTY_PROFILE = {
-    commercialName: '',
-    category: '',
-    slogan: '',
-    legalName: '',
-    rif: '',
-    fiscalAddress: '',
-    receptionPhone: '',
-    officialEmail: '',
-    timezone: '',
-    website: '',
-};
+import { apiJson } from '@utils/api';
+import { useToast } from '@context/ToastContext';
+import { usePermissions } from '@hooks/usePermissions';
 
 const CATEGORY_OPTIONS = [
     { value: '5', label: '5 Estrellas' },
@@ -35,271 +25,223 @@ const TIMEZONE_OPTIONS = [
     { value: 'Europe/Madrid', label: 'Europe/Madrid (GMT+1)' },
 ];
 
-function normalizeProfile(profile = {}) {
-    return {
-        commercialName: profile.commercialName ?? '',
-        category: profile.category ?? '',
-        slogan: profile.slogan ?? '',
-        legalName: profile.legalName ?? '',
-        rif: profile.rif ?? '',
-        fiscalAddress: profile.fiscalAddress ?? '',
-        receptionPhone: profile.receptionPhone ?? '',
-        officialEmail: profile.officialEmail ?? '',
-        timezone: profile.timezone ?? '',
-        website: profile.website ?? '',
-    };
-}
+const EMPTY_FORM = {
+    hotel_name: '',
+    hotel_category: '',
+    hotel_slogan: '',
+    hotel_rif: '',
+    hotel_address: '',
+    hotel_phone: '',
+    hotel_email: '',
+    hotel_timezone: '',
+    hotel_website: '',
+};
 
 export default function GeneralSettingsTab() {
+    const { showToast } = useToast();
+    const { can } = usePermissions();
+    const [form, setForm] = useState(EMPTY_FORM);
+    const [saved, setSaved] = useState(EMPTY_FORM);
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
-    const [formData, setFormData] = useState(EMPTY_PROFILE);
-    const [savedData, setSavedData] = useState(EMPTY_PROFILE);
-    const [isSaving, setIsSaving] = useState(false);
-    const [saveStatus, setSaveStatus] = useState(null);
 
-    useEffect(() => {
-        const storedProfile = localStorage.getItem(STORAGE_KEY);
-        if (!storedProfile) {
-            setFormData(EMPTY_PROFILE);
-            setSavedData(EMPTY_PROFILE);
-            return;
-        }
-
+    const fetchSettings = useCallback(async () => {
+        setLoading(true);
         try {
-            const parsed = JSON.parse(storedProfile);
-            const normalized = normalizeProfile(parsed);
-            setFormData(normalized);
-            setSavedData(normalized);
+            const data = await apiJson('/api/settings?category=hotel');
+            const items = data.settings || [];
+            const map = {};
+            items.forEach((s) => { map[s.key] = s.value; });
+            const normalized = {
+                hotel_name: map.hotel_name || '',
+                hotel_category: map.hotel_category || '',
+                hotel_slogan: map.hotel_slogan || '',
+                hotel_rif: map.hotel_rif || '',
+                hotel_address: map.hotel_address || '',
+                hotel_phone: map.hotel_phone || '',
+                hotel_email: map.hotel_email || '',
+                hotel_timezone: map.hotel_timezone || '',
+                hotel_website: map.hotel_website || '',
+            };
+            setForm(normalized);
+            setSaved(normalized);
         } catch {
-            setFormData(EMPTY_PROFILE);
-            setSavedData(EMPTY_PROFILE);
-        }
-    }, []);
-
-    const hasChanges = useMemo(
-        () => JSON.stringify(formData) !== JSON.stringify(savedData),
-        [formData, savedData],
-    );
-
-    const handleFieldChange = (field) => (e) => {
-        const value = e.target.value;
-        setFormData((prev) => ({ ...prev, [field]: value }));
-        if (saveStatus) {
-            setSaveStatus(null);
-        }
-    };
-
-    const handleSelectChange = (field) => (value) => {
-        setFormData((prev) => ({ ...prev, [field]: value }));
-        if (saveStatus) {
-            setSaveStatus(null);
-        }
-    };
-
-    const handleSave = () => {
-        if (!hasChanges || isSaving) {
-            return;
-        }
-
-        setIsSaving(true);
-        try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(formData));
-            setSavedData(formData);
-            setSaveStatus('saved');
-        } catch {
-            setSaveStatus('error');
+            showToast({ title: 'Error', message: 'No se pudieron cargar los datos', type: 'error' });
         } finally {
-            setIsSaving(false);
+            setLoading(false);
+        }
+    }, [showToast]);
+
+    useEffect(() => { fetchSettings(); }, [fetchSettings]);
+
+    const isDirty = JSON.stringify(form) !== JSON.stringify(saved);
+    const isReadOnly = !can('settings', 'write');
+
+    const handleField = (key) => (e) => setForm((p) => ({ ...p, [key]: e.target.value }));
+    const handleSelect = (key) => (val) => setForm((p) => ({ ...p, [key]: val }));
+
+    const handleSave = async () => {
+        if (isReadOnly || saving) return;
+        setSaving(true);
+        try {
+            await apiJson('/api/settings/batch', {
+                method: 'PUT',
+                body: Object.fromEntries(Object.entries(form).map(([k, v]) => [k, v])),
+            });
+            setSaved(form);
+            showToast({ title: 'Guardado', message: 'Configuración general guardada', type: 'success' });
+        } catch {
+            showToast({ title: 'Error', message: 'No se pudo guardar', type: 'error' });
+        } finally {
+            setSaving(false);
         }
     };
 
-    const handleDragOver = (e) => {
-        e.preventDefault();
-        setIsDragging(true);
-    };
+    const handleDiscard = () => setForm(saved);
 
-    const handleDragLeave = () => {
-        setIsDragging(false);
-    };
+    const handleDragOver = (e) => { e.preventDefault(); setIsDragging(true); };
+    const handleDragLeave = () => setIsDragging(false);
+    const handleDrop = (e) => { e.preventDefault(); setIsDragging(false); };
 
-    const handleDrop = (e) => {
-        e.preventDefault();
-        setIsDragging(false);
-    };
+    if (loading) {
+        return (
+            <div className="p-6 flex items-center justify-center h-48">
+                <div className="animate-pulse text-[var(--color-text-muted)]">Cargando...</div>
+            </div>
+        );
+    }
 
     return (
-        <div className="space-y-6 animate-in fade-in duration-300 pb-10">
-            
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                    <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">
-                        Perfil Corporativo del Hotel
-                    </h2>
-                </div>
-                <Button
-                    onClick={handleSave}
-                    disabled={!hasChanges || isSaving}
-                    variant="register"
-                    icon={Save}
-                    className="active:scale-95"
-                >
-                    <span>{isSaving ? 'Guardando...' : 'Guardar Cambios'}</span>
-                </Button>
-            </div>
-
-            {saveStatus === 'saved' && (
-                <p className="text-sm text-[var(--color-success)]">Cambios guardados correctamente.</p>
-            )}
-            {saveStatus === 'error' && (
-                <p className="text-sm text-[var(--color-danger)]">No se pudo guardar. Intenta nuevamente.</p>
-            )}
-
-            <div className="bg-[var(--color-bg-secondary)] rounded-xl border border-[var(--color-border)] overflow-visible shadow-sm">
-                <div className="p-4 border-b border-[var(--color-border)] flex items-center gap-3 bg-[var(--color-bg-tertiary)]/30">
-                    <div className="p-2 bg-blue-500/10 rounded-lg text-blue-600">
-                        <Globe size={20} />
-                    </div>
-                    <h3 className="font-semibold text-[var(--color-text-primary)]">
-                        Identidad Visual
-                    </h3>
-                </div>
-                
-                <div className="p-6 grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="p-6 space-y-6 pb-24">
+            <SettingsSection
+                title="Identidad del Hotel"
+                description="Datos públicos de tu establecimiento"
+                icon={Globe}
+            >
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div className="lg:col-span-1">
-                        <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">
-                            Logotipo del Hotel
+                        <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
+                            Logotipo
                         </label>
                         <div
                             onDragOver={handleDragOver}
                             onDragLeave={handleDragLeave}
                             onDrop={handleDrop}
-                            className={`
-                                border-2 border-dashed rounded-xl h-48 flex flex-col items-center justify-center gap-3 p-4 text-center transition-colors cursor-pointer
-                                ${isDragging 
-                                    ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/5' 
+                            className={`border-2 border-dashed rounded-xl h-40 flex flex-col items-center justify-center gap-2 p-4 text-center transition-colors cursor-pointer ${
+                                isDragging
+                                    ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/5'
                                     : 'border-[var(--color-border)] hover:border-[var(--color-primary)]/50 hover:bg-[var(--color-bg-tertiary)]'
-                                }
-                            `}
+                            }`}
                         >
-                            <div className="p-3 bg-[var(--color-bg-tertiary)] rounded-full">
-                                <UploadCloud className="w-6 h-6 text-[var(--color-text-muted)]" />
-                            </div>
-                            <div className="space-y-1">
-                                <p className="text-sm font-medium text-[var(--color-text-primary)]">
-                                    Haz clic o arrastra tu logo aquí
-                                </p>
-                                <p className="text-xs text-[var(--color-text-muted)]">
-                                    PNG, JPG o SVG (máx. 2MB)
-                                </p>
-                            </div>
+                            <UploadCloud className="w-6 h-6 text-[var(--color-text-muted)]" />
+                            <p className="text-xs text-[var(--color-text-muted)]">PNG, JPG o SVG (máx. 2MB)</p>
                         </div>
                     </div>
 
-                    <div className="lg:col-span-2 space-y-5">
-                        <Input 
-                            label="Nombre Comercial" 
-                            value={formData.commercialName}
-                            onChange={handleFieldChange('commercialName')}
-                            placeholder="Ej. Grand Hotel Central"
-                        />
-                        
-                        <div className="flex flex-col gap-1.5">
-                            <label className="text-sm font-medium text-[var(--color-text-primary)]">
-                                Categoría Oficial
-                            </label>
+                    <div className="lg:col-span-2 space-y-4">
+                        <SettingsField label="Nombre Comercial">
+                            <input
+                                className="input w-full"
+                                value={form.hotel_name}
+                                onChange={handleField('hotel_name')}
+                                placeholder="Nombre de tu hotel"
+                                disabled={isReadOnly}
+                            />
+                        </SettingsField>
+                        <SettingsField label="Categoría">
                             <CustomDropdown
-                                value={formData.category}
-                                onChange={handleSelectChange('category')}
+                                value={form.hotel_category}
+                                onChange={handleSelect('hotel_category')}
                                 options={CATEGORY_OPTIONS}
                                 placeholder="Seleccionar categoría"
+                                disabled={isReadOnly}
                             />
-                        </div>
+                        </SettingsField>
+                        <SettingsField label="Eslogan">
+                            <input
+                                className="input w-full"
+                                value={form.hotel_slogan}
+                                onChange={handleField('hotel_slogan')}
+                                placeholder="Frase que define tu marca"
+                                disabled={isReadOnly}
+                            />
+                        </SettingsField>
+                    </div>
+                </div>
+            </SettingsSection>
 
-                        <Input 
-                            label="Eslogan Comercial" 
-                            value={formData.slogan}
-                            onChange={handleFieldChange('slogan')}
-                            placeholder="Frase corta que define tu marca"
+            <SettingsSection
+                title="Datos Fiscales y Contacto"
+                description="Información legal y canales de comunicación"
+                icon={Building2}
+            >
+                <SettingsGroup>
+                    <SettingsField label="RIF">
+                        <input
+                            className="input w-full"
+                            value={form.hotel_rif}
+                            onChange={handleField('hotel_rif')}
+                            placeholder="J-00000000-0"
+                            disabled={isReadOnly}
                         />
-                    </div>
-                </div>
-            </div>
-
-            <div className="bg-[var(--color-bg-secondary)] rounded-xl border border-[var(--color-border)] overflow-visible shadow-sm">
-                <div className="p-4 border-b border-[var(--color-border)] flex items-center gap-3 bg-[var(--color-bg-tertiary)]/30">
-                    <div className="p-2 bg-purple-500/10 rounded-lg text-purple-600">
-                        <Building2 size={20} />
-                    </div>
-                    <h3 className="font-semibold text-[var(--color-text-primary)]">
-                        Datos Fiscales y Contacto
-                    </h3>
-                </div>
-
-                <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <Input 
-                        label="Razón Social (Empresa)" 
-                        value={formData.legalName}
-                        onChange={handleFieldChange('legalName')}
-                        placeholder="Nombre legal completo"
-                    />
-                    
-                    <Input 
-                        label="Registro de Información Fiscal (RIF)" 
-                        value={formData.rif}
-                        onChange={handleFieldChange('rif')}
-                        placeholder="Ej. J-00000000-0"
-                    />
-
-                    <div className="flex flex-col gap-1.5 md:col-span-2">
-                        <label className="text-sm font-medium text-[var(--color-text-primary)]">
-                            Dirección Fiscal Completa
-                        </label>
-                        <textarea 
-                            rows="3"
-                            value={formData.fiscalAddress}
-                            onChange={handleFieldChange('fiscalAddress')}
-                            className="w-full bg-[var(--color-bg-primary)] border border-[var(--color-border)] text-sm rounded-lg px-3 py-2 text-[var(--color-text-primary)] placeholder-[var(--color-text-muted)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)] transition-all resize-none"
-                            placeholder="Ingresa la dirección fiscal completa"
-                        ></textarea>
-                    </div>
-
-                    <Input 
-                        label="Teléfono de Recepción" 
-                        value={formData.receptionPhone}
-                        onChange={handleFieldChange('receptionPhone')}
-                        type="tel"
-                        placeholder="Ej. +58 (281) 555-0199"
-                    />
-                    
-                    <Input 
-                        label="Correo Electrónico Oficial" 
-                        value={formData.officialEmail}
-                        onChange={handleFieldChange('officialEmail')}
-                        type="email"
-                        placeholder="Ej. contacto@tu-hotel.com"
-                    />
-
-                    <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-medium text-[var(--color-text-primary)]">
-                            Zona Horaria Predeterminada
-                        </label>
+                    </SettingsField>
+                    <SettingsField label="Teléfono">
+                        <input
+                            className="input w-full"
+                            value={form.hotel_phone}
+                            onChange={handleField('hotel_phone')}
+                            placeholder="+58 (281) 555-0199"
+                            disabled={isReadOnly}
+                        />
+                    </SettingsField>
+                    <SettingsField label="Correo">
+                        <input
+                            className="input w-full"
+                            type="email"
+                            value={form.hotel_email}
+                            onChange={handleField('hotel_email')}
+                            placeholder="contacto@tu-hotel.com"
+                            disabled={isReadOnly}
+                        />
+                    </SettingsField>
+                    <SettingsField label="Sitio Web">
+                        <input
+                            className="input w-full"
+                            value={form.hotel_website}
+                            onChange={handleField('hotel_website')}
+                            placeholder="https://tu-hotel.com"
+                            disabled={isReadOnly}
+                        />
+                    </SettingsField>
+                    <SettingsField label="Zona Horaria" className="sm:col-span-2">
                         <CustomDropdown
-                            value={formData.timezone}
-                            onChange={handleSelectChange('timezone')}
+                            value={form.hotel_timezone}
+                            onChange={handleSelect('hotel_timezone')}
                             options={TIMEZONE_OPTIONS}
                             placeholder="Seleccionar zona horaria"
+                            disabled={isReadOnly}
                         />
-                    </div>
+                    </SettingsField>
+                    <SettingsField label="Dirección Fiscal" className="sm:col-span-2">
+                        <textarea
+                            rows="3"
+                            className="input w-full resize-none"
+                            value={form.hotel_address}
+                            onChange={handleField('hotel_address')}
+                            placeholder="Dirección fiscal completa"
+                            disabled={isReadOnly}
+                        />
+                    </SettingsField>
+                </SettingsGroup>
+            </SettingsSection>
 
-                    <Input 
-                        label="Sitio Web" 
-                        value={formData.website}
-                        onChange={handleFieldChange('website')}
-                        placeholder="https://"
-                    />
-                </div>
-            </div>
-
+            <SettingsSaveBar
+                isDirty={isDirty}
+                isSaving={saving}
+                onSave={handleSave}
+                onDiscard={handleDiscard}
+            />
         </div>
     );
 }

@@ -17,6 +17,7 @@ from routes.maintenance import router as maintenance_router
 from routes.reception import router as reception_router
 from routes.settings import router as settings_router
 from routes.roles import router as roles_router
+from routes.users import router as users_router
 from routes.rack import router as rack_router
 from routes.housekeeping import router as housekeeping_router
 from routes.linen import router as linen_router
@@ -51,6 +52,7 @@ app.include_router(maintenance_router)
 app.include_router(reception_router)
 app.include_router(settings_router)
 app.include_router(roles_router)
+app.include_router(users_router)
 app.include_router(rack_router)
 app.include_router(housekeeping_router)
 app.include_router(linen_router)
