@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
     Home, Settings, Wrench, ChevronDown, Shield, BedDouble, Hotel,
-    ServerCog, CalendarCheck, Monitor, LayoutGrid
+    ServerCog, CalendarCheck, Monitor, LayoutGrid, Receipt, ClipboardCheck
 } from 'lucide-react';
 
 const sidebarConfig = [
@@ -26,6 +26,12 @@ const sidebarConfig = [
         label: 'Demo Rack',
     },
     {
+        type: 'link',
+        to: '/billing',
+        icon: Receipt,
+        label: 'Facturación',
+    },
+    {
         type: 'dropdown',
         id: 'reservations',
         icon: CalendarCheck,
@@ -44,8 +50,18 @@ const sidebarConfig = [
             { to: '/reception/operations', label: 'Check-in/out' },
             { to: '/reception/folios', label: 'Folios' },
             { to: '/reception/walkins', label: 'Walk-ins' },
-            { to: '/reception/audit', label: 'Auditoría' },
             { to: '/reception/logbook', label: 'Novedades' },
+        ],
+    },
+    {
+        type: 'dropdown',
+        id: 'audit',
+        icon: ClipboardCheck,
+        label: 'Auditoría',
+        items: [
+            { to: '/audit', label: 'Auditoría', end: true },
+            { to: '/audit/nocturna', label: 'Auditoría Nocturna' },
+            { to: '/audit/reportes', label: 'Reportes' },
         ],
     },
     {
@@ -54,13 +70,10 @@ const sidebarConfig = [
         icon: BedDouble,
         label: 'Housekeeping',
         items: [
-            { to: '/housekeeping/dashboard', label: 'Dashboard' },
-            { to: '/housekeeping', label: 'Asignaciones' },
-            { to: '/housekeeping/panel', label: 'Panel de Camarera' },
-            { to: '/housekeeping/inspeccion', label: 'Inspección' },
-            { to: '/housekeeping/incidencias', label: 'Incidencias' },
-            { to: '/housekeeping/personal', label: 'Personal' },
-            { to: '/housekeeping/lenceria', label: 'Lencería' },
+            { to: '/housekeeping', label: 'Dashboard', end: true },
+            { to: '/housekeeping/operaciones', label: 'Operaciones' },
+            { to: '/housekeeping/control', label: 'Control' },
+            { to: '/housekeeping/gestion', label: 'Gestión' },
         ],
     },
     {
