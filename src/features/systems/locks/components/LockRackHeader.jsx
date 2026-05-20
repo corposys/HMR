@@ -2,15 +2,16 @@ import React, { useState } from 'react';
 import { TriangleAlert, Plus, DoorOpen, MapPin, BatteryFull, Lock, CheckCircle2, ShieldAlert, XCircle } from 'lucide-react';
 import Button from '@shared/common/Button';
 import Badge from '@shared/common/Badge';
+import CustomDropdown from '@shared/common/CustomDropdown';
 import { Card, CardHeader } from '@/components/ui/card';
 import { LOCK_STATUS_LABELS } from '../utils/lockConstants';
 
 const STATUS_FILTERS = [
-    { value: 'all', label: 'Todas', icon: Lock, key: 'total', tone: 'border-cyan-500/30 bg-cyan-500/10 text-cyan-300 shadow-sm' },
-    { value: 'operational', label: 'Operativas', icon: CheckCircle2, key: 'healthy', tone: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300 shadow-sm' },
-    { value: 'preventive', label: 'Preventivas', icon: ShieldAlert, key: 'preventive', tone: 'border-amber-500/30 bg-amber-500/10 text-amber-300 shadow-sm' },
-    { value: 'failure', label: 'Fallas', icon: TriangleAlert, key: 'failure', tone: 'border-red-500/30 bg-red-500/10 text-red-300 shadow-sm' },
-    { value: 'out_of_service', label: 'Bloqueadas', icon: XCircle, key: 'out_of_service', tone: 'border-zinc-500/30 bg-zinc-500/10 text-zinc-300 shadow-sm' },
+    { value: 'all', label: 'Todos' },
+    { value: 'operational', label: 'Operativas' },
+    { value: 'preventive', label: 'Preventivas' },
+    { value: 'failure', label: 'Fallas' },
+    { value: 'out_of_service', label: 'Bloqueadas' },
 ];
 
 export default function LockRackHeader({
@@ -26,46 +27,44 @@ export default function LockRackHeader({
 }) {
     const [showAlertsDrawer, setShowAlertsDrawer] = useState(false);
 
-    const getCount = (key) => {
-        if (key === 'failure') return failureCount;
-        if (key === 'out_of_service') return outOfServiceCount;
-        return operationalSummary?.[key] ?? 0;
-    };
+    const statsItems = [
+        { label: 'total', value: operationalSummary?.total || 0, icon: Lock, color: 'text-cyan-400' },
+        { label: 'operativas', value: operationalSummary?.healthy || 0, icon: CheckCircle2, color: 'text-emerald-400' },
+        { label: 'prev.', value: operationalSummary?.preventive || 0, icon: ShieldAlert, color: 'text-amber-400' },
+        { label: 'fallas', value: failureCount || 0, icon: TriangleAlert, color: 'text-red-400' },
+        { label: 'bloqueadas', value: outOfServiceCount || 0, icon: XCircle, color: 'text-zinc-400' },
+    ];
 
     return (
         <Card className="border-[var(--color-border)] bg-[var(--color-bg-secondary)] shadow-sm">
             <CardHeader className="py-3 px-4">
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                    {/* Izquierda: Stat-Filters clickeables */}
-                    <div className="flex w-full sm:w-auto items-center gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
-                        {STATUS_FILTERS.map((option) => {
-                            const count = getCount(option.key);
-                            const isActive = statusFilter === option.value;
-                            const Icon = option.icon;
-
-                            return (
-                                <button
-                                    key={option.value}
-                                    type="button"
-                                    onClick={() => setStatusFilter(option.value)}
-                                    className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-full border text-xs font-medium whitespace-nowrap shrink-0 transition-all ${
-                                        isActive
-                                            ? `${option.tone} border-current`
-                                            : 'border-[var(--color-border)] bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)] hover:border-[var(--color-border-hover)] hover:text-[var(--color-text-primary)]'
-                                    }`}
-                                >
-                                    <Icon className="h-3 w-3 shrink-0" />
-                                    <span className="hidden sm:inline">{option.label}</span>
-                                    <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${isActive ? 'bg-white/10 text-current' : 'bg-[var(--color-bg-primary)]/80 text-[var(--color-text-muted)]'}`}>
-                                        {count}
-                                    </span>
-                                </button>
-                            );
-                        })}
+                    {/* Izquierda: Stats estilo Reservas */}
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                        <div className="flex items-center gap-3 text-xs">
+                            {statsItems.map((stat) => {
+                                const Icon = stat.icon;
+                                return (
+                                    <div key={stat.label} className="flex items-center gap-1.5 text-[var(--color-text-secondary)]">
+                                        <Icon className={`w-3.5 h-3.5 ${stat.color}`} />
+                                        <span><strong className="text-[var(--color-text-primary)]">{stat.value}</strong> {stat.label}</span>
+                                    </div>
+                                );
+                            })}
+                        </div>
                     </div>
 
-                    {/* Derecha: Botones de acción */}
-                    <div className="flex w-full sm:w-auto items-center justify-center sm:justify-end gap-2 shrink-0">
+                    {/* Derecha: Filtro + Botones de acción */}
+                    <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+                        <CustomDropdown
+                            value={statusFilter}
+                            onChange={(v) => setStatusFilter(v)}
+                            options={STATUS_FILTERS}
+                            placeholder="Estado"
+                            className="min-w-[140px]"
+                            buttonClassName="h-8"
+                        />
+
                         <button
                             type="button"
                             onClick={onOpenReport}
