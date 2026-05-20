@@ -214,6 +214,10 @@ export default function Navbar({ onMenuClick, isMobileSidebarOpen }) {
             return pageMeta[location.pathname];
         }
 
+        if (location.pathname.startsWith('/settings/')) {
+            return pageMeta['/settings'];
+        }
+
         if (location.pathname.startsWith('/systems/room/')) {
             return pageMeta['/systems/rooms'];
         }

@@ -19,10 +19,6 @@ const tabs = [
 export default function SettingsLayout() {
     return (
         <div className="flex flex-col h-full bg-[var(--color-bg-primary)]">
-            <div className="px-6 pt-5 pb-0">
-                <h1 className="text-xl font-semibold text-[var(--color-text-primary)] mb-1">Configuración</h1>
-                <p className="text-sm text-[var(--color-text-secondary)]">Gestiona los ajustes de tu hotel</p>
-            </div>
             <nav 
                 className="flex overflow-x-auto border-b border-[var(--color-border)] px-6 mt-4 scrollbar-hide" 
                 aria-label="Tabs de configuración"
