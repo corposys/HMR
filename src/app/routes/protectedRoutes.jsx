@@ -66,7 +66,6 @@ export const protectedRoutes = [
     { path: 'housekeeping/incidencias', element: <IncidentsPage /> },
     { path: 'housekeeping/personal', element: <StaffPage /> },
     { path: 'housekeeping/lenceria', element: <Linen /> },
-<<<<<<< HEAD
     {
         path: 'settings',
         element: <SettingsLayout />,
@@ -82,9 +81,4 @@ export const protectedRoutes = [
             { path: 'system', element: <SettingsSystem /> },
         ],
     },
-    { path: 'demo-rack', element: <DemoRackPage /> },
 ];
-=======
-    { path: 'settings', element: <Settings /> },
-];
->>>>>>> 387601d13f705bd9bd0aa3391735eaf4d6784e9b
