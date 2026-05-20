@@ -1,15 +1,19 @@
 import { NavLink, Outlet } from 'react-router-dom';
-import { Globe, DollarSign, CalendarDays, Building2, Wrench, Link as LinkIcon, Users, Settings } from 'lucide-react';
+import { Globe, DollarSign, Building2, Link as LinkIcon, Users, CalendarDays, Clock, ClipboardCheck, Sparkles, Wrench, Shield, Settings } from 'lucide-react';
 
 const tabs = [
     { to: '/settings/general', label: 'General', icon: Globe },
-    { to: '/settings/finance', label: 'Finanzas', icon: DollarSign },
-    { to: '/settings/reservations', label: 'Reservas', icon: CalendarDays },
+    { to: '/settings/currency', label: 'Moneda', icon: DollarSign },
     { to: '/settings/structure', label: 'Estructura', icon: Building2 },
-    { to: '/settings/locks', label: 'Cerraduras', icon: Wrench },
     { to: '/settings/integrations', label: 'Integraciones', icon: LinkIcon },
     { to: '/settings/users', label: 'Usuarios', icon: Users },
-    { to: '/settings/system', label: 'Sistema', icon: Settings },
+    { to: '/settings/reservations', label: 'Reservas', icon: CalendarDays },
+    { to: '/settings/reception', label: 'Recepción', icon: Clock },
+    { to: '/settings/audit', label: 'Auditoría', icon: ClipboardCheck },
+    { to: '/settings/housekeeping', label: 'Housekeeping', icon: Sparkles },
+    { to: '/settings/maintenance', label: 'Mantenimiento', icon: Wrench },
+    { to: '/settings/security', label: 'Seguridad', icon: Shield },
+    { to: '/settings/systems', label: 'Sistemas', icon: Settings },
 ];
 
 export default function SettingsLayout() {
@@ -19,7 +23,10 @@ export default function SettingsLayout() {
                 <h1 className="text-xl font-semibold text-[var(--color-text-primary)] mb-1">Configuración</h1>
                 <p className="text-sm text-[var(--color-text-secondary)]">Gestiona los ajustes de tu hotel</p>
             </div>
-            <nav className="flex overflow-x-auto border-b border-[var(--color-border)] px-6 mt-4" aria-label="Tabs de configuración">
+            <nav 
+                className="flex overflow-x-auto border-b border-[var(--color-border)] px-6 mt-4 scrollbar-hide" 
+                aria-label="Tabs de configuración"
+            >
                 {tabs.map((tab) => (
                     <NavLink
                         key={tab.to}

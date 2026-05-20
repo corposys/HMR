@@ -4,19 +4,25 @@ import { Navigate } from 'react-router-dom';
 const Dashboard = lazy(() => import('@features/dashboard/pages/Dashboard'));
 const SettingsLayout = lazy(() => import('@features/settings/layout/SettingsLayout'));
 const SettingsGeneral = lazy(() => import('@features/settings/pages/GeneralSettingsTab/GeneralSettingsTab'));
-const SettingsFinance = lazy(() => import('@features/settings/pages/FinanceTab/FinanceTab'));
+const SettingsCurrency = lazy(() => import('@features/settings/pages/CurrencyTab/CurrencyTab'));
 const SettingsReservations = lazy(() => import('@features/settings/pages/ReservationsTab/ReservationsTab'));
 const SettingsStructure = lazy(() => import('@features/settings/pages/StructureTab/StructureTab'));
 const SettingsLocks = lazy(() => import('@features/settings/pages/LockTypesTab/LockTypesTab'));
 const SettingsIntegrations = lazy(() => import('@features/settings/pages/IntegrationsTab/IntegrationsTab'));
 const SettingsUsers = lazy(() => import('@features/settings/pages/UsersTab/UsersTab'));
-const SettingsSystem = lazy(() => import('@features/settings/pages/SystemTab/SystemTab'));
+const SettingsReception = lazy(() => import('@features/settings/pages/ReceptionTab/ReceptionTab'));
+const SettingsAudit = lazy(() => import('@features/settings/pages/AuditTab/AuditTab'));
+const SettingsHousekeeping = lazy(() => import('@features/settings/pages/HousekeepingTab/HousekeepingTab'));
+const SettingsMaintenance = lazy(() => import('@features/settings/pages/MaintenanceTab/MaintenanceTab'));
+const SettingsSecurity = lazy(() => import('@features/settings/pages/SecurityTab/SecurityTab'));
+const SettingsSystems = lazy(() => import('@features/settings/pages/SystemsTab/SystemsTab'));
 const SignaturesHistory = lazy(() => import('@features/systems/signatures/pages/SignaturesHistory'));
 const Habitaciones = lazy(() => import('@features/maintenance/pages/Habitaciones'));
 const LockTimelinePage = lazy(() => import('@features/systems/locks/pages/LockTimelinePage'));
 const LocksRackPage = lazy(() => import('@features/systems/locks/pages/LocksRackPage'));
 const VehicleControl = lazy(() => import('@features/security/pages/VehicleControl'));
 const Linen = lazy(() => import('@features/housekeeping/pages/Linen'));
+const HousekeepingPage = lazy(() => import('@features/housekeeping/pages/Housekeeping'));
 const MaidPanel = lazy(() => import('@features/housekeeping/pages/MaidPanel'));
 const InspectionPage = lazy(() => import('@features/housekeeping/pages/InspectionPage'));
 const IncidentsPage = lazy(() => import('@features/housekeeping/pages/IncidentsPage'));
@@ -72,13 +78,17 @@ export const protectedRoutes = [
         children: [
             { index: true, element: <Navigate to="general" replace /> },
             { path: 'general', element: <SettingsGeneral /> },
-            { path: 'finance', element: <SettingsFinance /> },
-            { path: 'reservations', element: <SettingsReservations /> },
+            { path: 'currency', element: <SettingsCurrency /> },
             { path: 'structure', element: <SettingsStructure /> },
-            { path: 'locks', element: <SettingsLocks /> },
             { path: 'integrations', element: <SettingsIntegrations /> },
             { path: 'users', element: <SettingsUsers /> },
-            { path: 'system', element: <SettingsSystem /> },
+            { path: 'reservations', element: <SettingsReservations /> },
+            { path: 'reception', element: <SettingsReception /> },
+            { path: 'audit', element: <SettingsAudit /> },
+            { path: 'housekeeping', element: <SettingsHousekeeping /> },
+            { path: 'maintenance', element: <SettingsMaintenance /> },
+            { path: 'security', element: <SettingsSecurity /> },
+            { path: 'systems', element: <SettingsSystems /> },
         ],
     },
 ];
