@@ -25,7 +25,7 @@ class MaintenanceCreate(BaseModel):
 
 
 class LockUpdate(BaseModel):
-    status: Optional[Literal["operational", "preventive", "failure", "out_of_service"]] = None
+    status: Optional[Literal["operational", "needs_review", "out_of_service"]] = None
     notes: Optional[str] = None
 
 
@@ -177,7 +177,7 @@ async def create_maintenance(
         # Update lock status to operational after reprogramming or mechanical repair
         if data.type in ("reprogramming", "mechanical"):
             cur.execute(
-                "UPDATE lock_assets SET status = 'operational' WHERE id = %s AND status = 'failure'",
+                "UPDATE lock_assets SET status = 'operational' WHERE id = %s AND status = 'needs_review'",
                 (lock_asset_id,),
             )
 
@@ -280,8 +280,7 @@ async def maintenance_stats(current_user: dict = Depends(get_current_user)):
                 "reprogrammings": by_type.get("reprogramming", 0),
                 "pending_reports": pending_reports,
                 "locks_operational": by_lock_status.get("operational", 0),
-                "locks_preventive": by_lock_status.get("preventive", 0),
-                "locks_failure": by_lock_status.get("failure", 0),
+                "locks_needs_review": by_lock_status.get("needs_review", 0),
                 "locks_out_of_service": by_lock_status.get("out_of_service", 0),
                 "by_module": by_module,
             },
@@ -480,7 +479,7 @@ async def create_report(
     data: ReportCreate,
     current_user: dict = Depends(require_permission("maintenance", "write")),
 ):
-    """Create an operational report. If lock_failure, updates lock_assets.status to 'failure'."""
+    """Create an operational report. If lock_failure, updates lock_assets.status to 'needs_review'."""
     conn = get_connection()
     try:
         cur = conn.cursor()
@@ -518,10 +517,10 @@ async def create_report(
         ))
         report_id = cur.fetchone()[0]
 
-        # Update lock status to failure
+        # Update lock status to needs_review
         if data.report_type == "lock_failure" and lock_asset_id:
             cur.execute(
-                "UPDATE lock_assets SET status = 'failure' WHERE id = %s",
+                "UPDATE lock_assets SET status = 'needs_review' WHERE id = %s",
                 (lock_asset_id,),
             )
 
@@ -544,7 +543,7 @@ async def resolve_report(
     data: ReportUpdate,
     current_user: dict = Depends(require_permission("maintenance", "write")),
 ):
-    """Resolve or mark a report as duplicate. If lock_failure, may restore lock status."""
+    """Resolve or mark a report as duplicate. If lock_failure, restores lock status to operational."""
     conn = get_connection()
     try:
         cur = conn.cursor()
@@ -582,39 +581,9 @@ async def resolve_report(
             )
             remaining = cur.fetchone()[0]
             if remaining == 0:
-                # Check battery status before deciding status
-                cur.execute("""
-                    SELECT r.last_battery_change FROM rooms r WHERE r.id = %s
-                """, (room_id,))
-                last_change = cur.fetchone()[0]
-
-                new_status = "operational"
-                if last_change:
-                    today = date.today()
-                    days_since = (today - last_change).days
-                    # Get avg days
-                    cur.execute("""
-                        SELECT performed_at FROM maintenance_logs
-                        WHERE room_id = %s AND type = 'battery'
-                        ORDER BY performed_at DESC LIMIT 4
-                    """, (room_id,))
-                    dates = [r[0] for r in cur.fetchall()]
-                    if len(dates) >= 2:
-                        intervals = []
-                        for i in range(len(dates) - 1):
-                            delta = (dates[i] - dates[i + 1]).days
-                            if delta > 0:
-                                intervals.append(delta)
-                        avg_days = int(sum(intervals) / len(intervals)) if intervals else 90
-                    else:
-                        avg_days = 90
-                    health = max(0, min(100, int(100 - (days_since / max(avg_days, 1)) * 100)))
-                    if health < 30:
-                        new_status = "preventive"
-
                 cur.execute(
-                    "UPDATE lock_assets SET status = %s WHERE id = %s",
-                    (new_status, lock_asset_id),
+                    "UPDATE lock_assets SET status = 'operational' WHERE id = %s",
+                    (lock_asset_id,),
                 )
 
         conn.commit()
@@ -755,8 +724,7 @@ async def list_locks(
     status: Optional[str] = None,
     current_user: dict = Depends(get_current_user),
 ):
-    """List lock assets mapped to rooms with latest maintenance context.
-    Auto-transitions operational locks to preventive if battery health < 30."""
+    """List lock assets mapped to rooms with latest maintenance context."""
     conn = get_connection()
     try:
         cur = conn.cursor()
@@ -778,10 +746,11 @@ async def list_locks(
                        ORDER BY ml.performed_at DESC, ml.created_at DESC
                        LIMIT 1
                    ) AS last_maintenance_type,
-                   (
-                       SELECT COUNT(*) FROM maintenance_logs ml
-                       WHERE ml.room_id = r.id
-                   ) AS events_count
+                    (
+                        SELECT COUNT(*) FROM maintenance_logs ml
+                        WHERE ml.room_id = r.id
+                    ) AS events_count,
+                    la.notes
             FROM rooms r
             JOIN floors f ON r.floor_id = f.id
             JOIN modules m ON f.module_id = m.id
@@ -807,40 +776,12 @@ async def list_locks(
         cur.execute(query, params)
         rows = cur.fetchall()
 
-        today = date.today()
         locks = []
-        locks_to_update = []
 
         for r in rows:
             lock_id = r[0]
             current_lock_status = r[2] if lock_id else "operational"
-            last_battery_change = r[13]
             room_id_val = r[3]
-
-            # Auto-transition: if operational and battery health < 30, set to preventive
-            if current_lock_status == "operational" and last_battery_change:
-                days_since = (today - last_battery_change).days
-                # Get avg days for this room
-                cur.execute("""
-                    SELECT performed_at FROM maintenance_logs
-                    WHERE room_id = %s AND type = 'battery'
-                    ORDER BY performed_at DESC LIMIT 4
-                """, (room_id_val,))
-                dates = [row[0] for row in cur.fetchall()]
-                if len(dates) >= 2:
-                    intervals = []
-                    for i in range(len(dates) - 1):
-                        delta = (dates[i] - dates[i + 1]).days
-                        if delta > 0:
-                            intervals.append(delta)
-                    avg_days = int(sum(intervals) / len(intervals)) if intervals else 90
-                else:
-                    avg_days = 90
-                health = max(0, min(100, int(100 - (days_since / max(avg_days, 1)) * 100)))
-                if health < 30:
-                    current_lock_status = "preventive"
-                    if lock_id:
-                        locks_to_update.append((lock_id, "preventive"))
 
             locks.append({
                 "id": lock_id,
@@ -860,19 +801,10 @@ async def list_locks(
                 "last_maintenance_at": r[14].isoformat() if r[14] else None,
                 "last_maintenance_type": r[15],
                 "events_count": r[16],
+                "notes": r[17] if len(r) > 17 else None,
             })
 
-        # Batch update locks that transitioned to preventive
-        for lid, new_status in locks_to_update:
-            cur.execute(
-                "UPDATE lock_assets SET status = %s WHERE id = %s",
-                (new_status, lid),
-            )
-
-        if locks_to_update:
-            conn.commit()
-        else:
-            conn.commit()  # commit anyway since we may have other side effects
+        conn.commit()
 
         return {"success": True, "locks": locks}
     except Exception:
@@ -890,7 +822,7 @@ async def list_lock_events(lock_id: int, current_user: dict = Depends(get_curren
     try:
         cur = conn.cursor()
         cur.execute("""
-            SELECT la.id, la.code, la.status, r.id, r.room_number,
+            SELECT la.id, la.code, la.status, la.notes, r.id, r.room_number,
                    f.code AS floor_code, m.name AS module_name
             FROM lock_assets la
             JOIN rooms r ON la.room_id = r.id
@@ -940,10 +872,11 @@ async def list_lock_events(lock_id: int, current_user: dict = Depends(get_curren
                 "id": lock_row[0],
                 "code": lock_row[1],
                 "status": lock_row[2],
-                "room_id": lock_row[3],
-                "room_number": lock_row[4],
-                "floor_code": lock_row[5],
-                "module_name": lock_row[6],
+                "notes": lock_row[3],
+                "room_id": lock_row[4],
+                "room_number": lock_row[5],
+                "floor_code": lock_row[6],
+                "module_name": lock_row[7],
                 "last_maintenance_at": last_row[0].isoformat() if last_row and last_row[0] else None,
                 "last_maintenance_type": last_row[1] if last_row else None,
             },
@@ -971,7 +904,7 @@ async def update_lock_asset(
         updates, params = [], []
 
         if data.status is not None:
-            if data.status not in ("operational", "preventive", "failure", "out_of_service"):
+            if data.status not in ("operational", "needs_review", "out_of_service"):
                 raise HTTPException(status_code=400, detail="Estado de cerradura inválido")
             updates.append("status = %s")
             params.append(data.status)

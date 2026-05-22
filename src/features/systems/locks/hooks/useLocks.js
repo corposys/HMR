@@ -40,8 +40,8 @@ export function useLocksOverview() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    const fetchLocksOverview = useCallback(async () => {
-        setLoading(true);
+    const fetchLocksOverview = useCallback(async (silent = false) => {
+        if (!silent) setLoading(true);
         setError(null);
         try {
             const [locksData, predictionsData] = await Promise.all([
@@ -58,7 +58,7 @@ export function useLocksOverview() {
         } catch (err) {
             setError(err.message || 'Error cargando cerraduras');
         } finally {
-            setLoading(false);
+            if (!silent) setLoading(false);
         }
     }, []);
 

@@ -9,9 +9,8 @@ import { LOCK_STATUS_LABELS } from '../utils/lockConstants';
 const STATUS_FILTERS = [
     { value: 'all', label: 'Todos' },
     { value: 'operational', label: 'Operativas' },
-    { value: 'preventive', label: 'Preventivas' },
-    { value: 'failure', label: 'Fallas' },
-    { value: 'out_of_service', label: 'Bloqueadas' },
+    { value: 'needs_review', label: 'Pend. revisión' },
+    { value: 'out_of_service', label: 'Fuera de servicio' },
 ];
 
 export default function LockRackHeader({
@@ -19,8 +18,6 @@ export default function LockRackHeader({
     operationalSummary,
     statusFilter,
     setStatusFilter,
-    failureCount,
-    outOfServiceCount,
     onOpenCreateEvent,
     onOpenReport,
     onOpenLockDetail
@@ -30,9 +27,8 @@ export default function LockRackHeader({
     const statsItems = [
         { label: 'total', value: operationalSummary?.total || 0, icon: Lock, color: 'text-cyan-400' },
         { label: 'operativas', value: operationalSummary?.healthy || 0, icon: CheckCircle2, color: 'text-emerald-400' },
-        { label: 'prev.', value: operationalSummary?.preventive || 0, icon: ShieldAlert, color: 'text-amber-400' },
-        { label: 'fallas', value: failureCount || 0, icon: TriangleAlert, color: 'text-red-400' },
-        { label: 'bloqueadas', value: outOfServiceCount || 0, icon: XCircle, color: 'text-zinc-400' },
+        { label: 'pend. revisión', value: operationalSummary?.needsReview || 0, icon: ShieldAlert, color: 'text-amber-400' },
+        { label: 'fuera de servicio', value: operationalSummary?.outOfService || 0, icon: XCircle, color: 'text-zinc-400' },
     ];
 
     return (
@@ -117,7 +113,7 @@ export default function LockRackHeader({
                                         ) : (
                                             priorityLocks.map((item) => {
                                                 const prediction = item.prediction;
-                                                const isCritical = item.status === 'failure' || (prediction && prediction.days_remaining <= 0);
+                                                const isCritical = item.status === 'out_of_service' || (prediction && prediction.days_remaining <= 0);
 
                                                 return (
                                                     <button

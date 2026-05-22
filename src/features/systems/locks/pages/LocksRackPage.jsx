@@ -1,6 +1,6 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { DoorOpen, Lock } from 'lucide-react';
+import { Lock } from 'lucide-react';
 import { apiFetch } from '@utils/api';
 import PageWrapper from '@shared/common/PageWrapper';
 import LoadingSpinner from '@shared/common/LoadingSpinner';
@@ -11,7 +11,7 @@ import { LockSummaryCard } from '@features/systems/locks/components/LockSharedCo
 import CreateLockEventModal from '@features/systems/locks/components/CreateLockEventModal';
 import LockRackHeader from '@features/systems/locks/components/LockRackHeader';
 import LockModuleTabs from '@features/systems/locks/components/LockModuleTabs';
-import LockTimelineModal from '@features/systems/locks/components/LockTimelineModal';
+import LockQuickModal from '@features/systems/locks/components/LockQuickModal';
 import ReportModal from '@features/systems/locks/components/ReportModal';
 
 export default function LocksRackPage() {
@@ -19,17 +19,18 @@ export default function LocksRackPage() {
     const { showToast } = useToast();
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
-    const [selectedLockId, setSelectedLockId] = useState(null);
-    const [selectedLock, setSelectedLock] = useState(null);
-    const [events, setEvents] = useState([]);
-    const [detailLoading, setDetailLoading] = useState(false);
     const [showCreate, setShowCreate] = useState(false);
-    const [showTimelineModal, setShowTimelineModal] = useState(false);
     const [showReport, setShowReport] = useState(false);
     const [activeModule, setActiveModule] = useState('todos');
     const [savingEvent, setSavingEvent] = useState(false);
     const [savingReport, setSavingReport] = useState(false);
     const [updatingStatus, setUpdatingStatus] = useState(false);
+
+    // Quick modal state
+    const [quickModalLock, setQuickModalLock] = useState(null);
+    const [quickModalEvents, setQuickModalEvents] = useState([]);
+    const [showQuickModal, setShowQuickModal] = useState(false);
+    const [quickModalLoading, setQuickModalLoading] = useState(false);
 
     const { locks, predictionsByRoom, loading, error, fetchLocksOverview } = useLocksOverview();
 
@@ -61,28 +62,33 @@ export default function LocksRackPage() {
         fetchLocksOverview();
     }, [fetchLocksOverview]);
 
-    const fetchLockDetail = async (lockId) => {
-        if (!lockId) {
+    const handleOpenQuickModal = useCallback(async (item) => {
+        setQuickModalLoading(true);
+        setShowQuickModal(true);
+        try {
+            const lockId = item.id;
+            if (lockId) {
+                const payload = await apiFetch(`/api/maintenance/locks/${lockId}/events`);
+                setQuickModalLock(payload.lock || item);
+                setQuickModalEvents(payload.events || []);
+            } else {
+                setQuickModalLock(item);
+                setQuickModalEvents([]);
+            }
+        } catch {
+            setQuickModalLock(item);
+            setQuickModalEvents([]);
+        } finally {
+            setQuickModalLoading(false);
+        }
+    }, []);
+
+    const openLockDetail = (roomId) => {
+        if (!roomId) {
             return;
         }
-        setDetailLoading(true);
-        try {
-            const payload = await apiFetch(`/api/maintenance/locks/${lockId}/events`);
-            setSelectedLock(payload.lock || null);
-            setEvents(payload.events || []);
-        } catch {
-            setSelectedLock(null);
-            setEvents([]);
-        } finally {
-            setDetailLoading(false);
-        }
+        navigate(`/systems/room/${roomId}`);
     };
-
-    useEffect(() => {
-        fetchLockDetail(selectedLockId);
-    }, [selectedLockId]);
-
-    const selectedPrediction = selectedLock ? predictionsByRoom[selectedLock.room_id] : null;
 
     const handleCreateEvent = async (data) => {
         setSavingEvent(true);
@@ -92,10 +98,7 @@ export default function LocksRackPage() {
                 body: JSON.stringify(data),
             });
             setShowCreate(false);
-            await fetchLocksOverview();
-            if (selectedLockId) {
-                await fetchLockDetail(selectedLockId);
-            }
+            await fetchLocksOverview(true);
         } catch {
             showToast({
                 title: 'Error',
@@ -107,19 +110,21 @@ export default function LocksRackPage() {
         }
     };
 
-    const handleUpdateLockStatus = async (status) => {
-        if (!selectedLockId || !selectedLock || selectedLock.status === status) {
+    const handleUpdateLockStatus = useCallback(async (lockId, status) => {
+        if (!lockId || !status) {
             return;
         }
-
         setUpdatingStatus(true);
         try {
-            await apiFetch(`/api/maintenance/locks/${selectedLockId}`, {
+            await apiFetch(`/api/maintenance/locks/${lockId}`, {
                 method: 'PATCH',
                 body: JSON.stringify({ status }),
             });
-            await fetchLocksOverview();
-            await fetchLockDetail(selectedLockId);
+            await fetchLocksOverview(true);
+            if (quickModalLock?.id === lockId) {
+                const payload = await apiFetch(`/api/maintenance/locks/${lockId}/events`);
+                setQuickModalLock(payload.lock || quickModalLock);
+            }
         } catch {
             showToast({
                 title: 'Error',
@@ -129,14 +134,35 @@ export default function LocksRackPage() {
         } finally {
             setUpdatingStatus(false);
         }
-    };
+    }, [fetchLocksOverview, quickModalLock]);
 
-    const openLockDetail = (roomId) => {
-        if (!roomId) {
-            return;
+    const refreshQuickModal = useCallback(async () => {
+        if (!quickModalLock?.id) return;
+        try {
+            const payload = await apiFetch(`/api/maintenance/locks/${quickModalLock.id}/events`);
+            setQuickModalLock(payload.lock || quickModalLock);
+            setQuickModalEvents(payload.events || []);
+        } catch {
+            // silently fail
         }
-        navigate(`/systems/room/${roomId}`);
-    };
+    }, [quickModalLock]);
+
+    const handleToggleReviewStatus = useCallback(async (lockId, currentStatus) => {
+        const newStatus = currentStatus === 'needs_review' ? 'operational' : 'needs_review';
+        try {
+            await apiFetch(`/api/maintenance/locks/${lockId}`, {
+                method: 'PATCH',
+                body: JSON.stringify({ status: newStatus }),
+            });
+            await fetchLocksOverview(true);
+        } catch {
+            showToast({
+                title: 'Error',
+                message: 'No se pudo actualizar el estado',
+                type: 'error',
+            });
+        }
+    }, [fetchLocksOverview]);
 
     const handleCreateReport = async (data) => {
         setSavingReport(true);
@@ -146,7 +172,7 @@ export default function LocksRackPage() {
                 body: JSON.stringify(data),
             });
             setShowReport(false);
-            await fetchLocksOverview();
+            await fetchLocksOverview(true);
             showToast({
                 title: 'Reporte creado',
                 message: 'El reporte ha sido registrado exitosamente',
@@ -181,16 +207,11 @@ export default function LocksRackPage() {
                     operationalSummary={operationalSummary}
                     statusFilter={statusFilter}
                     setStatusFilter={setStatusFilter}
-                    failureCount={filteredLocks.filter((item) => item.status === 'failure').length}
-                    outOfServiceCount={filteredLocks.filter((item) => item.status === 'out_of_service').length}
                     onOpenCreateEvent={() => {
-                        setSelectedLockId(null);
-                        setSelectedLock(null);
                         setShowCreate(true);
                     }}
                     onOpenReport={() => setShowReport(true)}
                     onOpenLockDetail={openLockDetail}
-                    onRefresh={fetchLocksOverview}
                 />
 
                 {error && (
@@ -205,7 +226,7 @@ export default function LocksRackPage() {
                     onModuleChange={setActiveModule}
                     search={search}
                     setSearch={setSearch}
-                    onRefresh={fetchLocksOverview}
+                    onRefresh={() => fetchLocksOverview(true)}
                 />
 
                 {/* ── Rack ── */}
@@ -220,7 +241,14 @@ export default function LocksRackPage() {
                     ) : (
                         <div className="grid gap-2 auto-rows-fr [grid-template-columns:repeat(auto-fill,minmax(160px,1fr))]">
                             {displayedRooms.map((item) => (
-                                <LockSummaryCard key={item.id} item={item} prediction={item.prediction} onOpen={openLockDetail} />
+                                <LockSummaryCard
+                                    key={item.id}
+                                    item={item}
+                                    prediction={item.prediction}
+                                    onOpen={handleOpenQuickModal}
+                                    onOpenDetail={openLockDetail}
+                                    onToggleStatus={handleToggleReviewStatus}
+                                />
                             ))}
                         </div>
                     )}
@@ -232,25 +260,23 @@ export default function LocksRackPage() {
                     onSave={handleCreateEvent}
                     onCancel={() => setShowCreate(false)}
                     saving={savingEvent}
-                    initialRoomId={selectedLock?.room_id ?? null}
-                    lockRoomSelection={Boolean(selectedLock)}
                 />
             )}
 
-            {showTimelineModal && selectedLock && (
-                <LockTimelineModal
-                    selectedLock={selectedLock}
-                    events={events}
-                    selectedPrediction={selectedPrediction}
-                    detailLoading={detailLoading}
-                    onClose={() => setShowTimelineModal(false)}
-                    onCreateEvent={() => {
-                        setShowTimelineModal(false);
-                        setShowCreate(true);
+            {showQuickModal && quickModalLock && (
+                <LockQuickModal
+                    lock={quickModalLock}
+                    prediction={predictionsByRoom[quickModalLock.room_id]}
+                    events={quickModalEvents}
+                    onClose={() => {
+                        setShowQuickModal(false);
+                        setQuickModalLock(null);
+                        setQuickModalEvents([]);
                     }}
-                    onRefresh={() => fetchLockDetail(selectedLockId)}
                     onUpdateStatus={handleUpdateLockStatus}
-                    updatingStatus={updatingStatus}
+                    onOpenDetail={openLockDetail}
+                    onRefresh={refreshQuickModal}
+                    updatingStatus={quickModalLoading || updatingStatus}
                 />
             )}
 

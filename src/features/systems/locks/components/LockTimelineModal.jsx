@@ -1,7 +1,8 @@
-import React from 'react';
-import { DoorOpen, Plus, RefreshCw, ShieldAlert, Calendar, Battery, User, BatteryFull, AlertCircle, Radio, Wrench } from 'lucide-react';
+import React, { useState } from 'react';
+import { DoorOpen, Plus, RefreshCw, ShieldAlert, Calendar, Battery, User, BatteryFull, AlertCircle, Radio, Wrench, StickyNote, Edit3, Save, X } from 'lucide-react';
 import Modal from '@shared/common/Modal';
 import LoadingSpinner from '@shared/common/LoadingSpinner';
+import { apiFetch } from '@utils/api';
 import { LOCK_STATUS_STYLES, LOCK_STATUS_LABELS } from '../utils/lockConstants';
 import { formatShortDate } from '../utils/lockHelpers';
 
@@ -13,10 +14,33 @@ export default function LockTimelineModal({
     onClose,
     onCreateEvent,
     onRefresh,
-    onUpdateStatus,
-    updatingStatus,
 }) {
+    const [editingNotes, setEditingNotes] = useState(false);
+    const [localNotes, setLocalNotes] = useState(selectedLock?.notes || '');
+    const [savingNotes, setSavingNotes] = useState(false);
+
     if (!selectedLock) return null;
+
+    const handleSaveNotes = async () => {
+        setSavingNotes(true);
+        try {
+            await apiFetch(`/api/maintenance/locks/${selectedLock.id}`, {
+                method: 'PATCH',
+                body: JSON.stringify({ notes: localNotes }),
+            });
+            setEditingNotes(false);
+            if (onRefresh) onRefresh();
+        } catch {
+            // silently fail
+        } finally {
+            setSavingNotes(false);
+        }
+    };
+
+    const handleCancelNotes = () => {
+        setLocalNotes(selectedLock.notes || '');
+        setEditingNotes(false);
+    };
 
     return (
         <Modal isOpen={true} onClose={onClose} size="xl">
@@ -155,52 +179,87 @@ export default function LockTimelineModal({
                         </div>
 
                         <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-primary)]/40 p-3.5">
-                            <div className="mb-2.5 flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wider text-[var(--color-text-primary)] sm:text-[10px]">
-                                <AlertCircle className="h-3 w-3 text-[var(--color-primary)]" />
-                                Estado actual
-                            </div>
-                            <div className="flex flex-wrap gap-1.5">
-                                {Object.entries(LOCK_STATUS_LABELS).map(([value, label]) => {
-                                    const active = selectedLock.status === value;
-                                    return (
-                                        <button
-                                            key={value}
-                                            type="button"
-                                            onClick={() => onUpdateStatus(value)}
-                                            disabled={updatingStatus}
-                                            className={`rounded-lg border px-2.5 py-1.5 text-[9px] font-semibold uppercase tracking-wide transition-all sm:text-[10px] ${active
-                                                ? `${LOCK_STATUS_STYLES[value]} ring-1 ring-inset ring-current/20 shadow-sm`
-                                                : 'border-[var(--color-border)] bg-[var(--color-bg-primary)]/30 text-[var(--color-text-secondary)] hover:border-[var(--color-border-hover)] hover:bg-[var(--color-bg-primary)]'
-                                                }`}
-                                        >
-                                            {label}
-                                        </button>
-                                    );
-                                })}
+                            <div className="mb-2.5 flex items-center justify-between text-[9px] font-bold uppercase tracking-wider text-[var(--color-text-primary)] sm:text-[10px]">
+                                <span className="flex items-center gap-1.5">
+                                    <AlertCircle className="h-3 w-3 text-[var(--color-primary)]" />
+                                    Estado y resumen
+                                </span>
                             </div>
 
-                            <div className="mt-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-primary)]/35 p-3.5">
-                                <div className="mb-2 flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wider text-[var(--color-text-primary)] sm:text-[10px]">
-                                    <ShieldAlert className="h-3 w-3 text-[var(--color-primary)]" />
-                                    Resumen
+                            {selectedLock.notes && !editingNotes && (
+                                <div className="mb-3 rounded-lg border border-[var(--color-border)]/60 bg-[var(--color-bg-primary)]/30 p-2.5">
+                                    <div className="flex items-center gap-1.5 text-[8px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)] mb-1.5">
+                                        <StickyNote className="h-3 w-3" />
+                                        Nota guardada
+                                    </div>
+                                    <p className="text-[10px] leading-relaxed text-[var(--color-text-secondary)]">{selectedLock.notes}</p>
                                 </div>
-                                <div className="grid gap-1.5 sm:grid-cols-2">
-                                    <div className="flex items-center justify-between rounded-lg bg-[var(--color-bg-secondary)] px-3 py-2 border border-[var(--color-border)]/50 sm:col-span-2">
-                                        <span className="text-[9px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]">Total eventos</span>
-                                        <span className="text-sm font-bold text-[var(--color-text-primary)]">{events.length}</span>
+                            )}
+
+                            {!editingNotes ? (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setLocalNotes(selectedLock.notes || '');
+                                        setEditingNotes(true);
+                                    }}
+                                    className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-[var(--color-border)] bg-[var(--color-bg-primary)]/20 px-3 py-2 text-[10px] font-medium text-[var(--color-text-secondary)] transition-all hover:border-[var(--color-primary)]/40 hover:text-[var(--color-primary)] w-full justify-center"
+                                >
+                                    <Edit3 className="h-3 w-3" />
+                                    {selectedLock.notes ? 'Editar observación' : 'Agregar observación'}
+                                </button>
+                            ) : (
+                                <div className="space-y-2">
+                                    <textarea
+                                        value={localNotes}
+                                        onChange={(e) => setLocalNotes(e.target.value)}
+                                        rows={3}
+                                        placeholder="Ej: Marco desalineado, hay que empujar la puerta con fuerza..."
+                                        className="w-full px-3 py-2 text-sm bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded-lg text-[var(--color-text-primary)] focus:border-[var(--color-primary)] focus:outline-none resize-none placeholder:text-[var(--color-text-muted)]"
+                                    />
+                                    <div className="flex gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={handleSaveNotes}
+                                            disabled={savingNotes}
+                                            className="flex-1 py-1.5 text-xs font-medium rounded-lg bg-[var(--color-primary)] hover:bg-[var(--color-primary-light)] text-white flex items-center justify-center gap-1.5 transition-colors disabled:opacity-60"
+                                        >
+                                            {savingNotes ? (
+                                                <span className="animate-spin w-3 h-3 border-2 border-white border-t-transparent rounded-full" />
+                                            ) : (
+                                                <Save className="w-3 h-3" />
+                                            )}
+                                            Guardar
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={handleCancelNotes}
+                                            disabled={savingNotes}
+                                            className="flex-1 py-1.5 text-xs font-medium rounded-lg border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-primary)] flex items-center justify-center gap-1.5 transition-colors disabled:opacity-60"
+                                        >
+                                            <X className="w-3 h-3" />
+                                            Cancelar
+                                        </button>
                                     </div>
-                                    <div className="flex items-center justify-between rounded-lg bg-[var(--color-bg-secondary)] px-3 py-2 border border-[var(--color-border)]/50">
-                                        <span className="text-[9px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]">Último evento</span>
-                                        <span className="text-[10px] font-bold text-[var(--color-text-primary)]">{events.length > 0 ? formatShortDate(events[0].performed_at) : '—'}</span>
-                                    </div>
-                                    <div className="flex items-center justify-between rounded-lg bg-[var(--color-bg-secondary)] px-3 py-2 border border-[var(--color-border)]/50">
-                                        <span className="text-[9px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]">Últ. mant.</span>
-                                        <span className="text-[10px] font-bold text-[var(--color-text-primary)]">{formatShortDate(selectedLock.last_maintenance_at)}</span>
-                                    </div>
-                                    <div className="flex items-center justify-between rounded-lg bg-[var(--color-bg-secondary)] px-3 py-2 border border-[var(--color-border)]/50 sm:col-span-2">
-                                        <span className="text-[9px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]">Últ. tipo</span>
-                                        <span className="text-[10px] font-bold text-[var(--color-text-primary)]">{selectedLock.last_maintenance_type || '—'}</span>
-                                    </div>
+                                </div>
+                            )}
+
+                            <div className="mt-3 grid gap-1.5">
+                                <div className="flex items-center justify-between rounded-lg bg-[var(--color-bg-secondary)] px-3 py-2 border border-[var(--color-border)]/50">
+                                    <span className="text-[9px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]">Total eventos</span>
+                                    <span className="text-sm font-bold text-[var(--color-text-primary)]">{events.length}</span>
+                                </div>
+                                <div className="flex items-center justify-between rounded-lg bg-[var(--color-bg-secondary)] px-3 py-2 border border-[var(--color-border)]/50">
+                                    <span className="text-[9px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]">Último evento</span>
+                                    <span className="text-[10px] font-bold text-[var(--color-text-primary)]">{events.length > 0 ? formatShortDate(events[0].performed_at) : '—'}</span>
+                                </div>
+                                <div className="flex items-center justify-between rounded-lg bg-[var(--color-bg-secondary)] px-3 py-2 border border-[var(--color-border)]/50">
+                                    <span className="text-[9px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]">Últ. mant.</span>
+                                    <span className="text-[10px] font-bold text-[var(--color-text-primary)]">{formatShortDate(selectedLock.last_maintenance_at)}</span>
+                                </div>
+                                <div className="flex items-center justify-between rounded-lg bg-[var(--color-bg-secondary)] px-3 py-2 border border-[var(--color-border)]/50">
+                                    <span className="text-[9px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]">Últ. tipo</span>
+                                    <span className="text-[10px] font-bold text-[var(--color-text-primary)]">{selectedLock.last_maintenance_type || '—'}</span>
                                 </div>
                             </div>
                         </div>

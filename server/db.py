@@ -228,7 +228,7 @@ def _create_tables(cur):
             room_id       INTEGER NOT NULL UNIQUE REFERENCES rooms(id) ON DELETE CASCADE,
             code          VARCHAR(40) UNIQUE,
             status        VARCHAR(20) NOT NULL DEFAULT 'operational'
-                CHECK (status IN ('operational', 'preventive', 'failure', 'out_of_service')),
+                CHECK (status IN ('operational', 'needs_review', 'out_of_service')),
             installed_at  DATE,
             notes         TEXT,
             created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -505,7 +505,27 @@ def _create_tables(cur):
 def _run_migrations(cur):
     cur.execute("ALTER TABLE maintenance_logs ADD COLUMN IF NOT EXISTS lock_asset_id INTEGER REFERENCES lock_assets(id) ON DELETE SET NULL")
     cur.execute("ALTER TABLE lock_assets ADD COLUMN IF NOT EXISTS code VARCHAR(40) UNIQUE")
-    cur.execute("ALTER TABLE lock_assets ADD COLUMN IF NOT EXISTS status VARCHAR(20) NOT NULL DEFAULT 'operational' CHECK (status IN ('operational', 'preventive', 'failure', 'out_of_service'))")
+    cur.execute("ALTER TABLE lock_assets ADD COLUMN IF NOT EXISTS status VARCHAR(20) NOT NULL DEFAULT 'operational'")
+    cur.execute("""
+        DO $$
+        BEGIN
+            -- Migrate old statuses to new ones
+            UPDATE lock_assets SET status = 'needs_review' WHERE status IN ('preventive', 'failure');
+
+            -- Drop old status CHECK constraint if it exists
+            IF EXISTS (
+                SELECT 1 FROM pg_constraint
+                WHERE conname LIKE 'lock_assets_status_check%'
+                AND conrelid = 'lock_assets'::regclass
+            ) THEN
+                ALTER TABLE lock_assets DROP CONSTRAINT lock_assets_status_check;
+            END IF;
+
+            -- Add new CHECK constraint
+            ALTER TABLE lock_assets ADD CONSTRAINT lock_assets_status_check
+                CHECK (status IN ('operational', 'needs_review', 'out_of_service'));
+        END $$;
+    """)
     cur.execute("ALTER TABLE lock_assets ADD COLUMN IF NOT EXISTS installed_at DATE")
     cur.execute("ALTER TABLE lock_assets ADD COLUMN IF NOT EXISTS notes TEXT")
     cur.execute("ALTER TABLE rooms ADD COLUMN IF NOT EXISTS room_type_id INTEGER REFERENCES room_types(id) ON DELETE SET NULL")

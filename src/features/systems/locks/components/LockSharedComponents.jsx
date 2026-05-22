@@ -1,5 +1,5 @@
 import React from 'react';
-import { Battery, Calendar, ShieldAlert, AlertCircle, ChevronRight } from 'lucide-react';
+import { Battery, Calendar, ShieldAlert, AlertCircle, Flag, Search, StickyNote } from 'lucide-react';
 import { LOCK_STATUS_LABELS, LOCK_STATUS_DOT_STYLES } from '../utils/lockConstants';
 import { formatShortDate, formatFloorCode } from '../utils/lockHelpers';
 
@@ -51,7 +51,7 @@ export function SectionTitle({ icon: Icon, title, rightElement }) {
     );
 }
 
-export function LockSummaryCard({ item, prediction, onOpen, showFloorBadge = true }) {
+export function LockSummaryCard({ item, prediction, onOpen, onToggleStatus, onOpenDetail, showFloorBadge = true }) {
     const statusKey = item.status || 'operational';
     const statusDotClass = LOCK_STATUS_DOT_STYLES[statusKey] || LOCK_STATUS_DOT_STYLES.operational;
     const healthScore = prediction?.health_score ?? null;
@@ -66,10 +66,9 @@ export function LockSummaryCard({ item, prediction, onOpen, showFloorBadge = tru
                 : 'text-emerald-400';
 
     return (
-        <button
-            type="button"
-            onClick={() => onOpen(item.room_id || item.id)}
-            className="group relative rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-2.5 text-left transition-all hover:border-[var(--color-primary)]/50 hover:bg-[var(--color-bg-tertiary)] hover:shadow-md flex flex-col min-h-[130px]"
+        <div
+            className="relative rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-2.5 transition-all hover:border-[var(--color-primary)]/50 hover:bg-[var(--color-bg-tertiary)] hover:shadow-md flex flex-col min-h-[130px] cursor-pointer"
+            onClick={() => onOpen(item)}
         >
             <div className="flex items-start justify-between">
                 <div className="flex flex-col items-start">
@@ -83,15 +82,20 @@ export function LockSummaryCard({ item, prediction, onOpen, showFloorBadge = tru
                     </div>
 
                     <div className="mt-1">
-                        <p className="text-base font-bold leading-tight text-[var(--color-text-primary)] text-center w-full">{item.room_number}</p>
+                        <p className="text-base font-bold leading-tight text-[var(--color-text-primary)]">{item.room_number}</p>
                     </div>
                 </div>
 
-                <span
-                    className={`mt-0.5 inline-flex h-2.5 w-2.5 rounded-full ${statusDotClass}`}
-                    aria-label={LOCK_STATUS_LABELS[statusKey] || LOCK_STATUS_LABELS.operational}
-                    title={LOCK_STATUS_LABELS[statusKey] || LOCK_STATUS_LABELS.operational}
-                />
+                <div className="flex items-start gap-1">
+                    {item.notes && (
+                        <StickyNote className="h-3 w-3 text-[var(--color-primary)] mt-1" title="Tiene observaciones" />
+                    )}
+                    <span
+                        className={`mt-0.5 inline-flex h-2.5 w-2.5 rounded-full ${statusDotClass}`}
+                        aria-label={LOCK_STATUS_LABELS[statusKey] || LOCK_STATUS_LABELS.operational}
+                        title={LOCK_STATUS_LABELS[statusKey] || LOCK_STATUS_LABELS.operational}
+                    />
+                </div>
             </div>
 
             <div className="flex-1 flex flex-col justify-center gap-1.5 mt-2">
@@ -134,10 +138,42 @@ export function LockSummaryCard({ item, prediction, onOpen, showFloorBadge = tru
                 </span>
             </div>
 
-            <div className="absolute right-2.5 top-2.5 opacity-0 transition-opacity group-hover:opacity-100">
-                <ChevronRight className="h-3.5 w-3.5 text-[var(--color-primary)]" />
+            {/* Hover actions */}
+            <div className="absolute inset-x-0 bottom-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                <div className="flex items-center justify-end gap-1.5 p-2 pointer-events-auto">
+                    {onToggleStatus && (
+                        <button
+                            type="button"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onToggleStatus(item.id, statusKey === 'needs_review' ? 'operational' : 'needs_review');
+                            }}
+                            className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-[9px] font-semibold uppercase tracking-wide transition-all shadow-sm ${
+                                statusKey === 'needs_review'
+                                    ? 'bg-amber-500/20 border border-amber-500/40 text-amber-400'
+                                    : 'bg-[var(--color-bg-primary)]/90 border border-[var(--color-border)]/60 text-[var(--color-text-secondary)] hover:border-[var(--color-border-hover)] hover:text-[var(--color-text-primary)]'
+                            }`}
+                        >
+                            <Flag className="h-3 w-3" />
+                            {statusKey === 'needs_review' ? 'Desmarcar' : 'Marcar'}
+                        </button>
+                    )}
+                    {onOpenDetail && (
+                        <button
+                            type="button"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onOpenDetail(item.room_id || item.id);
+                            }}
+                            className="inline-flex items-center gap-1 rounded-md bg-[var(--color-primary)]/90 hover:bg-[var(--color-primary)] text-white px-2 py-1 text-[9px] font-semibold uppercase tracking-wide transition-all shadow-sm"
+                        >
+                            <Search className="h-3 w-3" />
+                            Ver detalles
+                        </button>
+                    )}
+                </div>
             </div>
-        </button>
+        </div>
     );
 }
 

@@ -154,15 +154,15 @@ export function useLockRackData(locks, predictionsByRoom, search, statusFilter) 
 
     const operationalSummary = useMemo(() => {
         const total = filteredLocks.length;
-        const critical = filteredLocks.filter((item) => item.status === 'failure' || item.status === 'out_of_service').length;
-        const preventive = filteredLocks.filter((item) => item.status === 'preventive').length;
+        const needsReview = filteredLocks.filter((item) => item.status === 'needs_review').length;
+        const outOfService = filteredLocks.filter((item) => item.status === 'out_of_service').length;
         const healthy = filteredLocks.filter((item) => item.status === 'operational').length;
         const overdue = filteredLocks.filter((item) => {
             const prediction = predictionsByRoom[item.room_id];
-            return item.status === 'failure' || item.status === 'out_of_service' || (prediction && prediction.days_remaining <= 0);
+            return item.status === 'out_of_service' || (prediction && prediction.days_remaining <= 0);
         }).length;
 
-        return { total, critical, preventive, healthy, overdue };
+        return { total, needsReview, outOfService, healthy, overdue };
     }, [filteredLocks, predictionsByRoom]);
 
     const priorityLocks = useMemo(() => {

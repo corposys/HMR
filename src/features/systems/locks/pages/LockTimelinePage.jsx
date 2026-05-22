@@ -6,7 +6,6 @@ import {
     Calendar,
     DoorOpen,
     ShieldAlert,
-    User,
     Plus,
     RefreshCw,
     AlertCircle,
@@ -17,13 +16,17 @@ import {
     MapPin,
     Hash,
     Radio,
+    StickyNote,
+    Edit3,
+    Save,
+    X,
 } from 'lucide-react';
 import { apiFetch } from '@utils/api';
 import LoadingSpinner from '@shared/common/LoadingSpinner';
 import Button from '@shared/common/Button';
 import { Card, CardHeader } from '@/components/ui/card';
 import CreateLockEventModal from '@features/systems/locks/components/CreateLockEventModal';
-import { LOCK_STATUS_STYLES, LOCK_STATUS_LABELS, LOCK_STATUS_DOT_STYLES } from '@features/systems/locks/utils/lockConstants';
+import { LOCK_STATUS_LABELS, LOCK_STATUS_DOT_STYLES } from '@features/systems/locks/utils/lockConstants';
 import { formatDate } from '@features/systems/locks/utils/lockHelpers';
 import { HealthBar, DetailMetric, SectionTitle } from '@features/systems/locks/components/LockSharedComponents';
 
@@ -38,7 +41,9 @@ export default function LockTimelinePage() {
     const [error, setError] = useState('');
     const [showCreate, setShowCreate] = useState(false);
     const [savingEvent, setSavingEvent] = useState(false);
-    const [updatingStatus, setUpdatingStatus] = useState(false);
+    const [editingNotes, setEditingNotes] = useState(false);
+    const [localNotes, setLocalNotes] = useState('');
+    const [savingNotes, setSavingNotes] = useState(false);
 
     const roomId = Number(id);
 
@@ -83,6 +88,10 @@ export default function LockTimelinePage() {
         fetchDetail();
     }, [fetchDetail]);
 
+    useEffect(() => {
+        setLocalNotes(lock?.notes || '');
+    }, [lock?.notes]);
+
     const orderedEvents = useMemo(() => {
         return [...events].sort((a, b) => new Date(b.performed_at) - new Date(a.performed_at));
     }, [events]);
@@ -112,24 +121,26 @@ export default function LockTimelinePage() {
         }
     };
 
-    const handleUpdateLockStatus = async (status) => {
-        if (!lock?.id || lock.status === status) {
-            return;
-        }
-
-        setUpdatingStatus(true);
+    const handleSaveNotes = async () => {
+        if (!lock?.id) return;
+        setSavingNotes(true);
         try {
             await apiFetch(`/api/maintenance/locks/${lock.id}`, {
                 method: 'PATCH',
-                body: JSON.stringify({ status }),
+                body: JSON.stringify({ notes: localNotes }),
             });
-
+            setEditingNotes(false);
             await fetchDetail();
         } catch {
-            // Keep current status rendered if request fails.
+            // silently fail
         } finally {
-            setUpdatingStatus(false);
+            setSavingNotes(false);
         }
+    };
+
+    const handleCancelNotes = () => {
+        setLocalNotes(lock?.notes || '');
+        setEditingNotes(false);
     };
 
     if (loading) {
@@ -223,31 +234,63 @@ export default function LockTimelinePage() {
                         <section className="overflow-hidden rounded-xl border border-[var(--color-border)]/80 bg-[var(--color-bg-secondary)] shadow-sm">
                             <SectionTitle icon={ShieldAlert} title="Estado y resumen" />
                             <div className="p-3 space-y-3">
-                                <div className="rounded-lg border border-[var(--color-border)]/60 bg-[var(--color-bg-primary)]/30 p-2.5">
-                                    <div className="mb-2 flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-[var(--color-text-muted)]">
-                                        <Activity className="h-3 w-3" />
-                                        <span>Estado actual</span>
+                                {lock?.notes ? (
+                                    <div className="rounded-lg border border-[var(--color-border)]/60 bg-[var(--color-bg-primary)]/30 p-2.5">
+                                        <div className="flex items-center gap-1.5 text-[8px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)] mb-1.5">
+                                            <StickyNote className="h-3 w-3" />
+                                            Observación
+                                        </div>
+                                        <p className="text-[11px] leading-relaxed text-[var(--color-text-secondary)]">{lock.notes}</p>
                                     </div>
-                                    <div className="flex flex-wrap gap-1.5">
-                                        {Object.entries(LOCK_STATUS_LABELS).map(([value, label]) => {
-                                            const active = lock?.status === value;
-                                            return (
-                                                <button
-                                                    key={value}
-                                                    type="button"
-                                                    onClick={() => handleUpdateLockStatus(value)}
-                                                    disabled={!lock?.id || updatingStatus}
-                                                    className={`rounded-md border px-2 py-1 text-[10px] uppercase tracking-wide font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${active
-                                                        ? `${LOCK_STATUS_STYLES[value]}`
-                                                        : 'border-[var(--color-border)]/60 bg-[var(--color-bg-primary)]/30 text-[var(--color-text-secondary)] hover:border-[var(--color-border-hover)] hover:text-[var(--color-text-primary)]'
-                                                        }`}
-                                                >
-                                                    {label}
-                                                </button>
-                                            );
-                                        })}
+                                ) : null}
+
+                                {!editingNotes ? (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setLocalNotes(lock?.notes || '');
+                                            setEditingNotes(true);
+                                        }}
+                                        className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-[var(--color-border)] bg-[var(--color-bg-primary)]/20 px-3 py-2 text-[10px] font-medium text-[var(--color-text-secondary)] transition-all hover:border-[var(--color-primary)]/40 hover:text-[var(--color-primary)] w-full justify-center"
+                                    >
+                                        <Edit3 className="h-3 w-3" />
+                                        {lock?.notes ? 'Editar observación' : 'Agregar observación'}
+                                    </button>
+                                ) : (
+                                    <div className="space-y-2">
+                                        <textarea
+                                            value={localNotes}
+                                            onChange={(e) => setLocalNotes(e.target.value)}
+                                            rows={3}
+                                            placeholder="Ej: Marco desalineado, hay que empujar la puerta con fuerza..."
+                                            className="w-full px-3 py-2 text-sm bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded-lg text-[var(--color-text-primary)] focus:border-[var(--color-primary)] focus:outline-none resize-none placeholder:text-[var(--color-text-muted)]"
+                                        />
+                                        <div className="flex gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={handleSaveNotes}
+                                                disabled={savingNotes}
+                                                className="flex-1 py-1.5 text-xs font-medium rounded-lg bg-[var(--color-primary)] hover:bg-[var(--color-primary-light)] text-white flex items-center justify-center gap-1.5 transition-colors disabled:opacity-60"
+                                            >
+                                                {savingNotes ? (
+                                                    <span className="animate-spin w-3 h-3 border-2 border-white border-t-transparent rounded-full" />
+                                                ) : (
+                                                    <Save className="w-3 h-3" />
+                                                )}
+                                                Guardar
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={handleCancelNotes}
+                                                disabled={savingNotes}
+                                                className="flex-1 py-1.5 text-xs font-medium rounded-lg border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-primary)] flex items-center justify-center gap-1.5 transition-colors disabled:opacity-60"
+                                            >
+                                                <X className="w-3 h-3" />
+                                                Cancelar
+                                            </button>
+                                        </div>
                                     </div>
-                                </div>
+                                )}
 
                                 <div className="grid gap-2 grid-cols-2 sm:grid-cols-3">
                                     <DetailMetric label="Módulo" value={lock?.module_name || '—'} icon={DoorOpen} />
@@ -272,76 +315,66 @@ export default function LockTimelinePage() {
                             }
                         />
 
-                        <div className="p-4 flex-1">
-                            {orderedEvents.length === 0 ? (
-                                <div className="flex h-full min-h-[300px] flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-[var(--color-border)]/80 bg-[var(--color-bg-primary)]/20 text-center">
-                                    <Calendar className="h-8 w-8 text-[var(--color-text-muted)] opacity-50" />
-                                    <p className="text-xs text-[var(--color-text-secondary)]">Esta cerradura aún no tiene eventos registrados.</p>
-                                </div>
-                            ) : (
-                                <div className="relative space-y-0 before:absolute before:inset-y-0 before:left-4 before:w-px before:border-l before:border-dashed before:border-[var(--color-border)]/60">
-                                    {orderedEvents.map((event, index) => {
-                                        const eventType = event.type === 'battery' ? 'battery' : event.type === 'reprogramming' ? 'reprogramming' : 'mechanical';
-                                        const eventColors = {
-                                            battery: { border: 'border-emerald-500/30', bg: 'bg-emerald-500/15', text: 'text-emerald-400', icon: Battery },
-                                            reprogramming: { border: 'border-purple-500/30', bg: 'bg-purple-500/15', text: 'text-purple-400', icon: Radio },
-                                            mechanical: { border: 'border-amber-500/30', bg: 'bg-amber-500/15', text: 'text-amber-400', icon: Wrench },
-                                        };
-                                        const EventIcon = eventColors[eventType].icon;
-                                        const isLast = index === orderedEvents.length - 1;
+                        {orderedEvents.length === 0 ? (
+                            <div className="flex h-72 flex-col items-center justify-center gap-3 text-center">
+                                <Calendar className="h-8 w-8 text-[var(--color-text-muted)] opacity-50" />
+                                <p className="text-xs text-[var(--color-text-secondary)]">Esta cerradura aún no tiene eventos registrados.</p>
+                            </div>
+                        ) : (
+                            <div className="w-full overflow-x-auto">
+                                <table className="w-full text-left text-sm text-[var(--color-text-secondary)]">
+                                    <thead className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]">
+                                        <tr>
+                                            <th scope="col" className="px-4 py-3 font-medium whitespace-nowrap">Tipo</th>
+                                            <th scope="col" className="px-4 py-3 font-medium">Descripción</th>
+                                            <th scope="col" className="px-4 py-3 font-medium whitespace-nowrap hidden md:table-cell">Pieza</th>
+                                            <th scope="col" className="px-4 py-3 font-medium whitespace-nowrap">Fecha</th>
+                                            <th scope="col" className="px-4 py-3 font-medium whitespace-nowrap hidden sm:table-cell">Técnico</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-[var(--color-border)]">
+                                        {orderedEvents.map((event) => {
+                                            const eventType = event.type === 'battery' ? 'battery' : event.type === 'reprogramming' ? 'reprogramming' : 'mechanical';
+                                            const eventColors = {
+                                                battery: { border: 'border-emerald-500/30', bg: 'bg-emerald-500/15', text: 'text-emerald-400', icon: Battery },
+                                                reprogramming: { border: 'border-purple-500/30', bg: 'bg-purple-500/15', text: 'text-purple-400', icon: Radio },
+                                                mechanical: { border: 'border-amber-500/30', bg: 'bg-amber-500/15', text: 'text-amber-400', icon: Wrench },
+                                            };
+                                            const EventIcon = eventColors[eventType].icon;
 
-                                        return (
-                                            <div key={event.id} className={`relative flex gap-4 ${isLast ? '' : 'pb-5'}`}>
-                                                <div className={`relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border bg-[var(--color-bg-secondary)] shadow-sm ${eventColors[eventType].border}`}>
-                                                    <div className={`flex h-5 w-5 items-center justify-center rounded-full ${eventColors[eventType].bg}`}>
-                                                        <EventIcon className="h-2.5 w-2.5" />
-                                                    </div>
-                                                </div>
-
-                                                <div className="group flex-1 overflow-hidden rounded-lg border border-[var(--color-border)]/50 bg-gradient-to-br from-[var(--color-bg-primary)]/30 to-[var(--color-bg-secondary)]/10 transition-all hover:border-[var(--color-primary)]/30 hover:bg-[var(--color-bg-primary)]/40 hover:shadow-sm">
-                                                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--color-border)]/30 px-3 py-1.5 bg-[var(--color-bg-primary)]/20">
+                                            return (
+                                                <tr key={event.id} className="hover:bg-[var(--color-bg-tertiary)]/50 transition-colors">
+                                                    <td className="px-4 py-3">
                                                         <div className="flex items-center gap-2">
-                                                            <span className={`text-[11px] font-semibold uppercase tracking-wider ${eventColors[eventType].text}`}>
+                                                            <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border ${eventColors[eventType].border}`}>
+                                                                <div className={`flex h-4 w-4 items-center justify-center rounded-full ${eventColors[eventType].bg}`}>
+                                                                    <EventIcon className="h-2.5 w-2.5" />
+                                                                </div>
+                                                            </div>
+                                                            <span className={`text-xs font-semibold uppercase tracking-wider ${eventColors[eventType].text}`}>
                                                                 {eventType === 'battery' ? 'Batería' : eventType === 'reprogramming' ? 'Reprogramación' : 'Mecánico'}
                                                             </span>
                                                         </div>
-                                                        <div className="flex items-center gap-1 text-[10px] text-[var(--color-text-muted)] font-medium">
-                                                            <Calendar className="h-3 w-3" />
-                                                            {formatDate(event.performed_at)}
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="px-3 py-2">
-                                                        {event.description ? (
-                                                            <p className="text-xs leading-relaxed text-[var(--color-text-primary)]/90">
-                                                                {event.description}
-                                                            </p>
-                                                        ) : (
-                                                            <p className="text-xs italic text-[var(--color-text-muted)]">Sin descripción</p>
-                                                        )}
-
-                                                        <div className="mt-2.5 flex flex-wrap gap-2">
-                                                            {event.part_name && (
-                                                                <div className="flex items-center gap-1 rounded-md bg-[var(--color-bg-primary)]/40 px-1.5 py-0.5 border border-[var(--color-border)]/40">
-                                                                    <DoorOpen className="h-[10px] w-[10px] text-[var(--color-primary)]/70" />
-                                                                    <span className="text-[10px] font-medium text-[var(--color-text-secondary)]">{event.part_name}</span>
-                                                                </div>
-                                                            )}
-                                                            {event.user_name && (
-                                                                <div className="flex items-center gap-1 rounded-md bg-[var(--color-bg-primary)]/40 px-1.5 py-0.5 border border-[var(--color-border)]/40">
-                                                                    <User className="h-[10px] w-[10px] text-[var(--color-primary)]/70" />
-                                                                    <span className="text-[10px] font-medium text-[var(--color-text-secondary)]">{event.user_name}</span>
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
-                        </div>
+                                                    </td>
+                                                    <td className="px-4 py-3 text-[var(--color-text-primary)]">
+                                                        {event.description || <span className="italic text-[var(--color-text-muted)]">Sin descripción</span>}
+                                                    </td>
+                                                    <td className="px-4 py-3 hidden md:table-cell text-[var(--color-text-muted)]">
+                                                        {event.part_name || <span className="italic">—</span>}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-[var(--color-text-muted)] whitespace-nowrap">
+                                                        {formatDate(event.performed_at)}
+                                                    </td>
+                                                    <td className="px-4 py-3 hidden sm:table-cell text-[var(--color-text-muted)]">
+                                                        {event.user_name || <span className="italic">—</span>}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
                     </section>
                 </div>
             </div>
