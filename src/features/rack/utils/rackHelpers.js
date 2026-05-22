@@ -86,11 +86,11 @@ export const RACK_STATE_COLORS = {
     },
     blocked: {
         bg: 'bg-gray-500/15',
-        text: 'text-gray-400',
-        border: 'border-gray-500/40',
+        text: 'text-[var(--color-text-muted)]',
+        border: 'border-gray-500/30',
         hover: 'hover:bg-gray-500/20',
         dot: 'bg-gray-400',
-        pill: 'bg-gray-500/10 text-gray-400 border-gray-500/20',
+        pill: 'bg-gray-500/10 text-[var(--color-text-muted)] border-gray-500/20',
         glow: '#9ca3af',
     },
     fdu: {

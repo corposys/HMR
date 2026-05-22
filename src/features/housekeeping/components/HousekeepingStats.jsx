@@ -61,7 +61,7 @@ export default function HousekeepingStats({ stats }) {
             label: 'Mantenimiento',
             count: roomStatuses.maintenance || 0,
             icon: Wrench,
-            color: 'text-gray-400 bg-gray-500/10 border-gray-500/20',
+            color: 'text-[var(--color-text-muted)] bg-gray-500/10 border-gray-500/20',
         },
         {
             label: 'Asignadas',

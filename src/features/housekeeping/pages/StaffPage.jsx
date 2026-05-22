@@ -148,7 +148,7 @@ export default function StaffPage() {
                                     >
                                         {member.is_active
                                             ? <ToggleRight className="w-5 h-5 text-emerald-400" />
-                                            : <ToggleLeft className="w-5 h-5 text-gray-500" />
+                                            : <ToggleLeft className="w-5 h-5 text-[var(--color-text-muted)]" />
                                         }
                                     </button>
                                 </div>

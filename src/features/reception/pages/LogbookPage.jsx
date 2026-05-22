@@ -38,7 +38,7 @@ const TYPE_VARIANTS = {
 };
 
 const PRIORITY_COLORS = {
-    low: 'text-gray-400',
+    low: 'text-[var(--color-text-muted)]',
     normal: 'text-blue-400',
     high: 'text-amber-400',
     urgent: 'text-red-400',

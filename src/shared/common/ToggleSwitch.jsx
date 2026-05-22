@@ -21,7 +21,7 @@ export default function ToggleSwitch({ checked, onChange, disabled = false, size
             >
                 <span
                     aria-hidden="true"
-                    className={`pointer-events-none absolute left-[2px] top-1/2 inline-block -translate-y-1/2 rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${circleSize} ${checked ? translate : 'translate-x-0'}`}
+                    className={`pointer-events-none absolute left-[2px] top-1/2 inline-block -translate-y-1/2 rounded-full bg-[var(--color-bg-secondary)] shadow ring-0 transition duration-200 ease-in-out ${circleSize} ${checked ? translate : 'translate-x-0'}`}
                 />
             </button>
         </div>

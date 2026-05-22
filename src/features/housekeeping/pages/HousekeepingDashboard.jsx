@@ -61,7 +61,7 @@ export default function HousekeepingDashboard() {
         { label: 'Total hab.', value: rooms.total, icon: Users, color: 'text-[var(--color-text-primary)]' },
         { label: 'Limpias', value: rooms.clean, icon: CheckCircle, color: 'text-emerald-400' },
         { label: 'Sucias', value: rooms.dirty, icon: Clock, color: 'text-yellow-400' },
-        { label: 'Mantenimiento', value: rooms.maintenance, icon: AlertTriangle, color: 'text-gray-400' },
+        { label: 'Mantenimiento', value: rooms.maintenance, icon: AlertTriangle, color: 'text-[var(--color-text-muted)]' },
         { label: '% Limpieza', value: `${rooms.clean_percentage}%`, icon: TrendingUp, color: rooms.clean_percentage >= 80 ? 'text-emerald-400' : rooms.clean_percentage >= 50 ? 'text-yellow-400' : 'text-red-400' },
         { label: 'En inspección', value: rooms.inspection, icon: CheckCircle, color: 'text-purple-400' },
         { label: 'Asignadas hoy', value: assignments.total, icon: Users, color: 'text-blue-400' },
@@ -139,8 +139,8 @@ export default function HousekeepingDashboard() {
                             )}
                             {incidents.low > 0 && (
                                 <div className="rounded-lg bg-gray-500/10 border border-gray-500/20 px-2 py-1 text-center">
-                                    <p className="text-sm font-bold text-gray-400">{incidents.low}</p>
-                                    <p className="text-[10px] text-gray-400/70">Bajas</p>
+                                    <p className="text-sm font-bold text-[var(--color-text-muted)]">{incidents.low}</p>
+                                    <p className="text-[10px] text-[var(--color-text-muted)]/70">Bajas</p>
                                 </div>
                             )}
                         </div>

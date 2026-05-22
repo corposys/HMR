@@ -16,7 +16,7 @@ const stateBadgeConfig = {
     reserved: { label: 'Reservada', className: 'bg-amber-500/15 text-amber-400 border-amber-500/30' },
     dirty: { label: 'Sucia', className: 'bg-red-500/15 text-red-400 border-red-500/30' },
     maintenance: { label: 'Mantenimiento', className: 'bg-orange-500/15 text-orange-400 border-orange-500/30' },
-    blocked: { label: 'Bloqueada', className: 'bg-gray-500/15 text-gray-400 border-gray-500/30' },
+    blocked: { label: 'Bloqueada', className: 'bg-gray-500/15 text-[var(--color-text-muted)] border-gray-500/30' },
     fdu: { label: 'FDU', className: 'bg-purple-500/15 text-purple-400 border-purple-500/30' },
 };
 
