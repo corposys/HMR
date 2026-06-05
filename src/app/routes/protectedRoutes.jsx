@@ -42,6 +42,7 @@ const DemoRackPage = lazy(() => import('@features/demo-rack/pages/DemoRackPage')
 const BillingPage = lazy(() => import('@features/billing/pages/BillingPage'));
 const AuditModulePage = lazy(() => import('@features/audit/pages/AuditModulePage'));
 const AuditNocturnaPage = lazy(() => import('@features/audit/pages/AuditNocturnaPage'));
+const ReportsPage = lazy(() => import('@features/reports/pages/ReportsPage'));
 
 export const protectedRoutes = [
     { index: true, element: <Dashboard /> },
@@ -61,6 +62,7 @@ export const protectedRoutes = [
     { path: 'maintenance/habitaciones', element: <Habitaciones /> },
     { path: 'systems/room/:id', element: <LockTimelinePage /> },
     { path: 'systems/rooms', element: <LocksRackPage /> },
+    { path: 'reportes', element: <ReportsPage /> },
     { path: 'security/vehicle-control', element: <VehicleControl /> },
     { path: 'housekeeping', element: <HousekeepingDashboard /> },
     { path: 'housekeeping/operaciones', element: <HousekeepingOperacionesPage /> },

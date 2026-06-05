@@ -14,87 +14,6 @@ const sidebarConfig = [
         end: true,
     },
     {
-        type: 'link',
-        to: '/rack',
-        icon: LayoutGrid,
-        label: 'Rack Operativo',
-    },
-    {
-        type: 'link',
-        to: '/demo-rack',
-        icon: LayoutGrid,
-        label: 'Demo Rack',
-    },
-    {
-        type: 'link',
-        to: '/billing',
-        icon: Receipt,
-        label: 'Facturación',
-    },
-    {
-        type: 'dropdown',
-        id: 'reservations',
-        icon: CalendarCheck,
-        label: 'Reservaciones',
-        items: [
-            { to: '/reservaciones', label: 'Reservas', end: true },
-            { to: '/reservaciones/tarifario', label: 'Tarifario' },
-        ],
-    },
-    {
-        type: 'dropdown',
-        id: 'reception',
-        icon: Hotel,
-        label: 'Recepción',
-        items: [
-            { to: '/reception/operations', label: 'Check-in/out' },
-            { to: '/reception/folios', label: 'Folios' },
-            { to: '/reception/walkins', label: 'Walk-ins' },
-            { to: '/reception/logbook', label: 'Novedades' },
-        ],
-    },
-    {
-        type: 'dropdown',
-        id: 'audit',
-        icon: ClipboardCheck,
-        label: 'Auditoría',
-        items: [
-            { to: '/audit', label: 'Auditoría', end: true },
-            { to: '/audit/nocturna', label: 'Auditoría Nocturna' },
-            { to: '/audit/reportes', label: 'Reportes' },
-        ],
-    },
-    {
-        type: 'dropdown',
-        id: 'housekeeping',
-        icon: BedDouble,
-        label: 'Housekeeping',
-        items: [
-            { to: '/housekeeping', label: 'Dashboard', end: true },
-            { to: '/housekeeping/operaciones', label: 'Operaciones' },
-            { to: '/housekeeping/control', label: 'Control' },
-            { to: '/housekeeping/gestion', label: 'Gestión' },
-        ],
-    },
-    {
-        type: 'dropdown',
-        id: 'maintenance',
-        icon: Wrench,
-        label: 'Mantenimiento',
-        items: [
-            { to: '/maintenance/habitaciones', label: 'Habitaciones' },
-        ],
-    },
-    {
-        type: 'dropdown',
-        id: 'security',
-        icon: Shield,
-        label: 'Seguridad',
-        items: [
-            { to: '/security/vehicle-control', label: 'Control de Vehiculos' },
-        ],
-    },
-    {
         type: 'dropdown',
         id: 'systems',
         icon: ServerCog,
@@ -103,6 +22,12 @@ const sidebarConfig = [
             { to: '/systems/signatures', label: 'Firmas' },
             { to: '/systems/rooms', label: 'Cerraduras' },
         ],
+    },
+    {
+        type: 'link',
+        to: '/reportes',
+        icon: ClipboardCheck,
+        label: 'Reportes',
     },
 ];
 
