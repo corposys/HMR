@@ -25,6 +25,7 @@ import {
     Receipt,
     ClipboardCheck,
     Printer,
+    Ticket,
 } from 'lucide-react';
 import { useAuth } from '@context/AuthContext';
 import { useTheme } from '@context/ThemeContext';
@@ -207,6 +208,10 @@ export default function Navbar({ onMenuClick, isMobileSidebarOpen }) {
             title: 'Impresoras',
             icon: Printer,
         },
+        '/systems/tickets': {
+            title: 'Tickets de Soporte',
+            icon: Ticket,
+        },
         '/settings': {
             title: 'Configuración',
             icon: SettingsIcon,
@@ -233,6 +238,10 @@ export default function Navbar({ onMenuClick, isMobileSidebarOpen }) {
 
         if (location.pathname.startsWith('/systems/signatures/')) {
             return pageMeta['/systems/signatures'];
+        }
+
+        if (location.pathname.startsWith('/systems/tickets/')) {
+            return pageMeta['/systems/tickets'];
         }
 
         return null;

@@ -794,6 +794,39 @@ def _run_migrations(cur):
     """)
 
     cur.execute("""
+        CREATE TABLE IF NOT EXISTS tickets (
+            id SERIAL PRIMARY KEY,
+            ticket_number VARCHAR(20) UNIQUE NOT NULL,
+            category VARCHAR(50) NOT NULL CHECK (category IN ('hardware', 'software', 'conectividad', 'otro')),
+            title VARCHAR(200) NOT NULL,
+            description TEXT NOT NULL,
+            priority VARCHAR(20) DEFAULT 'media' CHECK (priority IN ('baja', 'media', 'alta', 'urgente')),
+            status VARCHAR(20) DEFAULT 'open' CHECK (status IN ('open', 'in_progress', 'resolved', 'closed')),
+            submitted_by_name VARCHAR(100) NOT NULL,
+            submitted_by_department VARCHAR(100),
+            submitted_by_contact VARCHAR(100),
+            pc_location VARCHAR(100),
+            assigned_to INTEGER REFERENCES users(id) ON DELETE SET NULL,
+            created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+            resolved_at TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    """)
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS ticket_comments (
+            id SERIAL PRIMARY KEY,
+            ticket_id INTEGER NOT NULL REFERENCES tickets(id) ON DELETE CASCADE,
+            user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+            author_name VARCHAR(100),
+            comment_text TEXT NOT NULL,
+            is_internal BOOLEAN DEFAULT FALSE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    """)
+
+    cur.execute("""
         UPDATE roles SET permissions = permissions::jsonb || '{"maintenance": {"read": true, "write": true}}'::jsonb
         WHERE name IN ('receptionist', 'reception_manager')
         AND (permissions->'maintenance'->>'write')::boolean = false
@@ -815,6 +848,7 @@ def _seed_all():
     _seed_housekeeping_staff()
     _seed_linen_types()
     _seed_printers_and_toners()
+    _seed_tickets()
     _seed_demo_data()
 
 
@@ -1491,6 +1525,81 @@ def _seed_printers_and_toners():
         conn.rollback()
         release_connection(conn)
         logger.error(f"Error seeding printers and toners: {e}")
+
+
+def _seed_tickets():
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT COUNT(*) FROM tickets")
+        if cur.fetchone()[0] > 0:
+            logger.info("Tickets already seeded, skipping")
+            cur.close()
+            release_connection(conn)
+            return
+
+        admin_id = None
+        cur.execute("SELECT id FROM users WHERE role_id = 1 LIMIT 1")
+        admin_row = cur.fetchone()
+        if admin_row:
+            admin_id = admin_row[0]
+
+        ticket_count = cur.execute("SELECT COUNT(*) FROM tickets").fetchone()[0] or 0
+
+        tickets_data = [
+            ("TK-2026-0001", "hardware", "Impresora HP no enciende", "La impresora HP LaserJet de Recepción no responde al encenderla. Probé cambiar el cable de corriente y sigue sin funcionar.", "alta", "open", "Carlos Rodríguez", "Recepción", "Ext. 1001", "Recepción - Mostrador principal"),
+            ("TK-2026-0002", "conectividad", "Sin acceso a internet en Corporativo", "Las PC del área de ventas corporativas (piso 2) no tienen conexión a internet desde las 8am. El WiFi se conecta pero sin acceso a la red.", "urgente", "in_progress", "María Gutiérrez", "Corporativo", "Ext. 2005", "Corpo - Piso 2, escritorio 3"),
+            ("TK-2026-0003", "software", "Error al abrir el sistema HMR", "Me sale un error 'Connection refused' cuando intento abrir el sistema en mi PC. Ya reinicié el navegador y la PC.", "media", "in_progress", "Juan Hernández", "Administración", "Ext. 3002", "Oficina Administrativa"),
+            ("TK-2026-0004", "hardware", "Teclado no funciona correctamente", "El teclado de la PC de Housekeeping no registra algunas teclas. La letra 'a' y el número '5' fallan constantemente.", "baja", "open", "Ana Díaz", "Housekeeping", "Ext. 4001", "Housekeeping - Oficina central"),
+            ("TK-2026-0005", "conectividad", "Teléfono IP sin línea", "El teléfono de la extensión 3005 no tiene tono desde ayer. Ya probé desconectar y reconectar el cable de red.", "alta", "open", "Pedro Martínez", "Administración", "Ext. 3005", "Admin - Contabilidad"),
+            ("TK-2026-0006", "software", "Actualización de antivirus pendiente", "Varias PCs del área de Recepción muestran alertas del antivirus desactualizado. Solicito actualización urgente.", "media", "resolved", "Laura Torres", "Recepción", "Ext. 1003", "Recepción - Back office"),
+            ("TK-2026-0007", "hardware", "Monitor parpadea constantemente", "El monitor de la PC de Gerencia parpadea cada 5-10 minutos. Probé otro cable de video y persiste el problema.", "media", "resolved", "Diego Ruiz", "Gerencia", "Ext. 5001", "Gerencia General"),
+            ("TK-2026-0008", "otro", "Solicitud de nuevo punto de red", "Necesitamos instalar un punto de red adicional en la nueva oficina de RRHH (piso 3). Se requiere cableado y switch.", "baja", "closed", "Camila Vargas", "RRHH", "Ext. 6001", "RRHH - Piso 3"),
+        ]
+
+        ticket_ids = []
+        for t in tickets_data:
+            cur.execute(
+                "INSERT INTO tickets (ticket_number, category, title, description, priority, status, submitted_by_name, submitted_by_department, submitted_by_contact, pc_location) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id",
+                t,
+            )
+            ticket_ids.append(cur.fetchone()[0])
+
+        if admin_id:
+            cur.execute("UPDATE tickets SET assigned_to = %s WHERE id IN (%s, %s, %s)",
+                        (admin_id, ticket_ids[1], ticket_ids[2], ticket_ids[5]))
+            cur.execute("UPDATE tickets SET assigned_to = %s, created_by = %s WHERE id = %s",
+                        (admin_id, admin_id, ticket_ids[6]))
+            cur.execute("UPDATE tickets SET assigned_to = %s, resolved_at = NOW(), created_by = %s WHERE id = %s",
+                        (admin_id, admin_id, ticket_ids[6]))
+            cur.execute("UPDATE tickets SET assigned_to = %s, resolved_at = NOW(), created_by = %s WHERE id = %s",
+                        (admin_id, admin_id, ticket_ids[7]))
+
+        comments_data = [
+            (ticket_ids[0], None, "Carlos Rodríguez", "Ya verifiqué el cable de corriente y el enchufe. Sigue sin responder.", False),
+            (ticket_ids[1], admin_id, "Admin Sistema", "Recibido. Voy a revisar el switch del piso 2. Mientras tanto, ¿pueden usar los datos móviles?", False),
+            (ticket_ids[1], None, "María Gutiérrez", "Sí, estamos con datos móviles por ahora. Gracias.", False),
+            (ticket_ids[2], admin_id, "Admin Sistema", "Revisando logs del servidor. El servicio parece estar caído. Voy a reiniciarlo.", False),
+            (ticket_ids[2], admin_id, "Admin Sistema", "Nota interna: posible error de memoria en el contenedor de backend.", True),
+            (ticket_ids[5], admin_id, "Admin Sistema", "Antivirus actualizado en las 3 PCs de Recepción. Marcando como resuelto.", False),
+            (ticket_ids[6], admin_id, "Admin Sistema", "Monitor reemplazado. Era falla del panel. Se instaló monitor de respaldo.", False),
+            (ticket_ids[7], admin_id, "Admin Sistema", "Punto de red instalado y verificado. Ticket cerrado.", False),
+        ]
+        for tid, uid, aname, text, internal in comments_data:
+            cur.execute(
+                "INSERT INTO ticket_comments (ticket_id, user_id, author_name, comment_text, is_internal) VALUES (%s, %s, %s, %s, %s)",
+                (tid, uid, aname, text, internal),
+            )
+
+        conn.commit()
+        cur.close()
+        release_connection(conn)
+        logger.info(f"Tickets seeded ({len(ticket_ids)} tickets, {len(comments_data)} comments)")
+    except Exception as e:
+        conn.rollback()
+        release_connection(conn)
+        logger.error(f"Error seeding tickets: {e}")
 
 
 def _seed_demo_data():

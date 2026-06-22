@@ -22,6 +22,7 @@ const sidebarConfig = [
             { to: '/systems/signatures', label: 'Firmas' },
             { to: '/systems/rooms', label: 'Cerraduras' },
             { to: '/systems/printers', label: 'Impresoras' },
+            { to: '/systems/tickets', label: 'Tickets' },
         ],
     },
     {
