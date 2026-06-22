@@ -24,6 +24,7 @@ import {
     Moon,
     Receipt,
     ClipboardCheck,
+    Printer,
 } from 'lucide-react';
 import { useAuth } from '@context/AuthContext';
 import { useTheme } from '@context/ThemeContext';
@@ -201,6 +202,10 @@ export default function Navbar({ onMenuClick, isMobileSidebarOpen }) {
         '/systems/signatures': {
             title: 'Firmas Corporativas',
             icon: FileSignature,
+        },
+        '/systems/printers': {
+            title: 'Impresoras',
+            icon: Printer,
         },
         '/settings': {
             title: 'Configuración',

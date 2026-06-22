@@ -40,10 +40,10 @@ export default function SignatureForm({ formData, setFormData, handleClear, fixe
 
     return (
         <Card className="border-[var(--color-border)] bg-[var(--color-bg-secondary)] shadow-sm h-fit">
-            <CardHeader className="pb-4">
+            <CardHeader className="pb-3">
                 <div className="flex justify-between items-center">
-                    <CardTitle className="text-lg font-medium text-[var(--color-text-primary)] flex items-center gap-2 m-0">
-                        <User className="w-6 h-6 text-[var(--color-primary)]" />
+                    <CardTitle className="text-sm font-semibold text-[var(--color-text-primary)] flex items-center gap-2 m-0">
+                        <User className="w-5 h-5 text-[var(--color-primary)]" />
                         Datos del Usuario
                     </CardTitle>
                     {!readOnly && (
@@ -59,7 +59,7 @@ export default function SignatureForm({ formData, setFormData, handleClear, fixe
             </CardHeader>
             <CardContent className="space-y-4">
                 <div>
-                    <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1.5">
+                    <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1">
                         Nombre y Apellido
                     </label>
                     <div className="relative">
@@ -78,7 +78,7 @@ export default function SignatureForm({ formData, setFormData, handleClear, fixe
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1.5">
+                    <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1">
                         Departamento / Cargo
                     </label>
                     <div className="relative">
@@ -97,7 +97,7 @@ export default function SignatureForm({ formData, setFormData, handleClear, fixe
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1.5">
+                    <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1">
                         Correo Electrónico
                     </label>
                     <div className="relative">
@@ -116,9 +116,9 @@ export default function SignatureForm({ formData, setFormData, handleClear, fixe
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1.5 flex justify-between items-center">
+                    <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1 flex justify-between items-center">
                         <span>Teléfono Móvil</span>
-                        <span className="text-[var(--color-text-muted)] text-xs font-normal">(Opcional)</span>
+                        <span className="text-[var(--color-text-muted)] text-[11px] font-normal">(Opcional)</span>
                     </label>
                     <div className="relative">
                         <Smartphone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-text-muted)]" />
@@ -136,11 +136,11 @@ export default function SignatureForm({ formData, setFormData, handleClear, fixe
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1.5">
+                    <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1">
                         Extensión Telefónica
                     </label>
                     <div className="relative">
-                        <Smartphone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-text-muted)]" />
+                        <PhoneCall className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-text-muted)]" />
                         <input
                             type="text"
                             name="extension"
@@ -155,7 +155,7 @@ export default function SignatureForm({ formData, setFormData, handleClear, fixe
                 </div>
 
                 <div className="pt-2 border-t border-[var(--color-border)]">
-                    <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1.5">
+                    <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1">
                         Teléfono Oficina
                     </label>
                     <div className="p-3 bg-[var(--color-bg-tertiary)]/50 rounded-lg border border-[var(--color-border)] flex items-start gap-3">
@@ -165,7 +165,7 @@ export default function SignatureForm({ formData, setFormData, handleClear, fixe
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1.5">
+                    <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1">
                         Sitio Web
                     </label>
                     <div className="p-3 bg-[var(--color-bg-tertiary)]/50 rounded-lg border border-[var(--color-border)] flex items-start gap-3">

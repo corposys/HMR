@@ -743,6 +743,57 @@ def _run_migrations(cur):
     """)
 
     cur.execute("""
+        CREATE TABLE IF NOT EXISTS printers (
+            id SERIAL PRIMARY KEY,
+            segment VARCHAR(20) NOT NULL CHECK (segment IN ('hotel', 'corpo')),
+            ownership VARCHAR(20) NOT NULL CHECK (ownership IN ('propia', 'alquilada')),
+            brand VARCHAR(100) NOT NULL,
+            model VARCHAR(100) NOT NULL,
+            serial_number VARCHAR(100) UNIQUE,
+            connection_type VARCHAR(20) NOT NULL CHECK (connection_type IN ('red', 'usb')),
+            ip_address VARCHAR(50),
+            has_scanner BOOLEAN DEFAULT FALSE,
+            location VARCHAR(100),
+            status VARCHAR(20) DEFAULT 'operational' CHECK (status IN ('operational', 'maintenance', 'out_of_service')),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    """)
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS toner_models (
+            id SERIAL PRIMARY KEY,
+            model_name VARCHAR(100) UNIQUE NOT NULL,
+            color VARCHAR(50) NOT NULL,
+            compatible_printers TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    """)
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS toner_inventory (
+            id SERIAL PRIMARY KEY,
+            toner_model_id INTEGER NOT NULL REFERENCES toner_models(id) ON DELETE CASCADE,
+            segment VARCHAR(20) NOT NULL CHECK (segment IN ('hotel', 'corpo')),
+            quantity INTEGER NOT NULL DEFAULT 0 CHECK (quantity >= 0),
+            UNIQUE (toner_model_id, segment)
+        );
+    """)
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS toner_transactions (
+            id SERIAL PRIMARY KEY,
+            toner_model_id INTEGER NOT NULL REFERENCES toner_models(id) ON DELETE CASCADE,
+            segment VARCHAR(20) NOT NULL CHECK (segment IN ('hotel', 'corpo')),
+            type VARCHAR(10) NOT NULL CHECK (type IN ('in', 'out')),
+            quantity INTEGER NOT NULL CHECK (quantity > 0),
+            printer_id INTEGER REFERENCES printers(id) ON DELETE SET NULL,
+            created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+            notes TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    """)
+
+    cur.execute("""
         UPDATE roles SET permissions = permissions::jsonb || '{"maintenance": {"read": true, "write": true}}'::jsonb
         WHERE name IN ('receptionist', 'reception_manager')
         AND (permissions->'maintenance'->>'write')::boolean = false
@@ -763,6 +814,7 @@ def _seed_all():
     _seed_lock_assets()
     _seed_housekeeping_staff()
     _seed_linen_types()
+    _seed_printers_and_toners()
     _seed_demo_data()
 
 
@@ -1338,6 +1390,107 @@ def _seed_linen_types():
         conn.rollback()
         release_connection(conn)
         logger.error(f"Error seeding linen types: {e}")
+
+
+def _seed_printers_and_toners():
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT COUNT(*) FROM printers")
+        if cur.fetchone()[0] > 0:
+            logger.info("Printers and toners already seeded, skipping")
+            cur.close()
+            release_connection(conn)
+            return
+
+        printers_data = [
+            ("hotel", "propia", "HP", "LaserJet Pro M404dn", "SN-HP-M404-001", "red", "192.168.10.50", False, "Recepción", "operational"),
+            ("hotel", "propia", "Epson", "EcoTank L3250", "SN-EP-L3250-002", "usb", None, True, "Oficina Administrativa", "operational"),
+            ("corpo", "alquilada", "Brother", "HL-L2350DW", "SN-BR-L2350-001", "red", "192.168.20.30", False, "Corporativo Piso 2", "operational"),
+            ("corpo", "propia", "Canon", "imageCLASS MF269dw", "SN-CN-MF269-001", "red", "192.168.20.35", True, "Corporativo Piso 1", "maintenance"),
+        ]
+        printer_ids = []
+        for p in printers_data:
+            cur.execute(
+                "INSERT INTO printers (segment, ownership, brand, model, serial_number, connection_type, ip_address, has_scanner, location, status) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id",
+                p,
+            )
+            printer_ids.append(cur.fetchone()[0])
+
+        toner_models_data = [
+            ("85A (CE285A)", "Negro", "HP LaserJet Pro P1102, P1102w, M1212nf, M1217nfw"),
+            ("105A (W1105A)", "Negro", "HP LaserJet Pro M404dn, M404n, M404dw"),
+            ("Epson 664 Negro", "Negro", "Epson EcoTank L3250, L3251, L3256, L3260"),
+            ("Epson 664 Cian", "Cian", "Epson EcoTank L3250, L3251, L3256, L3260"),
+            ("Epson 664 Magenta", "Magenta", "Epson EcoTank L3250, L3251, L3256, L3260"),
+            ("Epson 664 Amarillo", "Amarillo", "Epson EcoTank L3250, L3251, L3256, L3260"),
+            ("Brother TN-760", "Negro", "Brother HL-L2350DW, HL-L2370DW, DCP-L2550DW"),
+        ]
+        toner_ids = []
+        for t in toner_models_data:
+            cur.execute(
+                "INSERT INTO toner_models (model_name, color, compatible_printers) VALUES (%s, %s, %s) RETURNING id",
+                t,
+            )
+            toner_ids.append(cur.fetchone()[0])
+
+        inventory_data = [
+            (toner_ids[0], "hotel", 4),
+            (toner_ids[0], "corpo", 0),
+            (toner_ids[1], "hotel", 6),
+            (toner_ids[1], "corpo", 0),
+            (toner_ids[2], "hotel", 5),
+            (toner_ids[2], "corpo", 0),
+            (toner_ids[3], "hotel", 3),
+            (toner_ids[3], "corpo", 0),
+            (toner_ids[4], "hotel", 3),
+            (toner_ids[4], "corpo", 0),
+            (toner_ids[5], "hotel", 3),
+            (toner_ids[5], "corpo", 0),
+            (toner_ids[6], "hotel", 0),
+            (toner_ids[6], "corpo", 2),
+        ]
+        for tid, seg, qty in inventory_data:
+            cur.execute(
+                "INSERT INTO toner_inventory (toner_model_id, segment, quantity) VALUES (%s, %s, %s)",
+                (tid, seg, qty),
+            )
+
+        admin_id = None
+        cur.execute("SELECT id FROM users WHERE role_id = 1 LIMIT 1")
+        admin_row = cur.fetchone()
+        if admin_row:
+            admin_id = admin_row[0]
+
+        transactions_data = [
+            (toner_ids[0], "hotel", "in", 5, None, admin_id, "Stock inicial - Compra proveedor"),
+            (toner_ids[1], "hotel", "in", 8, None, admin_id, "Stock inicial - Compra proveedor"),
+            (toner_ids[2], "hotel", "in", 6, None, admin_id, "Stock inicial - Compra proveedor"),
+            (toner_ids[3], "hotel", "in", 4, None, admin_id, "Stock inicial - Compra proveedor"),
+            (toner_ids[4], "hotel", "in", 4, None, admin_id, "Stock inicial - Compra proveedor"),
+            (toner_ids[5], "hotel", "in", 4, None, admin_id, "Stock inicial - Compra proveedor"),
+            (toner_ids[0], "hotel", "out", 1, printer_ids[0], admin_id, "Instalado en HP LaserJet - Recepción"),
+            (toner_ids[1], "hotel", "out", 2, printer_ids[0], admin_id, "Cambio programado - LaserJet Recepción"),
+            (toner_ids[2], "hotel", "out", 1, printer_ids[1], admin_id, "Recarga Epson EcoTank - Oficina"),
+            (toner_ids[6], "corpo", "in", 3, None, admin_id, "Stock inicial corporativo - Compra"),
+            (toner_ids[6], "corpo", "out", 1, printer_ids[2], admin_id, "Instalado en Brother HL-L2350DW - Corpo P2"),
+        ]
+        for tid, seg, ttype, qty, prt_id, user_id, notes in transactions_data:
+            cur.execute(
+                "INSERT INTO toner_transactions (toner_model_id, segment, type, quantity, printer_id, created_by, notes) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                (tid, seg, ttype, qty, prt_id, user_id, notes),
+            )
+
+        conn.commit()
+        cur.close()
+        release_connection(conn)
+        logger.info(f"Printers and toners seeded ({len(printer_ids)} printers, {len(toner_ids)} toner models, 11 transactions)")
+    except Exception as e:
+        conn.rollback()
+        release_connection(conn)
+        logger.error(f"Error seeding printers and toners: {e}")
 
 
 def _seed_demo_data():

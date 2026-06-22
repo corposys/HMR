@@ -21,6 +21,7 @@ const sidebarConfig = [
         items: [
             { to: '/systems/signatures', label: 'Firmas' },
             { to: '/systems/rooms', label: 'Cerraduras' },
+            { to: '/systems/printers', label: 'Impresoras' },
         ],
     },
     {

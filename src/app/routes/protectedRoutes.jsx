@@ -17,6 +17,7 @@ const SettingsMaintenance = lazy(() => import('@features/settings/pages/Maintena
 const SettingsSecurity = lazy(() => import('@features/settings/pages/SecurityTab/SecurityTab'));
 const SettingsSystems = lazy(() => import('@features/settings/pages/SystemsTab/SystemsTab'));
 const SignaturesHistory = lazy(() => import('@features/systems/signatures/pages/SignaturesHistory'));
+const PrintersDashboard = lazy(() => import('@features/systems/printers/pages/PrintersDashboard'));
 const Habitaciones = lazy(() => import('@features/maintenance/pages/Habitaciones'));
 const LockTimelinePage = lazy(() => import('@features/systems/locks/pages/LockTimelinePage'));
 const LocksRackPage = lazy(() => import('@features/systems/locks/pages/LocksRackPage'));
@@ -58,6 +59,7 @@ export const protectedRoutes = [
     { path: 'audit', element: <AuditModulePage /> },
     { path: 'audit/nocturna', element: <AuditNocturnaPage /> },
     { path: 'systems/signatures', element: <SignaturesHistory /> },
+    { path: 'systems/printers', element: <PrintersDashboard /> },
     { path: 'maintenance', element: <Habitaciones /> },
     { path: 'maintenance/habitaciones', element: <Habitaciones /> },
     { path: 'systems/room/:id', element: <LockTimelinePage /> },
