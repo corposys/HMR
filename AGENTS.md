@@ -14,6 +14,7 @@ React 19 + Vite 7 + Tailwind CSS v4 | FastAPI + PostgreSQL | Docker Compose
 | `npm run docker:logs` | Live logs |
 | `npm run docker:down` | Stop containers |
 | `npm run lint && npm run build` | CI frontend verification |
+| `npm run verify-deps` | Check required packages are installed |
 | `npm run dev` | Native Vite dev (see proxy note) |
 
 **No test framework.** Skip all `npm test`, `pytest`.
@@ -29,11 +30,11 @@ React 19 + Vite 7 + Tailwind CSS v4 | FastAPI + PostgreSQL | Docker Compose
 - Routing: `src/app/routes/` — lazy-loaded, `ProtectedRoute` + `Layout`
 - Contexts: `AuthContext.jsx` (JWT in localStorage), `ToastContext.jsx`
 - Hooks: `usePermissions()` (RBAC), `useSettings()` (hotel config)
-- shadcn configured via `components.json` but **no generated shadcn files** — custom components only
+- shadcn configured via `components.json` — 8 generated UI primitives in `src/components/ui/` (button, badge, card, dialog, separator, table, tabs, tooltip)
 - Constants: `src/utils/constants.js` — check before hardcoding
 
 ### Backend (`server/`)
-- Entrypoint: `server/main.py` — FastAPI, CORS, mounts 11 routers under `/api` + `/uploads`
+- Entrypoint: `server/main.py` — FastAPI, CORS, mounts 12 routers under `/api` + `/uploads`
 - No ORM: raw psycopg2, `SimpleConnectionPool(1, 10)` in `db.py`. Schema + seed data in same file.
 - On startup `init_db()` creates tables and seeds: roles (6), settings (27), room types (6), hotel structure (96 rooms), demo data (25 guests, ~33 reservations)
 - Rate limiting: **in-memory only** (resets on restart). Login: 10/min, register: 5/5min.
@@ -45,6 +46,7 @@ React 19 + Vite 7 + Tailwind CSS v4 | FastAPI + PostgreSQL | Docker Compose
 '@/' → 'src/'     '@app/' → 'src/app/'     '@features/' → 'src/features/'
 '@shared/' → 'src/shared/'   '@context/' → 'src/context/'
 '@utils/' → 'src/utils/'     '@hooks/' → 'src/hooks/'
+'@components/' → 'src/components/'
 ```
 **Always use these. Never relative paths.**
 
