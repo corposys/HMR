@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import {
     ArrowLeft,
     Battery,
@@ -33,6 +33,7 @@ import { HealthBar, DetailMetric, SectionTitle } from '@features/systems/locks/c
 export default function LockTimelinePage() {
     const { id } = useParams();
     const navigate = useNavigate();
+    const location = useLocation();
 
     const [lock, setLock] = useState(null);
     const [events, setEvents] = useState([]);
@@ -47,7 +48,7 @@ export default function LockTimelinePage() {
 
     const roomId = Number(id);
 
-    const fetchDetail = useCallback(async () => {
+    const fetchDetail = useCallback(async (skipStateCheck = false) => {
         if (!Number.isFinite(roomId)) {
             setError('Habitación inválida');
             setLoading(false);
@@ -56,16 +57,23 @@ export default function LockTimelinePage() {
 
         setLoading(true);
         setError('');
+
+        const stateData = !skipStateCheck ? location.state : null;
+
         try {
-            const [locksData, predData] = await Promise.all([
-                apiFetch('/api/maintenance/locks'),
-                apiFetch('/api/maintenance/predictions'),
-            ]);
+            let foundLock = stateData?.lock || null;
+            let foundPrediction = stateData?.prediction || null;
 
-            const foundLock = (locksData.locks || []).find((item) => Number(item.room_id) === roomId) || null;
+            if (!foundLock || !foundPrediction) {
+                const [locksData, predData] = await Promise.all([
+                    apiFetch('/api/maintenance/locks'),
+                    apiFetch('/api/maintenance/predictions'),
+                ]);
+                foundLock = (locksData.locks || []).find((item) => Number(item.room_id) === roomId) || null;
+                foundPrediction = (predData.predictions || []).find((item) => Number(item.room_id) === roomId) || null;
+            }
+
             setLock(foundLock);
-
-            const foundPrediction = (predData.predictions || []).find((item) => Number(item.room_id) === roomId) || null;
             setPrediction(foundPrediction);
 
             if (foundLock?.id) {
@@ -82,7 +90,7 @@ export default function LockTimelinePage() {
         } finally {
             setLoading(false);
         }
-    }, [roomId]);
+    }, [roomId, location.state]);
 
     useEffect(() => {
         fetchDetail();
@@ -104,16 +112,15 @@ export default function LockTimelinePage() {
             const payload = {
                 ...data,
                 room_id: Number(data.room_id || roomId),
-                part_type_id: data.part_type_id ? Number(data.part_type_id) : null,
             };
 
-            await apiFetch('/api/maintenance', {
+            await apiFetch('/api/maintenance/batch', {
                 method: 'POST',
                 body: JSON.stringify(payload),
             });
 
             setShowCreate(false);
-            await fetchDetail();
+            await fetchDetail(true);
         } catch (err) {
             setError(err.message || 'Error al registrar evento');
         } finally {
@@ -130,7 +137,7 @@ export default function LockTimelinePage() {
                 body: JSON.stringify({ notes: localNotes }),
             });
             setEditingNotes(false);
-            await fetchDetail();
+            await fetchDetail(true);
         } catch {
             // silently fail
         } finally {

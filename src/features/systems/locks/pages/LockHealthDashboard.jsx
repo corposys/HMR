@@ -1,8 +1,8 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-    ArrowLeft, AlertTriangle, Battery, Shield, Activity,
-    DoorOpen, AlertCircle, ChevronRight
+    AlertTriangle, Battery, Shield, Activity,
+    DoorOpen, ChevronRight
 } from 'lucide-react';
 import LoadingSpinner from '@shared/common/LoadingSpinner';
 import { formatDate } from '@features/systems/locks/utils/lockHelpers';
@@ -27,25 +27,7 @@ export default function LockHealthDashboard() {
     }
 
     return (
-        <div className="py-5 w-full px-5">
-            <div className="mx-auto max-w-auto space-y-4">
-                {/* Header */}
-                <div className="mb-6">
-                    <div className="flex items-center gap-3 mb-1">
-                        <button
-                            onClick={() => navigate('/systems/rooms')}
-                            aria-label="Volver al historial"
-                            title="Volver al historial"
-                            className="p-2.5 rounded-xl bg-[var(--color-primary)]/10 text-[var(--color-primary)] hover:bg-[var(--color-primary)]/20 transition-colors"
-                        >
-                            <ArrowLeft className="w-6 h-6" />
-                        </button>
-                        <div className="p-2.5 rounded-xl bg-[var(--color-primary)]/10">
-                            <Activity className="w-6 h-6 text-[var(--color-primary)]" />
-                        </div>
-                    </div>
-                </div>
-
+        <div className="space-y-4">
                 {/* Overview cards */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
                     <div className="bg-red-500/5 border border-red-500/20 rounded-xl p-4">
@@ -134,7 +116,6 @@ export default function LockHealthDashboard() {
                         </div>
                     </div>
                 )}
-            </div>
         </div>
     );
 }

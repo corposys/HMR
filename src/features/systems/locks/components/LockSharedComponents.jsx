@@ -83,6 +83,12 @@ export function LockSummaryCard({ item, prediction, onOpen, onToggleStatus, onOp
 
                     <div className="mt-1">
                         <p className="text-base font-bold leading-tight text-[var(--color-text-primary)]">{item.room_number}</p>
+                        {item.has_active_report && (
+                            <span className="inline-flex items-center gap-0.5 mt-0.5 text-[9px] font-semibold text-amber-400" title="Reporte de falla activo">
+                                <AlertCircle className="w-2.5 h-2.5" />
+                                Reporte
+                            </span>
+                        )}
                     </div>
                 </div>
 

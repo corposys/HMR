@@ -217,9 +217,53 @@ def _create_tables(cur):
         CREATE TABLE IF NOT EXISTS part_types (
             id          SERIAL PRIMARY KEY,
             name        VARCHAR(100) NOT NULL UNIQUE,
-            category    VARCHAR(20) NOT NULL CHECK (category IN ('battery', 'mechanical')),
+            category    VARCHAR(20) NOT NULL CHECK (category IN ('battery', 'mechanical', 'interno', 'carcasa', 'consumible', 'electronico')),
+            description TEXT,
+            stock_min   INTEGER DEFAULT 0,
             is_active   BOOLEAN DEFAULT TRUE,
             created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    """)
+
+    cur.execute("""
+        ALTER TABLE part_types DROP CONSTRAINT IF EXISTS part_types_category_check
+    """)
+    cur.execute("""
+        ALTER TABLE part_types ADD CONSTRAINT part_types_category_check
+        CHECK (category IN ('battery', 'mechanical', 'interno', 'carcasa', 'consumible', 'electronico'))
+    """)
+    cur.execute("ALTER TABLE part_types ADD COLUMN IF NOT EXISTS description TEXT")
+    cur.execute("ALTER TABLE part_types ADD COLUMN IF NOT EXISTS stock_min INTEGER DEFAULT 0")
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS part_inventory (
+            id            SERIAL PRIMARY KEY,
+            part_type_id  INTEGER NOT NULL REFERENCES part_types(id) ON DELETE CASCADE,
+            quantity      INTEGER NOT NULL DEFAULT 0 CHECK (quantity >= 0),
+            updated_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE (part_type_id)
+        );
+    """)
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS part_transactions (
+            id                SERIAL PRIMARY KEY,
+            part_type_id      INTEGER NOT NULL REFERENCES part_types(id) ON DELETE CASCADE,
+            type              VARCHAR(10) NOT NULL CHECK (type IN ('in', 'out')),
+            quantity          INTEGER NOT NULL CHECK (quantity > 0),
+            maintenance_log_id INTEGER REFERENCES maintenance_logs(id) ON DELETE SET NULL,
+            created_by        INTEGER REFERENCES users(id) ON DELETE SET NULL,
+            notes             TEXT,
+            created_at        TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    """)
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS maintenance_log_parts (
+            id                SERIAL PRIMARY KEY,
+            maintenance_log_id INTEGER NOT NULL REFERENCES maintenance_logs(id) ON DELETE CASCADE,
+            part_type_id      INTEGER NOT NULL REFERENCES part_types(id) ON DELETE RESTRICT,
+            quantity          INTEGER NOT NULL CHECK (quantity > 0)
         );
     """)
     cur.execute("""
@@ -1304,19 +1348,51 @@ def _seed_part_types():
             return
 
         parts = [
-            ("Batería", "battery"),
-            ("Motor", "mechanical"),
-            ("Cilindro", "mechanical"),
-            ("Embutido", "mechanical"),
-            ("Galleta", "mechanical"),
+            ("Batería AA", "consumible", "Pila AA recargable (4 por cerradura)", 20),
+            ("Porta Pilas", "interno", "Contenedor de baterías, va en la cara interna", 10),
+            ("Cilindro", "mecanico", "Donde se introduce la llave mecánica para apertura de emergencia", 8),
+            ("Cara Externa (con lector)", "carcasa", "Cascarón externo con tarjeta lectora RFID y LED", 6),
+            ("Cara Interna", "carcasa", "Cascarón interno con porta pilas y cuadrantes", 6),
+            ("Goma Externa", "consumible", "Sello amortiguador entre cara externa y puerta", 20),
+            ("Goma Interna", "consumible", "Sello amortiguador entre cara interna y puerta", 20),
+            ("Cuadrante", "mecanico", "Rectángulo de metal con resorte, conecta manilla con galleta (2 por cerradura)", 30),
+            ("Cuadrante Doble Lock", "mecanico", "Cuadrante pequeño para activar el doble lock con pasador", 15),
+            ("Pasador Doble Lock", "mecanico", "Pasador de la cara interna que activa el doble lock", 15),
+            ("Tarjeta Lectora (RFID+LED)", "electronico", "Placa con lector de tarjetas magnéticas y LED indicador", 8),
+            ("Galleta (Cuerpo Central)", "mecanico", "Estructura principal de la cerradura dentro de la puerta", 5),
         ]
-        for name, category in parts:
-            cur.execute("INSERT INTO part_types (name, category) VALUES (%s, %s)", (name, category))
+        part_ids = []
+        for name, category, desc, stock_min in parts:
+            cur.execute(
+                "INSERT INTO part_types (name, category, description, stock_min) VALUES (%s, %s, %s, %s) RETURNING id",
+                (name, category, desc, stock_min),
+            )
+            part_ids.append(cur.fetchone()[0])
+
+        initial_stock = [
+            (part_ids[0], 200),
+            (part_ids[1], 10),
+            (part_ids[2], 8),
+            (part_ids[3], 6),
+            (part_ids[4], 6),
+            (part_ids[5], 20),
+            (part_ids[6], 20),
+            (part_ids[7], 30),
+            (part_ids[8], 15),
+            (part_ids[9], 15),
+            (part_ids[10], 8),
+            (part_ids[11], 5),
+        ]
+        for pid, qty in initial_stock:
+            cur.execute(
+                "INSERT INTO part_inventory (part_type_id, quantity) VALUES (%s, %s)",
+                (pid, qty),
+            )
 
         conn.commit()
         cur.close()
         release_connection(conn)
-        logger.info("Part types seeded (5 types)")
+        logger.info(f"Part types seeded ({len(parts)} types with inventory)")
     except Exception as e:
         conn.rollback()
         release_connection(conn)

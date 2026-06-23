@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { TriangleAlert, Plus, DoorOpen, MapPin, BatteryFull, Lock, CheckCircle2, ShieldAlert, XCircle } from 'lucide-react';
+import { TriangleAlert, Plus, DoorOpen, MapPin, BatteryFull, Lock, CheckCircle2, ShieldAlert, XCircle, LayoutGrid, Table } from 'lucide-react';
 import Button from '@shared/common/Button';
 import Badge from '@shared/common/Badge';
 import CustomDropdown from '@shared/common/CustomDropdown';
@@ -20,7 +20,9 @@ export default function LockRackHeader({
     setStatusFilter,
     onOpenCreateEvent,
     onOpenReport,
-    onOpenLockDetail
+    onOpenLockDetail,
+    viewMode,
+    setViewMode,
 }) {
     const [showAlertsDrawer, setShowAlertsDrawer] = useState(false);
 
@@ -50,8 +52,27 @@ export default function LockRackHeader({
                         </div>
                     </div>
 
-                    {/* Derecha: Filtro + Botones de acción */}
+                    {/* Derecha: Vista + Filtro + Botones de acción */}
                     <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+                        <div className="inline-flex items-center rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-tertiary)] p-0.5">
+                            <button
+                                type="button"
+                                onClick={() => setViewMode('cards')}
+                                className={`inline-flex h-7 w-7 items-center justify-center rounded-md transition-colors ${viewMode === 'cards' ? 'bg-[var(--color-bg-primary)] text-[var(--color-primary)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'}`}
+                                title="Vista de tarjetas"
+                            >
+                                <LayoutGrid className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setViewMode('table')}
+                                className={`inline-flex h-7 w-7 items-center justify-center rounded-md transition-colors ${viewMode === 'table' ? 'bg-[var(--color-bg-primary)] text-[var(--color-primary)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'}`}
+                                title="Vista de tabla"
+                            >
+                                <Table className="w-3.5 h-3.5" />
+                            </button>
+                        </div>
+
                         <CustomDropdown
                             value={statusFilter}
                             onChange={(v) => setStatusFilter(v)}

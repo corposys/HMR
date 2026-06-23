@@ -24,6 +24,18 @@ class MaintenanceCreate(BaseModel):
     performed_at: Optional[str] = None  # ISO datetime string (YYYY-MM-DDTHH:MM)
 
 
+class BatchEventItem(BaseModel):
+    type: Literal["battery", "mechanical", "reprogramming"]
+    parts: list[dict] = []  # [{"part_type_id": 1, "quantity": 4}, ...]
+
+
+class MaintenanceBatchCreate(BaseModel):
+    room_id: int
+    events: list[BatchEventItem]
+    description: Optional[str] = None
+    performed_at: Optional[str] = None
+
+
 class LockUpdate(BaseModel):
     status: Optional[Literal["operational", "needs_review", "out_of_service"]] = None
     notes: Optional[str] = None
@@ -42,13 +54,25 @@ class ReportUpdate(BaseModel):
 
 class PartTypeCreate(BaseModel):
     name: str
-    category: Literal["battery", "mechanical"]
+    category: Literal["battery", "mechanical", "interno", "carcasa", "consumible", "electronico"]
+    description: Optional[str] = None
+    stock_min: int = 0
+    initial_stock: int = 0
 
 
 class PartTypeUpdate(BaseModel):
     name: Optional[str] = None
-    category: Optional[Literal["battery", "mechanical"]] = None
+    category: Optional[Literal["battery", "mechanical", "interno", "carcasa", "consumible", "electronico"]] = None
+    description: Optional[str] = None
+    stock_min: Optional[int] = None
     is_active: Optional[bool] = None
+
+
+class PartTransactionCreate(BaseModel):
+    part_type_id: int
+    type: Literal["in", "out"]
+    quantity: int
+    notes: Optional[str] = None
 
 
 def _ensure_lock_asset(cur, room_id: int) -> int:
@@ -191,6 +215,82 @@ async def create_maintenance(
         release_connection(conn)
 
 
+# ── Batch create maintenance events ──────────────────────────────────────────
+
+@router.post("/batch")
+async def create_batch_maintenance(
+    data: MaintenanceBatchCreate,
+    current_user: dict = Depends(require_permission("maintenance", "write")),
+):
+    """Create multiple maintenance logs at once (e.g., battery + mechanical + reprogramming).
+    Deducts part stock and records transactions atomically."""
+    if not data.events:
+        raise HTTPException(status_code=400, detail="Debe incluir al menos un evento")
+
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+        lock_asset_id = _ensure_lock_asset(cur, data.room_id)
+        perf_date = data.performed_at or datetime.now().isoformat()
+        created_log_ids = []
+
+        for event in data.events:
+            cur.execute("""
+                INSERT INTO maintenance_logs (room_id, lock_asset_id, type, description, performed_by, performed_at)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                RETURNING id
+            """, (
+                data.room_id, lock_asset_id, event.type,
+                data.description, current_user["id"], perf_date,
+            ))
+            log_id = cur.fetchone()[0]
+            created_log_ids.append(log_id)
+
+            # Link parts and deduct stock
+            for part in event.parts:
+                pt_id = part.get("part_type_id")
+                qty = part.get("quantity", 1)
+                if not pt_id or qty <= 0:
+                    continue
+
+                cur.execute(
+                    "INSERT INTO maintenance_log_parts (maintenance_log_id, part_type_id, quantity) VALUES (%s, %s, %s)",
+                    (log_id, pt_id, qty),
+                )
+
+                cur.execute(
+                    "UPDATE part_inventory SET quantity = quantity - %s, updated_at = NOW() WHERE part_type_id = %s",
+                    (qty, pt_id),
+                )
+
+                cur.execute("""
+                    INSERT INTO part_transactions (part_type_id, type, quantity, maintenance_log_id, created_by, notes)
+                    VALUES (%s, 'out', %s, %s, %s, %s)
+                """, (pt_id, qty, log_id, current_user["id"], data.description or f"Usado en evento {event.type}"))
+
+            # Side effects per type
+            if event.type == "battery":
+                cur.execute(
+                    "UPDATE rooms SET last_battery_change = %s WHERE id = %s",
+                    (perf_date, data.room_id),
+                )
+
+            if event.type in ("reprogramming", "mechanical"):
+                cur.execute(
+                    "UPDATE lock_assets SET status = 'operational' WHERE id = %s AND status = 'needs_review'",
+                    (lock_asset_id,),
+                )
+
+        conn.commit()
+        return {"success": True, "ids": created_log_ids, "count": len(created_log_ids)}
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=f"Error al crear eventos: {str(e)}")
+    finally:
+        cur.close()
+        release_connection(conn)
+
+
 # ── Delete a maintenance log ─────────────────────────────────────────────────
 
 @router.delete("/{log_id}")
@@ -292,15 +392,25 @@ async def maintenance_stats(current_user: dict = Depends(get_current_user)):
         release_connection(conn)
 
 
-# ── Part types ───────────────────────────────────────────────────────────────
+# ── Part types (catalog with stock) ──────────────────────────────────────────
 
 @router.get("/part-types")
 async def list_part_types(current_user: dict = Depends(get_current_user)):
     conn = get_connection()
     try:
         cur = conn.cursor()
-        cur.execute("SELECT id, name, category, is_active FROM part_types ORDER BY category, name")
-        parts = [{"id": r[0], "name": r[1], "category": r[2], "is_active": r[3]} for r in cur.fetchall()]
+        cur.execute("""
+            SELECT pt.id, pt.name, pt.category, pt.description, pt.stock_min, pt.is_active,
+                   COALESCE(pi.quantity, 0) as stock
+            FROM part_types pt
+            LEFT JOIN part_inventory pi ON pi.part_type_id = pt.id
+            WHERE pt.is_active = TRUE
+            ORDER BY pt.category, pt.name
+        """)
+        parts = [{
+            "id": r[0], "name": r[1], "category": r[2], "description": r[3],
+            "stock_min": r[4], "is_active": r[5], "stock": r[6],
+        } for r in cur.fetchall()]
         return {"success": True, "part_types": parts}
     except Exception:
         raise HTTPException(status_code=500, detail="Error al obtener tipos de piezas")
@@ -318,10 +428,21 @@ async def create_part_type(
     try:
         cur = conn.cursor()
         cur.execute(
-            "INSERT INTO part_types (name, category) VALUES (%s, %s) RETURNING id",
-            (data.name, data.category),
+            "INSERT INTO part_types (name, category, description, stock_min) VALUES (%s, %s, %s, %s) RETURNING id",
+            (data.name, data.category, data.description, data.stock_min),
         )
         pt_id = cur.fetchone()[0]
+
+        if data.initial_stock > 0:
+            cur.execute(
+                "INSERT INTO part_inventory (part_type_id, quantity) VALUES (%s, %s)",
+                (pt_id, data.initial_stock),
+            )
+            cur.execute("""
+                INSERT INTO part_transactions (part_type_id, type, quantity, created_by, notes)
+                VALUES (%s, 'in', %s, %s, 'Stock inicial')
+            """, (pt_id, data.initial_stock, current_user["id"]))
+
         conn.commit()
         return {"success": True, "id": pt_id}
     except Exception:
@@ -349,6 +470,12 @@ async def update_part_type(
         if data.category is not None:
             updates.append("category = %s")
             params.append(data.category)
+        if data.description is not None:
+            updates.append("description = %s")
+            params.append(data.description)
+        if data.stock_min is not None:
+            updates.append("stock_min = %s")
+            params.append(data.stock_min)
         if data.is_active is not None:
             updates.append("is_active = %s")
             params.append(data.is_active)
@@ -393,6 +520,104 @@ async def delete_part_type(
     except Exception:
         conn.rollback()
         raise HTTPException(status_code=500, detail="Error al desactivar tipo de pieza")
+    finally:
+        cur.close()
+        release_connection(conn)
+
+
+# ── Parts inventory & transactions ───────────────────────────────────────────
+
+@router.get("/parts/transactions")
+async def list_part_transactions(
+    part_type_id: Optional[int] = Query(None),
+    type_filter: Optional[str] = Query(None, alias="type"),
+    limit: int = Query(100),
+    current_user: dict = Depends(get_current_user),
+):
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+        query = """
+            SELECT pt.id, pt.part_type_id, pt.type, pt.quantity, pt.notes, pt.created_at,
+                   pt2.name as part_name, pt2.category,
+                   u.full_name as user_name
+            FROM part_transactions pt
+            JOIN part_types pt2 ON pt.part_type_id = pt2.id
+            LEFT JOIN users u ON pt.created_by = u.id
+        """
+        conditions = []
+        params = []
+        if part_type_id is not None:
+            conditions.append("pt.part_type_id = %s")
+            params.append(part_type_id)
+        if type_filter:
+            conditions.append("pt.type = %s")
+            params.append(type_filter)
+        if conditions:
+            query += " WHERE " + " AND ".join(conditions)
+        query += " ORDER BY pt.created_at DESC LIMIT %s"
+        params.append(limit)
+
+        cur.execute(query, params)
+        transactions = [{
+            "id": r[0], "part_type_id": r[1], "type": r[2], "quantity": r[3],
+            "notes": r[4], "created_at": r[5].isoformat() if r[5] else None,
+            "part_name": r[6], "category": r[7], "user_name": r[8],
+        } for r in cur.fetchall()]
+        return {"success": True, "transactions": transactions}
+    except Exception:
+        raise HTTPException(status_code=500, detail="Error al obtener transacciones")
+    finally:
+        cur.close()
+        release_connection(conn)
+
+
+@router.post("/parts/transactions")
+async def create_part_transaction(
+    data: PartTransactionCreate,
+    current_user: dict = Depends(require_permission("maintenance", "write")),
+):
+    """Register stock entry (in) or manual withdrawal (out)."""
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT id, name FROM part_types WHERE id = %s AND is_active = TRUE", (data.part_type_id,))
+        part = cur.fetchone()
+        if not part:
+            raise HTTPException(status_code=404, detail="Pieza no encontrada")
+
+        if data.type == "in":
+            cur.execute(
+                """INSERT INTO part_inventory (part_type_id, quantity)
+                   VALUES (%s, %s)
+                   ON CONFLICT (part_type_id)
+                   DO UPDATE SET quantity = part_inventory.quantity + %s, updated_at = NOW()""",
+                (data.part_type_id, data.quantity, data.quantity),
+            )
+        else:
+            cur.execute("SELECT quantity FROM part_inventory WHERE part_type_id = %s", (data.part_type_id,))
+            row = cur.fetchone()
+            current_stock = row[0] if row else 0
+            if current_stock < data.quantity:
+                raise HTTPException(status_code=400, detail=f"Stock insuficiente. Disponible: {current_stock}")
+            cur.execute(
+                "UPDATE part_inventory SET quantity = quantity - %s, updated_at = NOW() WHERE part_type_id = %s",
+                (data.quantity, data.part_type_id),
+            )
+
+        cur.execute("""
+            INSERT INTO part_transactions (part_type_id, type, quantity, created_by, notes)
+            VALUES (%s, %s, %s, %s, %s) RETURNING id, created_at
+        """, (data.part_type_id, data.type, data.quantity, current_user["id"], data.notes))
+        row = cur.fetchone()
+
+        conn.commit()
+        return {"success": True, "id": row[0], "created_at": row[1].isoformat() if row[1] else None}
+    except HTTPException:
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=f"Error al registrar transacción: {str(e)}")
     finally:
         cur.close()
         release_connection(conn)
@@ -750,6 +975,10 @@ async def list_locks(
                         SELECT COUNT(*) FROM maintenance_logs ml
                         WHERE ml.room_id = r.id
                     ) AS events_count,
+                    EXISTS(
+                        SELECT 1 FROM operational_reports or2
+                        WHERE or2.room_id = r.id AND or2.status = 'pending' AND or2.report_type = 'lock_failure'
+                    ) AS has_active_report,
                     la.notes
             FROM rooms r
             JOIN floors f ON r.floor_id = f.id
@@ -801,7 +1030,8 @@ async def list_locks(
                 "last_maintenance_at": r[14].isoformat() if r[14] else None,
                 "last_maintenance_type": r[15],
                 "events_count": r[16],
-                "notes": r[17] if len(r) > 17 else None,
+                "has_active_report": r[17] if len(r) > 17 else False,
+                "notes": r[18] if len(r) > 18 else None,
             })
 
         conn.commit()

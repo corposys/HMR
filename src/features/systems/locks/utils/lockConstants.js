@@ -15,15 +15,3 @@ export const LOCK_STATUS_DOT_STYLES = {
     needs_review: 'bg-amber-300 shadow-[0_0_10px_rgba(252,211,77,0.45)]',
     out_of_service: 'bg-zinc-400 shadow-[0_0_10px_rgba(161,161,170,0.35)]',
 };
-
-export const RACK_VIEW_MODES = {
-    structure: 'structure',
-    module: 'module',
-    priority: 'priority',
-};
-
-export const RACK_VIEW_LABELS = {
-    structure: 'Estructura hotelera',
-    module: 'Apilado por módulo',
-    priority: 'Prioridad operativa',
-};
