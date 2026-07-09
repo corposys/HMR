@@ -24,6 +24,7 @@ from routes.linen import router as linen_router
 from routes.rates import router as rates_router
 from routes.systems import router as systems_router
 from routes.tickets import router as tickets_router
+from routes.reports import router as reports_router
 
 UPLOADS_DIR = os.path.join(os.path.dirname(__file__), "uploads")
 os.makedirs(os.path.join(UPLOADS_DIR, "payments"), exist_ok=True)
@@ -61,6 +62,7 @@ app.include_router(linen_router)
 app.include_router(rates_router)
 app.include_router(systems_router)
 app.include_router(tickets_router)
+app.include_router(reports_router)
 
 app.mount("/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
 

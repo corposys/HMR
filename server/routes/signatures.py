@@ -105,17 +105,85 @@ async def create_signature(
         release_connection(conn)
 
 
+@router.put("/{signature_id}")
+async def update_signature(
+    signature_id: int,
+    data: SignatureCreate,
+    current_user: dict = Depends(get_current_user),
+):
+    """Update an existing signature. Admin (role_id=1) or the creator can update."""
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+        role_id = current_user.get("role_id")
+        if role_id == 1:
+            cur.execute("SELECT id FROM signatures WHERE id = %s", (signature_id,))
+        else:
+            cur.execute(
+                "SELECT id FROM signatures WHERE id = %s AND created_by = %s",
+                (signature_id, current_user["id"]),
+            )
+        if not cur.fetchone():
+            raise HTTPException(status_code=404, detail="Firma no encontrada o no tienes permiso para editarla")
+
+        cur.execute(
+            """
+            UPDATE signatures
+            SET full_name = %s, job_title = %s, email = %s,
+                mobile_phone = %s, extension = %s
+            WHERE id = %s
+            RETURNING id, full_name, job_title, email, mobile_phone, extension, created_at
+            """,
+            (
+                data.full_name,
+                data.job_title,
+                data.email,
+                data.mobile_phone or None,
+                data.extension or None,
+                signature_id,
+            ),
+        )
+        row = cur.fetchone()
+        conn.commit()
+        return {
+            "success": True,
+            "signature": {
+                "id": row[0],
+                "full_name": row[1],
+                "job_title": row[2],
+                "email": row[3],
+                "mobile_phone": row[4],
+                "extension": row[5],
+                "created_at": row[6].isoformat() if row[6] else None,
+            },
+        }
+    except HTTPException:
+        raise
+    except Exception:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail="Error al actualizar firma")
+    finally:
+        cur.close()
+        release_connection(conn)
+
+
 @router.delete("/{signature_id}")
 async def delete_signature(
     signature_id: int,
     current_user: dict = Depends(get_current_user),
 ):
-    """Delete a signature by ID. Only the creator can delete."""
+    """Delete a signature by ID. Admin (role_id=1) or the creator can delete."""
     conn = get_connection()
     try:
         cur = conn.cursor()
-        # Verify ownership
-        cur.execute("SELECT id FROM signatures WHERE id = %s AND created_by = %s", (signature_id, current_user["id"]))
+        role_id = current_user.get("role_id")
+        if role_id == 1:
+            cur.execute("SELECT id FROM signatures WHERE id = %s", (signature_id,))
+        else:
+            cur.execute(
+                "SELECT id FROM signatures WHERE id = %s AND created_by = %s",
+                (signature_id, current_user["id"]),
+            )
         if not cur.fetchone():
             raise HTTPException(status_code=404, detail="Firma no encontrada o no tienes permiso para eliminarla")
 

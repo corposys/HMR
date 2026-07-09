@@ -1,7 +1,9 @@
 """
 Tickets routes: support ticket system.
 """
-from fastapi import APIRouter, Depends, HTTPException, Query
+import time
+from collections import defaultdict
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import datetime
@@ -10,6 +12,10 @@ from db import get_connection, release_connection
 from middleware.auth import get_current_user, require_permission
 
 router = APIRouter(tags=["tickets"])
+
+_public_rate_limit_storage = defaultdict(list)
+_PUBLIC_RATE_LIMIT = 5
+_PUBLIC_RATE_WINDOW = 600
 
 
 class TicketPublicCreate(BaseModel):
@@ -41,8 +47,38 @@ class TicketCommentCreate(BaseModel):
     is_internal: bool = False
 
 
+def _check_public_rate_limit(request: Request):
+    client_ip = request.client.host if request.client else "unknown"
+    now = time.time()
+    _public_rate_limit_storage[client_ip] = [
+        ts for ts in _public_rate_limit_storage[client_ip] if now - ts < _PUBLIC_RATE_WINDOW
+    ]
+    if len(_public_rate_limit_storage[client_ip]) >= _PUBLIC_RATE_LIMIT:
+        raise HTTPException(
+            status_code=429,
+            detail="Demasiados tickets enviados. Por favor, intente más tarde.",
+        )
+    _public_rate_limit_storage[client_ip].append(now)
+
+
+def _generate_unique_ticket_number(cur, max_attempts: int = 5) -> str:
+    """Generate a unique ticket number, retrying on UNIQUE collisions."""
+    import psycopg2
+    year = datetime.now().year
+    for _ in range(max_attempts):
+        cur.execute("SELECT COUNT(*) FROM tickets")
+        count = cur.fetchone()[0] + 1
+        ticket_number = f"TK-{year}-{count:04d}"
+        cur.execute("SELECT 1 FROM tickets WHERE ticket_number = %s", (ticket_number,))
+        if not cur.fetchone():
+            return ticket_number
+    raise HTTPException(status_code=500, detail="No se pudo generar un número de ticket único")
+
+
 @router.post("/api/tickets/public")
-async def create_public_ticket(ticket: TicketPublicCreate):
+async def create_public_ticket(ticket: TicketPublicCreate, request: Request):
+    _check_public_rate_limit(request)
+
     if not ticket.category or ticket.category not in ("hardware", "software", "conectividad", "otro"):
         raise HTTPException(status_code=400, detail="Categoría inválida")
     if not ticket.title or not ticket.description:
@@ -53,9 +89,7 @@ async def create_public_ticket(ticket: TicketPublicCreate):
     conn = get_connection()
     try:
         cur = conn.cursor()
-        cur.execute("SELECT COUNT(*) FROM tickets")
-        count = cur.fetchone()[0] + 1
-        ticket_number = f"TK-{datetime.now().year}-{count:04d}"
+        ticket_number = _generate_unique_ticket_number(cur)
 
         cur.execute(
             """INSERT INTO tickets (ticket_number, category, title, description, priority,
@@ -75,6 +109,8 @@ async def create_public_ticket(ticket: TicketPublicCreate):
         cur.close()
         release_connection(conn)
         return {"success": True, "ticket": ticket_data}
+    except HTTPException:
+        raise
     except Exception as e:
         conn.rollback()
         release_connection(conn)
@@ -370,5 +406,78 @@ async def add_comment(
         raise
     except Exception as e:
         conn.rollback()
+        release_connection(conn)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/api/tickets/{ticket_id}")
+async def delete_ticket(
+    ticket_id: int,
+    current_user: dict = Depends(require_permission("maintenance", "write")),
+):
+    """Delete a ticket. Admin (role_id=1) or the assigned user can delete."""
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT id, assigned_to, created_by FROM tickets WHERE id = %s",
+            (ticket_id,),
+        )
+        existing = cur.fetchone()
+        if not existing:
+            cur.close()
+            release_connection(conn)
+            raise HTTPException(status_code=404, detail="Ticket no encontrado")
+
+        role_id = current_user.get("role_id")
+        user_id = current_user["id"]
+        is_owner = existing[1] == user_id or existing[2] == user_id
+        if role_id != 1 and not is_owner:
+            cur.close()
+            release_connection(conn)
+            raise HTTPException(status_code=403, detail="No tienes permiso para eliminar este ticket")
+
+        cur.execute("DELETE FROM ticket_comments WHERE ticket_id = %s", (ticket_id,))
+        cur.execute("DELETE FROM tickets WHERE id = %s", (ticket_id,))
+        conn.commit()
+        cur.close()
+        release_connection(conn)
+        return {"success": True, "message": "Ticket eliminado correctamente"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        conn.rollback()
+        release_connection(conn)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/api/users/assignable")
+async def list_assignable_users(
+    current_user: dict = Depends(require_permission("maintenance", "read")),
+):
+    """List active users that can be assigned to a ticket."""
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            """SELECT u.id, u.full_name, u.email, r.name as role_name
+               FROM users u
+               LEFT JOIN roles r ON r.id = u.role_id
+               WHERE u.is_active = TRUE
+               ORDER BY u.full_name"""
+        )
+        users = [
+            {
+                "id": r[0],
+                "full_name": r[1],
+                "email": r[2],
+                "role_name": r[3],
+            }
+            for r in cur.fetchall()
+        ]
+        cur.close()
+        release_connection(conn)
+        return {"success": True, "users": users}
+    except Exception as e:
         release_connection(conn)
         raise HTTPException(status_code=500, detail=str(e))

@@ -1,9 +1,26 @@
 import { useState, useEffect, useMemo } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
-    Home, Settings, Wrench, ChevronDown, Shield, BedDouble, Hotel,
+    Home, Settings, Wrench, ChevronDown, Shield, BedDouble,
     ServerCog, CalendarCheck, Monitor, LayoutGrid, Receipt, ClipboardCheck
 } from 'lucide-react';
+
+function BrandLogo({ collapsed = false }) {
+    return (
+        <div
+            className="flex items-center justify-center bg-[var(--color-primary)] rounded-md shrink-0 overflow-hidden"
+            style={{ width: collapsed ? 32 : 'auto', height: 32, padding: collapsed ? 0 : '0 10px 0 6px' }}
+            title="Hotel Margarita Real"
+        >
+            <img
+                src="/img/logo-hmr-main-white-.png"
+                alt="Hotel Margarita Real"
+                className="h-5 w-auto"
+                style={{ maxWidth: collapsed ? 24 : 140 }}
+            />
+        </div>
+    );
+}
 
 const sidebarConfig = [
     {
@@ -141,13 +158,12 @@ export default function Sidebar({ isMobileOpen = false, onCloseMobile }) {
                 ${isExpanded ? 'md:w-56 md:z-50' : 'md:w-14 md:z-40'}
             `}
         >
-            <div className={`px-3 py-2 border-b border-[var(--color-border)] h-14 flex items-center shrink-0 transition-all duration-300 ${isExpanded ? 'justify-between' : 'justify-center'}`}>
-                {isExpanded ? (
-                    <h2 className="text-lg font-bold text-[var(--color-text-primary)] whitespace-nowrap">
-                        HMR<span className="text-[var(--color-primary)]"> System</span>
-                    </h2>
-                ) : (
-                    <Hotel className="w-6 h-6 text-[var(--color-primary)]" />
+            <div className={`px-3 py-2 border-b border-[var(--color-border)] h-14 flex items-center shrink-0 transition-all duration-300 ${isExpanded ? 'justify-start gap-2' : 'justify-center'}`}>
+                <BrandLogo collapsed={!isExpanded} />
+                {isExpanded && (
+                    <span className="text-sm font-semibold text-[var(--color-text-primary)] whitespace-nowrap overflow-hidden">
+                        Margarita Real
+                    </span>
                 )}
             </div>
 

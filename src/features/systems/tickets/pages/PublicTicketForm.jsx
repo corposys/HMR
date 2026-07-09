@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Ticket, Send, CheckCircle, Hotel } from 'lucide-react';
+import { Ticket, Send, CheckCircle } from 'lucide-react';
 import { apiJson } from '@utils/api';
 
 const CATEGORIES = [
@@ -89,8 +89,17 @@ export default function PublicTicketForm() {
             <div className="w-full max-w-lg mx-auto">
                 <div className="text-center mb-8 pt-8">
                     <div className="inline-flex items-center gap-2 mb-2">
-                        <Hotel className="w-6 h-6 text-[var(--color-primary)]" />
-                        <span className="text-lg font-bold text-[var(--color-text-primary)]">HMR</span>
+                        <div
+                            className="flex items-center justify-center bg-[var(--color-primary)] rounded-md overflow-hidden"
+                            style={{ height: 32, padding: '0 10px 0 6px' }}
+                        >
+                            <img
+                                src="/img/logo-hmr-main-white-.png"
+                                alt="Hotel Margarita Real"
+                                className="h-5 w-auto"
+                                style={{ maxWidth: 130 }}
+                            />
+                        </div>
                     </div>
                     <h1 className="text-2xl font-bold text-[var(--color-text-primary)] flex items-center justify-center gap-2">
                         <Ticket className="w-6 h-6 text-[var(--color-primary)]" />

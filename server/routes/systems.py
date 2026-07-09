@@ -121,7 +121,11 @@ async def create_printer(
         raise HTTPException(status_code=400, detail="Propiedad inválida. Debe ser 'propia' o 'alquilada'")
     if data.connection_type not in ("red", "usb"):
         raise HTTPException(status_code=400, detail="Tipo de conexión inválido. Debe ser 'red' o 'usb'")
-        
+    if data.ip_address and data.ip_address.strip():
+        import re
+        if not re.match(r"^(\d{1,3}\.){3}\d{1,3}$", data.ip_address.strip()):
+            raise HTTPException(status_code=400, detail="Dirección IP inválida")
+
     conn = get_connection()
     try:
         cur = conn.cursor()
@@ -197,8 +201,12 @@ async def update_printer(
             params.append(data.connection_type)
             
         if data.ip_address is not None:
+            if data.ip_address.strip():
+                import re
+                if not re.match(r"^(\d{1,3}\.){3}\d{1,3}$", data.ip_address.strip()):
+                    raise HTTPException(status_code=400, detail="Dirección IP inválida")
             updates.append("ip_address = %s")
-            params.append(data.ip_address)
+            params.append(data.ip_address or None)
             
         if data.has_scanner is not None:
             updates.append("has_scanner = %s")
@@ -216,7 +224,8 @@ async def update_printer(
             
         if not updates:
             raise HTTPException(status_code=400, detail="No hay campos para actualizar")
-            
+
+        updates.append("updated_at = NOW()")
         params.append(printer_id)
         cur.execute(f"UPDATE printers SET {', '.join(updates)} WHERE id = %s", params)
         conn.commit()

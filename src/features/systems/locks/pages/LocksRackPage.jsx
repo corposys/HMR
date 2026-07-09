@@ -264,7 +264,7 @@ export default function LocksRackPage() {
                                     onOpenDetail={openLockDetail}
                                 />
                             ) : (
-                                <div className="grid gap-2 auto-rows-fr [grid-template-columns:repeat(auto-fill,minmax(160px,1fr))]">
+                                <div className="group/grid grid gap-2 auto-rows-fr [grid-template-columns:repeat(auto-fill,minmax(160px,1fr))]">
                                     {displayedRooms.map((item) => (
                                         <LockSummaryCard
                                             key={item.id}

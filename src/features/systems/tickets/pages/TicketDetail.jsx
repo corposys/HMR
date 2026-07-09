@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-    ArrowLeft, Send, User, MapPin, Calendar, Clock,
+    ArrowLeft, Send, User, MapPin, Calendar,
     AlertTriangle, CheckCircle, XCircle, MessageSquare,
-    RefreshCw, Shield, Layers, Ticket
+    RefreshCw, Shield, Layers, Ticket, Trash2
 } from 'lucide-react';
 import { useToast } from '@context/ToastContext';
 import { apiJson } from '@utils/api';
@@ -11,7 +11,12 @@ import PageWrapper from '@shared/common/PageWrapper';
 import LoadingSpinner from '@shared/common/LoadingSpinner';
 import ErrorState from '@shared/common/ErrorState';
 import CustomDropdown from '@shared/common/CustomDropdown';
+import Button from '@shared/common/Button';
+import { usePermissions } from '@hooks/usePermissions';
 import { Card } from '@/components/ui/card';
+import {
+    Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog';
 
 const STATUS_OPTIONS = [
     { value: 'open', label: 'Pendiente' },
@@ -25,6 +30,13 @@ const PRIORITY_OPTIONS = [
     { value: 'media', label: 'Media' },
     { value: 'alta', label: 'Alta' },
     { value: 'urgente', label: 'Urgente' },
+];
+
+const CATEGORY_OPTIONS = [
+    { value: 'hardware', label: 'Hardware' },
+    { value: 'software', label: 'Software' },
+    { value: 'conectividad', label: 'Conectividad' },
+    { value: 'otro', label: 'Otro' },
 ];
 
 const PRIORITY_COLORS = {
@@ -49,6 +61,7 @@ export default function TicketDetail() {
     const { id } = useParams();
     const navigate = useNavigate();
     const { showToast } = useToast();
+    const { isAdmin } = usePermissions();
 
     const [ticket, setTicket] = useState(null);
     const [comments, setComments] = useState([]);
@@ -58,6 +71,10 @@ export default function TicketDetail() {
     const [newComment, setNewComment] = useState('');
     const [isInternal, setIsInternal] = useState(false);
     const [submitting, setSubmitting] = useState(false);
+
+    const [users, setUsers] = useState([]);
+    const [confirmDelete, setConfirmDelete] = useState(false);
+    const [deleting, setDeleting] = useState(false);
 
     const fetchTicket = useCallback(async () => {
         setLoading(true);
@@ -77,23 +94,31 @@ export default function TicketDetail() {
         fetchTicket();
     }, [fetchTicket]);
 
-    const handleStatusChange = async (newStatus) => {
+    useEffect(() => {
+        apiJson('/api/users/assignable')
+            .then((data) => setUsers(data.users || []))
+            .catch(() => setUsers([]));
+    }, []);
+
+    const handleUpdate = async (field, value, successLabel) => {
         try {
-            await apiJson(`/api/tickets/${id}`, { method: 'PUT', body: { status: newStatus } });
-            showToast({ title: 'Estado actualizado', message: `Ticket marcado como ${STATUS_LABELS[newStatus]}`, type: 'success' });
-            fetchTicket();
+            await apiJson(`/api/tickets/${id}`, { method: 'PUT', body: { [field]: value } });
+            if (successLabel) {
+                showToast({ title: 'Actualizado', message: successLabel, type: 'success' });
+            }
+            await fetchTicket();
         } catch (err) {
             showToast({ title: 'Error', message: err.message, type: 'error' });
         }
     };
 
-    const handlePriorityChange = async (newPriority) => {
-        try {
-            await apiJson(`/api/tickets/${id}`, { method: 'PUT', body: { priority: newPriority } });
-            fetchTicket();
-        } catch (err) {
-            showToast({ title: 'Error', message: err.message, type: 'error' });
-        }
+    const handleStatusChange = (newStatus) => handleUpdate('status', newStatus, `Estado: ${STATUS_LABELS[newStatus]}`);
+    const handlePriorityChange = (newPriority) => handleUpdate('priority', newPriority, `Prioridad: ${PRIORITY_LABELS[newPriority]}`);
+    const handleCategoryChange = (newCategory) => handleUpdate('category', newCategory, `Categoría: ${CATEGORY_LABELS[newCategory]}`);
+    const handleAssigneeChange = (newUserId) => {
+        const value = newUserId === '__unassigned' ? null : Number(newUserId);
+        const label = value ? users.find((u) => u.id === value)?.full_name || 'usuario' : 'Sin asignar';
+        handleUpdate('assigned_to', value, `Asignado a ${label}`);
     };
 
     const handleSubmitComment = async (e) => {
@@ -107,11 +132,26 @@ export default function TicketDetail() {
             });
             setNewComment('');
             setIsInternal(false);
-            fetchTicket();
+            showToast({ title: 'Comentario enviado', message: 'El comentario se agregó al ticket.', type: 'success' });
+            await fetchTicket();
         } catch (err) {
             showToast({ title: 'Error', message: err.message, type: 'error' });
         } finally {
             setSubmitting(false);
+        }
+    };
+
+    const handleDelete = async () => {
+        setDeleting(true);
+        try {
+            await apiJson(`/api/tickets/${id}`, { method: 'DELETE' });
+            showToast({ title: 'Ticket eliminado', message: 'El ticket fue eliminado.', type: 'success' });
+            navigate('/systems/tickets');
+        } catch (err) {
+            showToast({ title: 'Error', message: err.message, type: 'error' });
+        } finally {
+            setDeleting(false);
+            setConfirmDelete(false);
         }
     };
 
@@ -130,16 +170,33 @@ export default function TicketDetail() {
 
     if (!ticket) return null;
 
+    const assigneeOptions = [
+        { value: '__unassigned', label: 'Sin asignar' },
+        ...users.map((u) => ({ value: String(u.id), label: u.full_name })),
+    ];
+
     return (
         <PageWrapper>
             <div className="flex flex-col gap-6">
-                <button
-                    onClick={() => navigate('/systems/tickets')}
-                    className="inline-flex items-center gap-2 text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors w-fit"
-                >
-                    <ArrowLeft className="w-4 h-4" />
-                    Volver a Tickets
-                </button>
+                <div className="flex items-center justify-between flex-wrap gap-3">
+                    <button
+                        onClick={() => navigate('/systems/tickets')}
+                        className="inline-flex items-center gap-2 text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors w-fit"
+                    >
+                        <ArrowLeft className="w-4 h-4" />
+                        Volver a Tickets
+                    </button>
+                    {isAdmin && (
+                        <Button
+                            variant="danger"
+                            size="sm"
+                            icon={Trash2}
+                            onClick={() => setConfirmDelete(true)}
+                        >
+                            Eliminar ticket
+                        </Button>
+                    )}
+                </div>
 
                 <Card className="p-6 bg-[var(--color-bg-secondary)] border-[var(--color-border)]">
                     <div className="flex flex-col gap-4">
@@ -177,6 +234,7 @@ export default function TicketDetail() {
                                     type="button"
                                     onClick={fetchTicket}
                                     className="inline-flex items-center justify-center h-8 w-8 rounded-lg border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors"
+                                    title="Recargar"
                                 >
                                     <RefreshCw className="w-3.5 h-3.5" />
                                 </button>
@@ -185,11 +243,14 @@ export default function TicketDetail() {
 
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                             <div className="p-3 bg-[var(--color-bg-tertiary)] rounded-lg border border-[var(--color-border)]">
-                                <div className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] mb-0.5">Categoría</div>
-                                <div className="text-xs font-semibold text-[var(--color-text-primary)] flex items-center gap-1.5">
-                                    <Layers className="w-3.5 h-3.5 text-[var(--color-text-muted)]" />
-                                    {CATEGORY_LABELS[ticket.category] || ticket.category}
-                                </div>
+                                <div className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] mb-1">Categoría</div>
+                                <CustomDropdown
+                                    value={ticket.category}
+                                    onChange={handleCategoryChange}
+                                    options={CATEGORY_OPTIONS}
+                                    placeholder="Categoría"
+                                    buttonClassName="h-7 text-xs !p-0 !bg-transparent !border-0 !text-[var(--color-text-primary)] font-semibold"
+                                />
                             </div>
                             <div className="p-3 bg-[var(--color-bg-tertiary)] rounded-lg border border-[var(--color-border)]">
                                 <div className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] mb-0.5">Solicitante</div>
@@ -206,15 +267,18 @@ export default function TicketDetail() {
                                 </div>
                             </div>
                             <div className="p-3 bg-[var(--color-bg-tertiary)] rounded-lg border border-[var(--color-border)]">
-                                <div className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] mb-0.5">Asignado</div>
-                                <div className="text-xs font-semibold text-[var(--color-text-primary)] flex items-center gap-1.5">
-                                    <Shield className="w-3.5 h-3.5 text-[var(--color-text-muted)]" />
-                                    {ticket.assigned_name || 'Sin asignar'}
-                                </div>
+                                <div className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] mb-1">Asignado</div>
+                                <CustomDropdown
+                                    value={ticket.assigned_to ? String(ticket.assigned_to) : '__unassigned'}
+                                    onChange={handleAssigneeChange}
+                                    options={assigneeOptions}
+                                    placeholder="Sin asignar"
+                                    buttonClassName="h-7 text-xs !p-0 !bg-transparent !border-0 !text-[var(--color-text-primary)] font-semibold"
+                                />
                             </div>
                         </div>
 
-                        {ticket.submitted_by_department && (
+                        {(ticket.submitted_by_department || ticket.submitted_by_contact) && (
                             <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-[var(--color-text-secondary)]">
                                 {ticket.submitted_by_department && <span>Área: <strong className="text-[var(--color-text-primary)]">{ticket.submitted_by_department}</strong></span>}
                                 {ticket.submitted_by_contact && <span>Contacto: <strong className="text-[var(--color-text-primary)]">{ticket.submitted_by_contact}</strong></span>}
@@ -306,6 +370,24 @@ export default function TicketDetail() {
                     </form>
                 </Card>
             </div>
+
+            <Dialog open={confirmDelete} onOpenChange={(o) => { if (!o) setConfirmDelete(false); }}>
+                <DialogContent className="bg-[var(--color-bg-secondary)] border-[var(--color-border)] text-[var(--color-text-primary)] max-w-sm">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Trash2 className="w-5 h-5 text-red-400" />
+                            Eliminar ticket
+                        </DialogTitle>
+                    </DialogHeader>
+                    <p className="text-sm text-[var(--color-text-secondary)]">
+                        ¿Eliminar el ticket <strong>{ticket.ticket_number}</strong>? Esta acción no se puede deshacer.
+                    </p>
+                    <DialogFooter className="gap-2">
+                        <Button variant="secondary" onClick={() => setConfirmDelete(false)}>Cancelar</Button>
+                        <Button variant="danger" onClick={handleDelete} loading={deleting} icon={Trash2}>Eliminar</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </PageWrapper>
     );
 }

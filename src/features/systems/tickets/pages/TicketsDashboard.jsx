@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-    Ticket, Search, RefreshCw, X,
+    Ticket, Search, RefreshCw, X, Plus,
     AlertTriangle, Clock, CheckCircle, XCircle,
     MessageSquare, User, MapPin, ArrowUpRight
 } from 'lucide-react';
@@ -13,6 +13,7 @@ import CustomDropdown from '@shared/common/CustomDropdown';
 import Button from '@shared/common/Button';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import CreateTicketModal from '@features/systems/tickets/components/CreateTicketModal';
 
 const STATUS_OPTIONS = [
     { value: 'all', label: 'Todos los estados' },
@@ -85,6 +86,7 @@ export default function TicketsDashboard() {
     const [priorityFilter, setPriorityFilter] = useState('all');
     const [categoryFilter, setCategoryFilter] = useState('all');
     const [statusFilter, setStatusFilter] = useState('all');
+    const [showCreate, setShowCreate] = useState(false);
 
     const fetchTickets = useCallback(async () => {
         setLoading(true);
@@ -112,24 +114,19 @@ export default function TicketsDashboard() {
     const handleTabChange = (tab) => {
         setActiveTab(tab);
         setStatusFilter(tab === 'all' ? 'all' : tab);
+        setSearch('');
     };
 
     const displayedTickets = useMemo(() => {
-        let filtered = tickets;
-        if (activeTab !== 'all') {
-            filtered = filtered.filter(t => t.status === activeTab);
-        }
-        if (search) {
-            const q = search.toLowerCase();
-            filtered = filtered.filter(t =>
-                t.title.toLowerCase().includes(q) ||
-                t.ticket_number.toLowerCase().includes(q) ||
-                t.submitted_by_name.toLowerCase().includes(q) ||
-                (t.submitted_by_department && t.submitted_by_department.toLowerCase().includes(q))
-            );
-        }
-        return filtered;
-    }, [tickets, activeTab, search]);
+        if (!search) return tickets;
+        const q = search.toLowerCase();
+        return tickets.filter(t =>
+            t.title.toLowerCase().includes(q) ||
+            t.ticket_number.toLowerCase().includes(q) ||
+            t.submitted_by_name.toLowerCase().includes(q) ||
+            (t.submitted_by_department && t.submitted_by_department.toLowerCase().includes(q))
+        );
+    }, [tickets, search]);
 
     const counts = useMemo(() => {
         const all = tickets.length;
@@ -188,6 +185,11 @@ export default function TicketsDashboard() {
                         Resueltos
                         <span className="ml-1 text-[11px] text-[var(--color-text-muted)]">{counts.resolved}</span>
                     </TabsTrigger>
+                    <TabsTrigger value="closed" className="flex-1 text-sm data-[state=active]:bg-[var(--color-bg-primary)] data-[state=active]:text-[var(--color-text-primary)] flex items-center gap-2">
+                        <XCircle className="w-4 h-4" />
+                        Cerrados
+                        <span className="ml-1 text-[11px] text-[var(--color-text-muted)]">{counts.closed}</span>
+                    </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value={activeTab} className="mt-0">
@@ -226,6 +228,14 @@ export default function TicketsDashboard() {
                                     buttonClassName="h-8 text-xs"
                                 />
                                 <Button variant="ghost" onClick={fetchTickets} icon={RefreshCw} className="h-8 w-8 !p-0 text-[var(--color-primary)] hover:text-[var(--color-primary-light)] hover:bg-[var(--color-primary)]/10 shrink-0" />
+                                <Button
+                                    variant="primary"
+                                    onClick={() => setShowCreate(true)}
+                                    icon={Plus}
+                                    className="h-8 text-xs"
+                                >
+                                    Nuevo Ticket
+                                </Button>
                             </div>
                         </div>
 
@@ -334,6 +344,12 @@ export default function TicketsDashboard() {
                     </Card>
                 </TabsContent>
             </Tabs>
+
+            <CreateTicketModal
+                open={showCreate}
+                onClose={() => setShowCreate(false)}
+                onCreated={fetchTickets}
+            />
         </PageWrapper>
     );
 }

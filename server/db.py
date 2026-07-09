@@ -90,6 +90,7 @@ def _create_tables(cur):
             password_hash VARCHAR(255) NOT NULL,
             role VARCHAR(20) DEFAULT 'user' NOT NULL,
             role_id INTEGER,
+            is_active BOOLEAN DEFAULT TRUE,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
     """)
@@ -584,6 +585,8 @@ def _run_migrations(cur):
     cur.execute("ALTER TABLE housekeeping_assignments ADD COLUMN IF NOT EXISTS inspected_at TIMESTAMP")
     cur.execute("ALTER TABLE housekeeping_assignments ADD COLUMN IF NOT EXISTS inspection_notes TEXT")
     cur.execute("ALTER TABLE part_types ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE")
+    cur.execute("ALTER TABLE printers ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+    cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE")
 
     cur.execute("""
         DO $$
@@ -1620,7 +1623,8 @@ def _seed_tickets():
         if admin_row:
             admin_id = admin_row[0]
 
-        ticket_count = cur.execute("SELECT COUNT(*) FROM tickets").fetchone()[0] or 0
+        cur.execute("SELECT COUNT(*) FROM tickets")
+        ticket_count = cur.fetchone()[0] or 0
 
         tickets_data = [
             ("TK-2026-0001", "hardware", "Impresora HP no enciende", "La impresora HP LaserJet de Recepción no responde al encenderla. Probé cambiar el cable de corriente y sigue sin funcionar.", "alta", "open", "Carlos Rodríguez", "Recepción", "Ext. 1001", "Recepción - Mostrador principal"),
@@ -1647,8 +1651,8 @@ def _seed_tickets():
                         (admin_id, ticket_ids[1], ticket_ids[2], ticket_ids[5]))
             cur.execute("UPDATE tickets SET assigned_to = %s, created_by = %s WHERE id = %s",
                         (admin_id, admin_id, ticket_ids[6]))
-            cur.execute("UPDATE tickets SET assigned_to = %s, resolved_at = NOW(), created_by = %s WHERE id = %s",
-                        (admin_id, admin_id, ticket_ids[6]))
+            cur.execute("UPDATE tickets SET assigned_to = %s, resolved_at = NOW(), created_by = %s WHERE id IN (%s, %s)",
+                        (admin_id, admin_id, ticket_ids[5], ticket_ids[6]))
             cur.execute("UPDATE tickets SET assigned_to = %s, resolved_at = NOW(), created_by = %s WHERE id = %s",
                         (admin_id, admin_id, ticket_ids[7]))
 

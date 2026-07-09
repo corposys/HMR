@@ -7,12 +7,13 @@ import {
     UserPlus, History
 } from 'lucide-react';
 import { useToast } from '@context/ToastContext';
-import { apiFetch } from '@utils/api';
+import { apiFetch, apiJson } from '@utils/api';
 import LoadingSpinner from '@shared/common/LoadingSpinner';
 import ErrorState from '@shared/common/ErrorState';
 import EmptyState from '@shared/common/EmptyState';
 import PageWrapper from '@shared/common/PageWrapper';
 import Button from '@shared/common/Button';
+import { useSettings } from '@hooks/useSettings';
 import {
     Card, CardHeader
 } from '@/components/ui/card';
@@ -29,6 +30,7 @@ import SignatureTable from '@features/systems/signatures/components/SignatureTab
 export default function SignaturesHistory() {
     const [searchParams, setSearchParams] = useSearchParams();
     const { showToast } = useToast();
+    const { getSetting } = useSettings();
 
     // Tab principal (generator vs history)
     const [mainTab, setMainTab] = useState(searchParams.get('tab') || 'generator');
@@ -43,6 +45,7 @@ export default function SignaturesHistory() {
     });
     const [currentId, setCurrentId] = useState(searchParams.get('id') || null);
     const [isDownloading, setIsDownloading] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
     const signatureRef = useRef(null);
 
     // Constantes del formulario
@@ -54,9 +57,9 @@ export default function SignaturesHistory() {
         mobilePhone: '+58 414-0000000',
     };
     const fixedData = {
-        officePhone: 'Ofic: +58 0295-5001300',
-        website: 'www.hotelmargaritareal.com',
-        address: 'Av. Aldonza Manrique, Final Calle Camarón, Hotel Margarita Real. Ofc. Admin. Pampatar, Edo. Nueva Esparta. Venezuela 6316'
+        officePhone: `Ofic: ${getSetting('hotel_phone', '+58 0295-5001300')}`,
+        website: getSetting('hotel_website', 'www.hotelmargaritareal.com'),
+        address: getSetting('hotel_address', 'Av. Aldonza Manrique, Final Calle Camarón, Hotel Margarita Real. Ofc. Admin. Pampatar, Edo. Nueva Esparta. Venezuela 6316'),
     };
 
     const isFormValid = formData.fullName.trim() !== '' &&
@@ -94,7 +97,11 @@ export default function SignaturesHistory() {
         try {
             await apiFetch(`/api/signatures/${toDelete.id}`, { method: 'DELETE' });
             setSignatures(prev => prev.filter(s => s.id !== toDelete.id));
+            if (currentId === toDelete.id) {
+                handleClear();
+            }
             setToDelete(null);
+            showToast({ title: 'Firma eliminada', message: 'La firma se eliminó correctamente.', type: 'success' });
         } catch {
             showToast({ title: 'Error', message: 'No se pudo eliminar la firma', type: 'error' });
         } finally {
@@ -111,7 +118,7 @@ export default function SignaturesHistory() {
             extension: sig.extension || '',
         });
         setCurrentId(sig.id);
-        
+
         const params = new URLSearchParams();
         params.set('tab', 'generator');
         params.set('id', sig.id);
@@ -128,10 +135,52 @@ export default function SignaturesHistory() {
             mobilePhone: ''
         });
         setCurrentId(null);
-        
+
         const params = new URLSearchParams();
         params.set('tab', 'generator');
         setSearchParams(params, { replace: true });
+    };
+
+    const persistSignature = async () => {
+        if (!formData.fullName.trim() || !formData.jobTitle.trim()) {
+            showToast({ type: 'warning', title: 'Datos incompletos', message: 'Completa nombre y cargo para guardar.' });
+            return null;
+        }
+        const payload = {
+            full_name: formData.fullName,
+            job_title: formData.jobTitle,
+            email: formData.email,
+            mobile_phone: formData.mobilePhone || null,
+            extension: formData.extension || null,
+        };
+        const endpoint = currentId ? `/api/signatures/${currentId}` : '/api/signatures';
+        const method = currentId ? 'PUT' : 'POST';
+        const data = await apiJson(endpoint, { method, body: payload });
+        if (!currentId && data.signature?.id) {
+            setCurrentId(data.signature.id);
+        }
+        return data;
+    };
+
+    const handleSave = async () => {
+        setIsSaving(true);
+        try {
+            await persistSignature();
+            await fetchSignatures();
+            showToast({
+                type: 'success',
+                title: 'Firma guardada',
+                message: 'La firma se guardó en el historial.',
+            });
+        } catch (err) {
+            showToast({
+                type: 'error',
+                title: 'No se pudo guardar',
+                message: err.message || 'Intenta nuevamente.',
+            });
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const handleDownload = async () => {
@@ -154,51 +203,21 @@ export default function SignaturesHistory() {
             link.click();
             document.body.removeChild(link);
 
-            if (formData.fullName && formData.jobTitle) {
-                try {
-                    const token = localStorage.getItem('token');
-                    const endpoint = currentId ? `/api/signatures/${currentId}` : '/api/signatures';
-                    const method = currentId ? 'PUT' : 'POST';
-
-                    const res = await fetch(endpoint, {
-                        method: method,
-                        headers: {
-                            'Content-Type': 'application/json',
-                            Authorization: `Bearer ${token}`,
-                        },
-                        body: JSON.stringify({
-                            full_name: formData.fullName,
-                            job_title: formData.jobTitle,
-                            email: formData.email,
-                            mobile_phone: formData.mobilePhone || null,
-                            extension: formData.extension || null,
-                        }),
-                    });
-
-                    if (!res.ok) throw new Error('Error saving signature');
-                    const data = await res.json();
-
-                    if (!currentId && data.signature?.id) {
-                        setCurrentId(data.signature.id);
-                    }
-                    
-                    fetchSignatures();
-
-                    showToast({
-                        type: 'success',
-                        title: 'Firma guardada',
-                        message: 'La firma se guardó correctamente en el historial.',
-                    });
-                } catch {
-                    showToast({
-                        type: 'error',
-                        title: 'No se pudo guardar',
-                        message: 'La descarga sí funcionó, pero falló el guardado en historial.',
-                    });
-                }
+            try {
+                await persistSignature();
+                await fetchSignatures();
+                showToast({
+                    type: 'success',
+                    title: 'Firma descargada y guardada',
+                    message: 'La firma se descargó y se guardó en el historial.',
+                });
+            } catch (err) {
+                showToast({
+                    type: 'warning',
+                    title: 'Firma descargada',
+                    message: `La imagen se descargó, pero no se pudo guardar: ${err.message}`,
+                });
             }
-
-            setIsDownloading(false);
         } catch (err) {
             console.error('Failed to generate image', err);
             showToast({
@@ -206,6 +225,7 @@ export default function SignaturesHistory() {
                 title: 'Error al descargar',
                 message: 'No se pudo generar la imagen de la firma. Intenta nuevamente.',
             });
+        } finally {
             setIsDownloading(false);
         }
     };
@@ -275,7 +295,9 @@ export default function SignaturesHistory() {
                                 placeholders={placeholders}
                                 isFormValid={isFormValid}
                                 isDownloading={isDownloading}
+                                isSaving={isSaving}
                                 handleDownload={handleDownload}
+                                handleSave={handleSave}
                                 signatureRef={signatureRef}
                             />
                             <SignatureInstructions />
