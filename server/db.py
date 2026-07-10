@@ -218,7 +218,7 @@ def _create_tables(cur):
         CREATE TABLE IF NOT EXISTS part_types (
             id          SERIAL PRIMARY KEY,
             name        VARCHAR(100) NOT NULL UNIQUE,
-            category    VARCHAR(20) NOT NULL CHECK (category IN ('battery', 'mechanical', 'interno', 'carcasa', 'consumible', 'electronico')),
+            category    VARCHAR(20) NOT NULL CHECK (category IN ('battery', 'mecanico', 'interno', 'carcasa', 'consumible', 'electronico')),
             description TEXT,
             stock_min   INTEGER DEFAULT 0,
             is_active   BOOLEAN DEFAULT TRUE,
@@ -231,7 +231,7 @@ def _create_tables(cur):
     """)
     cur.execute("""
         ALTER TABLE part_types ADD CONSTRAINT part_types_category_check
-        CHECK (category IN ('battery', 'mechanical', 'interno', 'carcasa', 'consumible', 'electronico'))
+        CHECK (category IN ('battery', 'mecanico', 'interno', 'carcasa', 'consumible', 'electronico'))
     """)
     cur.execute("ALTER TABLE part_types ADD COLUMN IF NOT EXISTS description TEXT")
     cur.execute("ALTER TABLE part_types ADD COLUMN IF NOT EXISTS stock_min INTEGER DEFAULT 0")
@@ -246,27 +246,6 @@ def _create_tables(cur):
         );
     """)
 
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS part_transactions (
-            id                SERIAL PRIMARY KEY,
-            part_type_id      INTEGER NOT NULL REFERENCES part_types(id) ON DELETE CASCADE,
-            type              VARCHAR(10) NOT NULL CHECK (type IN ('in', 'out')),
-            quantity          INTEGER NOT NULL CHECK (quantity > 0),
-            maintenance_log_id INTEGER REFERENCES maintenance_logs(id) ON DELETE SET NULL,
-            created_by        INTEGER REFERENCES users(id) ON DELETE SET NULL,
-            notes             TEXT,
-            created_at        TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-    """)
-
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS maintenance_log_parts (
-            id                SERIAL PRIMARY KEY,
-            maintenance_log_id INTEGER NOT NULL REFERENCES maintenance_logs(id) ON DELETE CASCADE,
-            part_type_id      INTEGER NOT NULL REFERENCES part_types(id) ON DELETE RESTRICT,
-            quantity          INTEGER NOT NULL CHECK (quantity > 0)
-        );
-    """)
     cur.execute("""
         CREATE TABLE IF NOT EXISTS lock_assets (
             id            SERIAL PRIMARY KEY,
@@ -290,6 +269,28 @@ def _create_tables(cur):
             performed_by  INTEGER REFERENCES users(id) ON DELETE SET NULL,
             performed_at  DATE NOT NULL DEFAULT CURRENT_DATE,
             created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    """)
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS part_transactions (
+            id                SERIAL PRIMARY KEY,
+            part_type_id      INTEGER NOT NULL REFERENCES part_types(id) ON DELETE CASCADE,
+            type              VARCHAR(10) NOT NULL CHECK (type IN ('in', 'out')),
+            quantity          INTEGER NOT NULL CHECK (quantity > 0),
+            maintenance_log_id INTEGER REFERENCES maintenance_logs(id) ON DELETE SET NULL,
+            created_by        INTEGER REFERENCES users(id) ON DELETE SET NULL,
+            notes             TEXT,
+            created_at        TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    """)
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS maintenance_log_parts (
+            id                SERIAL PRIMARY KEY,
+            maintenance_log_id INTEGER NOT NULL REFERENCES maintenance_logs(id) ON DELETE CASCADE,
+            part_type_id      INTEGER NOT NULL REFERENCES part_types(id) ON DELETE RESTRICT,
+            quantity          INTEGER NOT NULL CHECK (quantity > 0)
         );
     """)
 
@@ -585,7 +586,6 @@ def _run_migrations(cur):
     cur.execute("ALTER TABLE housekeeping_assignments ADD COLUMN IF NOT EXISTS inspected_at TIMESTAMP")
     cur.execute("ALTER TABLE housekeeping_assignments ADD COLUMN IF NOT EXISTS inspection_notes TEXT")
     cur.execute("ALTER TABLE part_types ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE")
-    cur.execute("ALTER TABLE printers ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
     cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE")
 
     cur.execute("""
@@ -805,6 +805,7 @@ def _run_migrations(cur):
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
     """)
+    cur.execute("ALTER TABLE printers ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
 
     cur.execute("""
         CREATE TABLE IF NOT EXISTS toner_models (
