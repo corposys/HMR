@@ -249,21 +249,21 @@ export default function TicketDetail() {
                                     onChange={handleCategoryChange}
                                     options={CATEGORY_OPTIONS}
                                     placeholder="Categoría"
-                                    buttonClassName="h-7 text-xs !p-0 !bg-transparent !border-0 !text-[var(--color-text-primary)] font-semibold"
+                                    buttonClassName="h-7 text-xs !px-0 !bg-transparent !border-0 !text-[var(--color-text-primary)] font-semibold"
                                 />
                             </div>
                             <div className="p-3 bg-[var(--color-bg-tertiary)] rounded-lg border border-[var(--color-border)]">
-                                <div className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] mb-0.5">Solicitante</div>
-                                <div className="text-xs font-semibold text-[var(--color-text-primary)] flex items-center gap-1.5">
-                                    <User className="w-3.5 h-3.5 text-[var(--color-text-muted)]" />
-                                    {ticket.submitted_by_name}
+                                <div className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] mb-1">Solicitante</div>
+                                <div className="h-7 flex items-center text-xs font-semibold text-[var(--color-text-primary)] gap-1.5">
+                                    <User className="w-3.5 h-3.5 text-[var(--color-text-muted)] shrink-0" />
+                                    <span className="truncate">{ticket.submitted_by_name}</span>
                                 </div>
                             </div>
                             <div className="p-3 bg-[var(--color-bg-tertiary)] rounded-lg border border-[var(--color-border)]">
-                                <div className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] mb-0.5">Ubicación</div>
-                                <div className="text-xs font-semibold text-[var(--color-text-primary)] flex items-center gap-1.5">
-                                    <MapPin className="w-3.5 h-3.5 text-[var(--color-text-muted)]" />
-                                    {ticket.pc_location || ticket.submitted_by_department || '—'}
+                                <div className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] mb-1">Ubicación</div>
+                                <div className="h-7 flex items-center text-xs font-semibold text-[var(--color-text-primary)] gap-1.5">
+                                    <MapPin className="w-3.5 h-3.5 text-[var(--color-text-muted)] shrink-0" />
+                                    <span className="truncate">{ticket.pc_location || ticket.submitted_by_department || '—'}</span>
                                 </div>
                             </div>
                             <div className="p-3 bg-[var(--color-bg-tertiary)] rounded-lg border border-[var(--color-border)]">
@@ -273,7 +273,7 @@ export default function TicketDetail() {
                                     onChange={handleAssigneeChange}
                                     options={assigneeOptions}
                                     placeholder="Sin asignar"
-                                    buttonClassName="h-7 text-xs !p-0 !bg-transparent !border-0 !text-[var(--color-text-primary)] font-semibold"
+                                    buttonClassName="h-7 text-xs !px-0 !bg-transparent !border-0 !text-[var(--color-text-primary)] font-semibold"
                                 />
                             </div>
                         </div>

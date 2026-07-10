@@ -16,15 +16,25 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 const CATEGORY_OPTIONS = [
     { value: 'all', label: 'Todas las categorías' },
     { value: 'consumible', label: 'Consumibles' },
-    { value: 'mecanico', label: 'Mecánico' },
+    { value: 'mechanical', label: 'Mecánico' },
     { value: 'carcasa', label: 'Carcasa' },
     { value: 'interno', label: 'Interno' },
     { value: 'electronico', label: 'Electrónico' },
+    { value: 'battery', label: 'Batería' },
+];
+
+const CATEGORY_CREATE_OPTIONS = [
+    { value: 'consumible', label: 'Consumible' },
+    { value: 'mechanical', label: 'Mecánico' },
+    { value: 'carcasa', label: 'Carcasa' },
+    { value: 'interno', label: 'Interno' },
+    { value: 'electronico', label: 'Electrónico' },
+    { value: 'battery', label: 'Batería' },
 ];
 
 const CATEGORY_LABELS = {
     consumible: 'Consumible',
-    mecanico: 'Mecánico',
+    mechanical: 'Mecánico',
     carcasa: 'Carcasa',
     interno: 'Interno',
     electronico: 'Electrónico',
@@ -48,6 +58,10 @@ export default function PartsInventory() {
     const [transactionPart, setTransactionPart] = useState(null);
     const [transactionForm, setTransactionForm] = useState({ quantity: 1, notes: '' });
     const [submitting, setSubmitting] = useState(false);
+
+    const [showCreateModal, setShowCreateModal] = useState(false);
+    const [createForm, setCreateForm] = useState({ name: '', category: 'consumible', description: '', stock_min: 0, initial_stock: 0 });
+    const [createSubmitting, setCreateSubmitting] = useState(false);
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -119,6 +133,36 @@ export default function PartsInventory() {
         }
     };
 
+    const handleCreatePart = async (e) => {
+        e?.preventDefault();
+        if (!createForm.name.trim()) return;
+        setCreateSubmitting(true);
+        try {
+            await apiJson('/api/maintenance/part-types', {
+                method: 'POST',
+                body: {
+                    name: createForm.name.trim(),
+                    category: createForm.category,
+                    description: createForm.description.trim() || null,
+                    stock_min: createForm.stock_min,
+                    initial_stock: createForm.initial_stock,
+                },
+            });
+            showToast({
+                title: 'Pieza creada',
+                message: `${createForm.name.trim()} registrada correctamente`,
+                type: 'success',
+            });
+            setShowCreateModal(false);
+            setCreateForm({ name: '', category: 'consumible', description: '', stock_min: 0, initial_stock: 0 });
+            fetchData();
+        } catch (err) {
+            showToast({ title: 'Error', message: err.message, type: 'error' });
+        } finally {
+            setCreateSubmitting(false);
+        }
+    };
+
     const formatDate = (dateStr) => {
         if (!dateStr) return '';
         return new Date(dateStr).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
@@ -182,6 +226,9 @@ export default function PartsInventory() {
                                     buttonClassName="h-8 text-xs"
                                 />
                                 <Button variant="ghost" onClick={fetchData} icon={RefreshCw} className="h-8 w-8 !p-0 text-[var(--color-primary)] hover:text-[var(--color-primary-light)] hover:bg-[var(--color-primary)]/10 shrink-0" />
+                                <Button variant="primary" onClick={() => setShowCreateModal(true)} icon={Plus} size="sm">
+                                    Nueva Pieza
+                                </Button>
                             </div>
                         </div>
 
@@ -372,6 +419,84 @@ export default function PartsInventory() {
                             placeholder="Motivo del movimiento..."
                             className="w-full px-3 py-2 text-sm bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] rounded-lg text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)] focus:outline-none resize-none"
                         />
+                    </div>
+                </div>
+            </Modal>
+
+            <Modal
+                isOpen={showCreateModal}
+                onClose={() => setShowCreateModal(false)}
+                title="Nueva Pieza"
+                icon={Plus}
+                size="sm"
+                footer={
+                    <div className="flex gap-3 w-full">
+                        <button type="button" onClick={() => setShowCreateModal(false)} className="flex-1 py-2 text-sm rounded-xl border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)] transition-colors">
+                            Cancelar
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleCreatePart}
+                            disabled={createSubmitting || !createForm.name.trim()}
+                            className="flex-1 py-2 text-sm rounded-xl text-white font-medium bg-[var(--color-primary)] hover:bg-[var(--color-primary-light)] transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
+                        >
+                            <Plus className="w-4 h-4" />
+                            {createSubmitting ? 'Creando...' : 'Crear Pieza'}
+                        </button>
+                    </div>
+                }
+            >
+                <div className="space-y-4">
+                    <div>
+                        <label className="text-xs font-medium text-[var(--color-text-secondary)] mb-1 block">Nombre *</label>
+                        <input
+                            type="text"
+                            value={createForm.name}
+                            onChange={(e) => setCreateForm(prev => ({ ...prev, name: e.target.value }))}
+                            placeholder="Nombre de la pieza"
+                            className="w-full px-3 py-2 text-sm bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] rounded-lg text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)] focus:outline-none"
+                        />
+                    </div>
+                    <div>
+                        <label className="text-xs font-medium text-[var(--color-text-secondary)] mb-1 block">Categoría</label>
+                        <CustomDropdown
+                            value={createForm.category}
+                            onChange={(val) => setCreateForm(prev => ({ ...prev, category: val }))}
+                            options={CATEGORY_CREATE_OPTIONS}
+                            className="w-full"
+                        />
+                    </div>
+                    <div>
+                        <label className="text-xs font-medium text-[var(--color-text-secondary)] mb-1 block">Descripción</label>
+                        <textarea
+                            value={createForm.description}
+                            onChange={(e) => setCreateForm(prev => ({ ...prev, description: e.target.value }))}
+                            rows="2"
+                            placeholder="Descripción opcional..."
+                            className="w-full px-3 py-2 text-sm bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] rounded-lg text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)] focus:outline-none resize-none"
+                        />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="text-xs font-medium text-[var(--color-text-secondary)] mb-1 block">Stock mínimo</label>
+                            <input
+                                type="number"
+                                min="0"
+                                value={createForm.stock_min}
+                                onChange={(e) => setCreateForm(prev => ({ ...prev, stock_min: Math.max(0, parseInt(e.target.value) || 0) }))}
+                                className="w-full px-3 py-2 text-sm bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] rounded-lg text-[var(--color-text-primary)] focus:border-[var(--color-primary)] focus:outline-none"
+                            />
+                        </div>
+                        <div>
+                            <label className="text-xs font-medium text-[var(--color-text-secondary)] mb-1 block">Stock inicial</label>
+                            <input
+                                type="number"
+                                min="0"
+                                value={createForm.initial_stock}
+                                onChange={(e) => setCreateForm(prev => ({ ...prev, initial_stock: Math.max(0, parseInt(e.target.value) || 0) }))}
+                                className="w-full px-3 py-2 text-sm bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] rounded-lg text-[var(--color-text-primary)] focus:border-[var(--color-primary)] focus:outline-none"
+                            />
+                        </div>
                     </div>
                 </div>
             </Modal>

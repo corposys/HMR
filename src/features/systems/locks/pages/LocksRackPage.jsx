@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Lock, LayoutGrid, Package, Activity } from 'lucide-react';
+import { Lock, LayoutGrid, Package } from 'lucide-react';
 import { apiFetch } from '@utils/api';
 import PageWrapper from '@shared/common/PageWrapper';
 import LoadingSpinner from '@shared/common/LoadingSpinner';
@@ -15,7 +15,6 @@ import LockModuleTabs from '@features/systems/locks/components/LockModuleTabs';
 import LockStatusPopover from '@features/systems/locks/components/LockStatusPopover';
 import ReportModal from '@features/systems/locks/components/ReportModal';
 import PartsInventory from '@features/systems/locks/pages/PartsInventory';
-import LockHealthDashboard from '@features/systems/locks/pages/LockHealthDashboard';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 export default function LocksRackPage() {
@@ -186,10 +185,6 @@ export default function LocksRackPage() {
                             <Package className="w-4 h-4" />
                             Inventario
                         </TabsTrigger>
-                        <TabsTrigger value="health" className="flex-1 text-sm data-[state=active]:bg-[var(--color-bg-primary)] data-[state=active]:text-[var(--color-text-primary)] flex items-center gap-2">
-                            <Activity className="w-4 h-4" />
-                            Salud
-                        </TabsTrigger>
                     </TabsList>
                 </Tabs>
                 <div className="flex items-center justify-center h-96">
@@ -210,10 +205,6 @@ export default function LocksRackPage() {
                     <TabsTrigger value="parts" className="flex-1 text-sm data-[state=active]:bg-[var(--color-bg-primary)] data-[state=active]:text-[var(--color-text-primary)] flex items-center gap-2">
                         <Package className="w-4 h-4" />
                         Inventario
-                    </TabsTrigger>
-                    <TabsTrigger value="health" className="flex-1 text-sm data-[state=active]:bg-[var(--color-bg-primary)] data-[state=active]:text-[var(--color-text-primary)] flex items-center gap-2">
-                        <Activity className="w-4 h-4" />
-                        Salud
                     </TabsTrigger>
                 </TabsList>
 
@@ -283,10 +274,6 @@ export default function LocksRackPage() {
 
                 <TabsContent value="parts" className="mt-0">
                     <PartsInventory />
-                </TabsContent>
-
-                <TabsContent value="health" className="mt-0">
-                    <LockHealthDashboard />
                 </TabsContent>
             </Tabs>
 

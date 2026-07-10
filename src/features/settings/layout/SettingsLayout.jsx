@@ -1,19 +1,9 @@
 import { NavLink, Outlet } from 'react-router-dom';
-import { Globe, DollarSign, Building2, Link as LinkIcon, Users, CalendarDays, Clock, ClipboardCheck, Sparkles, Wrench, Shield, Settings } from 'lucide-react';
+import { Globe, Building2 } from 'lucide-react';
 
 const tabs = [
     { to: '/settings/general', label: 'General', icon: Globe },
-    { to: '/settings/currency', label: 'Moneda', icon: DollarSign },
     { to: '/settings/structure', label: 'Estructura', icon: Building2 },
-    { to: '/settings/integrations', label: 'Integraciones', icon: LinkIcon },
-    { to: '/settings/users', label: 'Usuarios', icon: Users },
-    { to: '/settings/reservations', label: 'Reservas', icon: CalendarDays },
-    { to: '/settings/reception', label: 'Recepción', icon: Clock },
-    { to: '/settings/audit', label: 'Auditoría', icon: ClipboardCheck },
-    { to: '/settings/housekeeping', label: 'Housekeeping', icon: Sparkles },
-    { to: '/settings/maintenance', label: 'Mantenimiento', icon: Wrench },
-    { to: '/settings/security', label: 'Seguridad', icon: Shield },
-    { to: '/settings/systems', label: 'Sistemas', icon: Settings },
 ];
 
 export default function SettingsLayout() {

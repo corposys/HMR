@@ -212,6 +212,10 @@ export default function Navbar({ onMenuClick, isMobileSidebarOpen }) {
             title: 'Tickets de Soporte',
             icon: Ticket,
         },
+        '/reportes': {
+            title: 'Reportes',
+            icon: ClipboardCheck,
+        },
         '/settings': {
             title: 'Configuración',
             icon: SettingsIcon,

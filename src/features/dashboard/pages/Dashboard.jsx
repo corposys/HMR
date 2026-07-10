@@ -1,11 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import {
-    CalendarCheck, Users, BedDouble, Banknote, Lock, Printer,
-    PenLine, Ticket, RefreshCcw, AlertTriangle, Wrench, Activity
-} from 'lucide-react';
+import { Lock, Printer, PenLine, Ticket, Wrench } from 'lucide-react';
 import StatCard from '@shared/common/StatCard';
 import Card, { CardHeader, CardTitle, CardContent } from '@shared/common/Card';
-import Button from '@shared/common/Button';
 import LoadingSpinner from '@shared/common/LoadingSpinner';
 import ErrorState from '@shared/common/ErrorState';
 import { apiJson } from '@utils/api';
@@ -55,18 +51,15 @@ function unwrap(payload) {
 
 export default function Dashboard() {
     const { can } = usePermissions();
-    const [reception, setReception] = useState(null);
     const [overview, setOverview] = useState(null);
     const [tickets30, setTickets30] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [lastUpdate, setLastUpdate] = useState(new Date());
     const intervalRef = useRef(null);
 
     const fetchAll = useCallback(async () => {
         setLoading(true);
         const results = await Promise.allSettled([
-            safeFetch('/api/reception/dashboard'),
             can('reports', 'read')
                 ? safeFetch('/api/reports/overview')
                 : Promise.resolve({ ok: false, error: 'no permission' }),
@@ -75,15 +68,13 @@ export default function Dashboard() {
                 : Promise.resolve({ ok: false, error: 'no permission' }),
         ]);
 
-        const [r, o, t] = results;
+        const [o, t] = results;
 
-        if (r.status === 'fulfilled' && r.value.ok) setReception(r.value.data?.dashboard ?? null);
         if (o.status === 'fulfilled' && o.value.ok) setOverview(unwrap(o.value.data));
         if (t.status === 'fulfilled' && t.value.ok) setTickets30(unwrap(t.value.data));
 
-        const hasAny = [r, o, t].some(s => s.status === 'fulfilled' && s.value.ok);
+        const hasAny = [o, t].some(s => s.status === 'fulfilled' && s.value.ok);
         setError(hasAny ? null : 'No se pudieron cargar los datos del dashboard.');
-        setLastUpdate(new Date());
         setLoading(false);
     }, [can]);
 
@@ -100,39 +91,6 @@ export default function Dashboard() {
             if (intervalRef.current) clearInterval(intervalRef.current);
         };
     }, [fetchAll]);
-
-    const receptionStats = reception
-        ? [
-            {
-                title: 'Habitaciones ocupadas',
-                value: `${reception.occupied}/${reception.total_rooms}`,
-                subtitle: `${reception.available} disponibles · ${reception.blocked} bloqueadas`,
-                icon: BedDouble,
-                variant: 'default',
-            },
-            {
-                title: 'Ingresos del mes',
-                value: formatCurrency(reception.month_revenue),
-                subtitle: `BCV: Bs. ${reception.bcv_rate?.toFixed(2) || '—'}`,
-                icon: Banknote,
-                variant: 'success',
-            },
-            {
-                title: 'Llegadas hoy',
-                value: reception.arrivals_today,
-                subtitle: 'Check-ins programados',
-                icon: CalendarCheck,
-                variant: 'primary',
-            },
-            {
-                title: 'Huéspedes en casa',
-                value: reception.in_house,
-                subtitle: `${reception.departures_today} salidas hoy`,
-                icon: Users,
-                variant: 'default',
-            },
-        ]
-        : [];
 
     const systemsStats = overview && overview.locks && overview.printers && overview.tickets && overview.toners && overview.signatures
         ? [
@@ -186,59 +144,22 @@ export default function Dashboard() {
 
     return (
         <div className="py-5 w-full px-5">
-            <div className="mx-auto max-w-auto space-y-4">
-                <div className="flex items-center justify-between flex-wrap gap-3 mb-2">
-                    <div>
-                        <h1 className="text-2xl font-bold text-[var(--color-text-primary)] flex items-center gap-2">
-                            <Activity className="w-6 h-6 text-[var(--color-primary)]" />
-                            Dashboard General
-                        </h1>
-                        <p className="text-sm text-[var(--color-text-secondary)] mt-1">
-                            Última actualización: {lastUpdate.toLocaleTimeString('es')}
-                            {' · '}
-                            <span className="text-[var(--color-text-muted)]">auto-refresh 60s</span>
-                        </p>
-                    </div>
-                    <Button
-                        variant="secondary"
-                        icon={RefreshCcw}
-                        onClick={fetchAll}
-                        size="sm"
-                        disabled={loading}
-                    >
-                        Actualizar
-                    </Button>
-                </div>
-
-                {loading && !reception && !overview ? (
+            <div className="mx-auto max-w-auto space-y-6">
+                {loading && !overview ? (
                     <LoadingSpinner size="lg" />
-                ) : error && !reception && !overview ? (
+                ) : error && !overview ? (
                     <ErrorState message={error} onRetry={fetchAll} />
                 ) : (
                     <>
-                        {reception && (
-                            <section>
-                                <h2 className="text-sm font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-3">
-                                    Operación Hotelera
-                                </h2>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                                    {receptionStats.map((s, i) => <StatCard key={i} {...s} />)}
-                                </div>
-                            </section>
-                        )}
-
                         {systemsStats.length > 0 && (
-                            <section className="mt-6">
-                                <h2 className="text-sm font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-3">
-                                    Sistemas Integrados
-                                </h2>
+                            <section>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                                     {systemsStats.map((s, i) => <StatCard key={i} {...s} />)}
                                 </div>
                             </section>
                         )}
 
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                             {tickets30 && tickets30.created_vs_resolved_by_day.length > 0 && (
                                 <Card padding="md">
                                     <CardHeader>
@@ -333,7 +254,7 @@ export default function Dashboard() {
                         </div>
 
                         {overview && overview.locks && (
-                            <Card padding="md" className="mt-6">
+                            <Card padding="md">
                                 <CardHeader>
                                     <CardTitle>Estado de cerraduras</CardTitle>
                                     <p className="text-sm text-[var(--color-text-muted)] mt-1">
@@ -381,15 +302,6 @@ export default function Dashboard() {
             </div>
         </div>
     );
-}
-
-function formatCurrency(value) {
-    const n = Number(value) || 0;
-    return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD',
-        maximumFractionDigits: 0,
-    }).format(n);
 }
 
 function today() {

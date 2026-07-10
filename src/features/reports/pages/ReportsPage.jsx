@@ -1,21 +1,17 @@
 import { useState } from 'react';
-import { ClipboardCheck, Lock, Printer, Ticket, PenLine, RefreshCcw } from 'lucide-react';
+import { Lock, Printer, Ticket, PenLine } from 'lucide-react';
 import PageWrapper from '@shared/common/PageWrapper';
-import Tabs from '@shared/common/Tabs';
-import Button from '@shared/common/Button';
 import EmptyState from '@shared/common/EmptyState';
 import DateRangeFilter from '@features/reports/components/DateRangeFilter';
 import { buildRangeFromPreset } from '@features/reports/components/dateRangeUtils';
 import { useReport } from '@features/reports/hooks/useReports';
 import { usePermissions } from '@hooks/usePermissions';
-import ReportsOverview from '@features/reports/components/ReportsOverview';
 import LocksReport from '@features/reports/components/LocksReport';
 import PrintersReport from '@features/reports/components/PrintersReport';
 import TicketsReport from '@features/reports/components/TicketsReport';
 import SignaturesReport from '@features/reports/components/SignaturesReport';
 
 const TABS = [
-    { id: 'overview', label: 'Resumen General', icon: ClipboardCheck },
     { id: 'locks', label: 'Cerraduras', icon: Lock },
     { id: 'printers', label: 'Impresoras', icon: Printer },
     { id: 'tickets', label: 'Tickets', icon: Ticket },
@@ -24,31 +20,23 @@ const TABS = [
 
 export default function ReportsPage() {
     const { can } = usePermissions();
-    const [activeTab, setActiveTab] = useState('overview');
+    const [activeTab, setActiveTab] = useState('locks');
     const [range, setRange] = useState(() => buildRangeFromPreset('30d'));
 
-    const showRangeFilter = activeTab !== 'overview';
-
-    const { data, loading, error, refresh } = useReport(
-        activeTab,
-        showRangeFilter ? range : { from: null, to: null }
-    );
+    const { data, loading, error, refresh } = useReport(activeTab, range);
 
     const renderActiveTab = () => {
-        if (activeTab === 'overview') {
-            return <ReportsOverview data={data} loading={loading} error={error} />;
-        }
         if (activeTab === 'locks') {
-            return <LocksReport data={data} loading={loading} error={error} range={range} />;
+            return <LocksReport data={data} loading={loading} error={error} range={range} refresh={refresh} />;
         }
         if (activeTab === 'printers') {
-            return <PrintersReport data={data} loading={loading} error={error} range={range} />;
+            return <PrintersReport data={data} loading={loading} error={error} range={range} refresh={refresh} />;
         }
         if (activeTab === 'tickets') {
-            return <TicketsReport data={data} loading={loading} error={error} range={range} />;
+            return <TicketsReport data={data} loading={loading} error={error} range={range} refresh={refresh} />;
         }
         if (activeTab === 'signatures') {
-            return <SignaturesReport data={data} loading={loading} error={error} range={range} />;
+            return <SignaturesReport data={data} loading={loading} error={error} range={range} refresh={refresh} />;
         }
         return null;
     };
@@ -66,34 +54,30 @@ export default function ReportsPage() {
 
     return (
         <PageWrapper>
-            <div className="flex items-center justify-between flex-wrap gap-3">
-                <div>
-                    <h1 className="text-2xl font-bold text-[var(--color-text-primary)] flex items-center gap-2">
-                        <ClipboardCheck className="w-6 h-6 text-[var(--color-primary)]" />
-                        Reportes
-                    </h1>
-                    <p className="text-sm text-[var(--color-text-secondary)] mt-1">
-                        Analítica consolidada de cerraduras, impresoras, tickets y firmas
-                    </p>
-                </div>
-                <Button
-                    variant="secondary"
-                    icon={RefreshCcw}
-                    onClick={refresh}
-                    size="sm"
-                >
-                    Actualizar
-                </Button>
-            </div>
-
             <div className="space-y-4">
-                <div className="bg-[var(--color-bg-secondary)] border-b border-[var(--color-border)] -mx-5 px-5 -mt-5">
-                    <Tabs items={TABS} activeId={activeTab} onChange={setActiveTab} />
-                </div>
+                <nav className="flex overflow-x-auto border-b border-[var(--color-border)] -mx-5 px-5 scrollbar-hide" aria-label="Tabs de reportes">
+                    {TABS.map((tab) => {
+                        const Icon = tab.icon;
+                        const isActive = activeTab === tab.id;
+                        return (
+                            <button
+                                key={tab.id}
+                                type="button"
+                                onClick={() => setActiveTab(tab.id)}
+                                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                                    isActive
+                                        ? 'border-[var(--color-primary)] text-[var(--color-primary)]'
+                                        : 'border-transparent text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:border-[var(--color-border-hover)]'
+                                }`}
+                            >
+                                <Icon className="w-4 h-4 shrink-0" />
+                                {tab.label}
+                            </button>
+                        );
+                    })}
+                </nav>
 
-                {showRangeFilter && (
-                    <DateRangeFilter value={range} onChange={setRange} />
-                )}
+                <DateRangeFilter value={range} onChange={setRange} />
 
                 <div>{renderActiveTab()}</div>
             </div>

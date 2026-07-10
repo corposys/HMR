@@ -1,18 +1,12 @@
-import { Lock, AlertTriangle, Wrench, Package } from 'lucide-react';
-import {
-    PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
-    BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend,
-} from 'recharts';
-import KPIRow from './KPIRow';
-import ChartCard from './ChartCard';
-import ReportTable from './ReportTable';
+import { Lock, Wrench, AlertTriangle, ClipboardCheck, Package } from 'lucide-react';
 import ReportSection from './ReportSection';
-import ExportButton from './ExportButton';
+import ReportTable from './ReportTable';
+import ReportOptionCard from './ReportOptionCard';
 
-const STATUS_COLORS = {
-    operational: '#10b981',
-    needs_review: '#f59e0b',
-    out_of_service: '#ef4444',
+const STATUS_LABELS = {
+    operational: 'Operativas',
+    needs_review: 'Revisión',
+    out_of_service: 'Fuera de servicio',
 };
 
 const EVENT_LABELS = {
@@ -36,178 +30,112 @@ const DEPT_LABELS = {
 };
 
 export default function LocksReport({ data, loading, error, range }) {
-    const statusData = data?.status_distribution
-        ? [
-            { name: 'Operativas', value: data.status_distribution.operational ?? 0, key: 'operational' },
-            { name: 'Revisión', value: data.status_distribution.needs_review ?? 0, key: 'needs_review' },
-            { name: 'Fuera de servicio', value: data.status_distribution.out_of_service ?? 0, key: 'out_of_service' },
-          ]
-        : [];
-
-    const eventsTypeData = data?.events_by_type
-        ? data.events_by_type.map((e) => ({
-            name: EVENT_LABELS[e.type] || e.type,
-            Eventos: e.count,
-        }))
-        : [];
-
-    const partsData = data?.parts_consumption || [];
-    const batteryAlerts = data?.battery_alerts;
+    const statusDist = data?.status_distribution || {};
+    const eventsByType = data?.events_by_type || [];
     const eventsByDay = data?.events_by_day || [];
+    const partsConsumption = data?.parts_consumption || [];
     const openReports = data?.open_reports || [];
-
-    const kpiItems = data && data.status_distribution && batteryAlerts
-        ? [
-            {
-                title: 'Cerraduras totales',
-                value: data.status_distribution.total,
-                icon: Lock,
-                variant: 'primary',
-            },
-            {
-                title: 'Operativas',
-                value: `${data.status_distribution.operational}/${data.status_distribution.total}`,
-                subtitle: `${Math.round((data.status_distribution.operational / Math.max(data.status_distribution.total, 1)) * 100)}% del total`,
-                icon: Lock,
-                variant: 'success',
-            },
-            {
-                title: 'Alertas de batería',
-                value: batteryAlerts.overdue + batteryAlerts.upcoming_15d,
-                subtitle: `${batteryAlerts.overdue} vencidas · ${batteryAlerts.upcoming_15d} ≤15d`,
-                icon: AlertTriangle,
-                variant: batteryAlerts.overdue > 0 ? 'danger' : 'warning',
-            },
-            {
-                title: 'Eventos del período',
-                value: eventsByDay.reduce((acc, d) => acc + d.count, 0),
-                subtitle: 'Mantenimientos registrados',
-                icon: Wrench,
-                variant: 'default',
-            },
-        ]
-        : [];
+    const batteryAlerts = data?.battery_alerts;
 
     return (
         <ReportSection loading={loading} error={error} data={data}>
-            <div className="space-y-6">
-                <KPIRow items={kpiItems} />
-
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <ChartCard
-                        title="Distribución de estados"
-                        description="Estado actual de las cerraduras"
-                    >
-                        <div className="h-64">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
-                                    <Pie
-                                        data={statusData}
-                                        cx="50%"
-                                        cy="50%"
-                                        innerRadius={50}
-                                        outerRadius={90}
-                                        paddingAngle={2}
-                                        dataKey="value"
-                                        label={({ name, value }) => `${name}: ${value}`}
-                                        labelLine={false}
-                                    >
-                                        {statusData.map((entry) => (
-                                            <Cell key={entry.key} fill={STATUS_COLORS[entry.key]} />
-                                        ))}
-                                    </Pie>
-                                    <Tooltip
-                                        contentStyle={{
-                                            backgroundColor: 'var(--color-bg-elevated)',
-                                            border: '1px solid var(--color-border)',
-                                            borderRadius: '8px',
-                                            color: 'var(--color-text-primary)',
-                                        }}
-                                    />
-                                </PieChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </ChartCard>
-
-                    <ChartCard
-                        title="Eventos por tipo"
-                        description={`Mantenimientos en el período (${range.from} → ${range.to})`}
-                    >
-                        <div className="h-64">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={eventsTypeData}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-                                    <XAxis dataKey="name" stroke="var(--color-text-muted)" fontSize={12} />
-                                    <YAxis stroke="var(--color-text-muted)" fontSize={12} allowDecimals={false} />
-                                    <Tooltip
-                                        contentStyle={{
-                                            backgroundColor: 'var(--color-bg-elevated)',
-                                            border: '1px solid var(--color-border)',
-                                            borderRadius: '8px',
-                                            color: 'var(--color-text-primary)',
-                                        }}
-                                    />
-                                    <Bar dataKey="Eventos" fill="var(--color-primary)" radius={[4, 4, 0, 0]} />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </ChartCard>
-                </div>
-
-                <ChartCard
-                    title="Repuestos más consumidos"
-                    description="Top 10 partes usadas en mantenimientos del período"
+            <div className="space-y-4">
+                <ReportOptionCard
+                    icon={Lock}
+                    title="Resumen de estado"
+                    description={`${statusDist.total || 0} cerraduras — ${statusDist.operational || 0} operativas, ${statusDist.needs_review || 0} en revisión, ${statusDist.out_of_service || 0} fuera de servicio`}
+                    columns={[
+                        { key: 'status', label: 'Estado', render: (r) => STATUS_LABELS[r.status] || r.status },
+                        { key: 'count', label: 'Cantidad', align: 'right' },
+                    ]}
+                    rows={[
+                        { status: 'operational', count: statusDist.operational || 0 },
+                        { status: 'needs_review', count: statusDist.needs_review || 0 },
+                        { status: 'out_of_service', count: statusDist.out_of_service || 0 },
+                    ]}
+                    filename={`cerraduras_estado_${range.from}_${range.to}.csv`}
                 >
-                    <div className="mb-3 flex justify-end">
-                        <ExportButton
-                            rows={partsData}
-                            filename={`cerraduras_partes_${range.from}_${range.to}.csv`}
+                    <ReportTable
+                        columns={[
+                            { key: 'status', label: 'Estado', render: (r) => STATUS_LABELS[r.status] || r.status },
+                            { key: 'count', label: 'Cantidad', align: 'right' },
+                        ]}
+                        rows={[
+                            { status: 'operational', count: statusDist.operational || 0 },
+                            { status: 'needs_review', count: statusDist.needs_review || 0 },
+                            { status: 'out_of_service', count: statusDist.out_of_service || 0 },
+                        ]}
+                    />
+                </ReportOptionCard>
+
+                <ReportOptionCard
+                    icon={Wrench}
+                    title="Mantenimientos del período"
+                    description={`${eventsByDay.reduce((a, d) => a + d.count, 0)} eventos registrados (${range.from} → ${range.to})`}
+                    columns={[
+                        { key: 'type', label: 'Tipo', render: (r) => EVENT_LABELS[r.type] || r.type },
+                        { key: 'count', label: 'Eventos', align: 'right' },
+                    ]}
+                    rows={eventsByType.map((e) => ({ type: e.type, count: e.count }))}
+                    filename={`cerraduras_mantenimientos_${range.from}_${range.to}.csv`}
+                >
+            <div className="space-y-4">
+                        <ReportTable
                             columns={[
-                                { key: 'part', label: 'Repuesto' },
-                                { key: 'used', label: 'Cantidad usada' },
+                                { key: 'type', label: 'Tipo', render: (r) => EVENT_LABELS[r.type] || r.type },
+                                { key: 'count', label: 'Eventos', align: 'right' },
                             ]}
+                            rows={eventsByType.map((e) => ({ type: e.type, count: e.count }))}
+                            empty="No hay eventos de mantenimiento en el período."
                         />
                     </div>
-                    {partsData.length === 0 ? (
-                        <p className="text-center py-6 text-sm text-[var(--color-text-muted)]">
-                            No se registraron consumos de repuestos en el período.
-                        </p>
-                    ) : (
-                        <div className="h-64">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={partsData} layout="vertical" margin={{ left: 60 }}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" horizontal={false} />
-                                    <XAxis type="number" stroke="var(--color-text-muted)" fontSize={12} allowDecimals={false} />
-                                    <YAxis
-                                        type="category"
-                                        dataKey="part"
-                                        stroke="var(--color-text-muted)"
-                                        fontSize={11}
-                                        width={140}
-                                    />
-                                    <Tooltip
-                                        contentStyle={{
-                                            backgroundColor: 'var(--color-bg-elevated)',
-                                            border: '1px solid var(--color-border)',
-                                            borderRadius: '8px',
-                                            color: 'var(--color-text-primary)',
-                                        }}
-                                    />
-                                    <Bar dataKey="used" fill="var(--color-warning)" radius={[0, 4, 4, 0]} name="Cantidad" />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </div>
-                    )}
-                </ChartCard>
+                </ReportOptionCard>
 
-                <ChartCard
+                <ReportOptionCard
+                    icon={AlertTriangle}
+                    title="Alertas de batería"
+                    description={batteryAlerts
+                        ? `${batteryAlerts.overdue} vencidas · ${batteryAlerts.upcoming_15d} próximas (≤15 días)`
+                        : 'Sin datos de predicción'}
+                    columns={[
+                        { key: 'label', label: 'Tipo' },
+                        { key: 'count', label: 'Cantidad', align: 'right' },
+                    ]}
+                    rows={batteryAlerts ? [
+                        { label: 'Vencidas', count: batteryAlerts.overdue || 0 },
+                        { label: 'Próximas (≤15 días)', count: batteryAlerts.upcoming_15d || 0 },
+                    ] : []}
+                    filename={`cerraduras_bateria_${range.from}_${range.to}.csv`}
+                >
+                    <ReportTable
+                        columns={[
+                            { key: 'label', label: 'Tipo' },
+                            { key: 'count', label: 'Cantidad', align: 'right' },
+                        ]}
+                        rows={batteryAlerts ? [
+                            { label: 'Vencidas', count: batteryAlerts.overdue || 0 },
+                            { label: 'Próximas (≤15 días)', count: batteryAlerts.upcoming_15d || 0 },
+                        ] : []}
+                    />
+                </ReportOptionCard>
+
+                <ReportOptionCard
+                    icon={ClipboardCheck}
                     title="Reportes operativos abiertos"
-                    description="Pendientes por resolver"
+                    description={`${openReports.length} pendientes por resolver`}
+                    columns={[
+                        { key: 'room_number', label: 'Hab.' },
+                        { key: 'report_type', label: 'Tipo', render: (r) => REPORT_TYPE_LABELS[r.report_type] || r.report_type },
+                        { key: 'source_department', label: 'Depto.', render: (r) => DEPT_LABELS[r.source_department] || r.source_department },
+                        { key: 'issue_description', label: 'Descripción' },
+                        { key: 'created_at', label: 'Reportado', render: (r) => r.created_at ? new Date(r.created_at).toLocaleDateString('es') : '—' },
+                    ]}
+                    rows={openReports}
+                    filename={`cerraduras_reportes_operativos_${range.from}_${range.to}.csv`}
                 >
                     <ReportTable
                         columns={[
                             { key: 'room_number', label: 'Habitación' },
-                            { key: 'floor_code', label: 'Piso', render: (r) => `M${r.module_number} ${r.floor_code}` },
                             { key: 'report_type', label: 'Tipo', render: (r) => REPORT_TYPE_LABELS[r.report_type] || r.report_type },
                             { key: 'source_department', label: 'Departamento', render: (r) => DEPT_LABELS[r.source_department] || r.source_department },
                             { key: 'issue_description', label: 'Descripción' },
@@ -216,7 +144,28 @@ export default function LocksReport({ data, loading, error, range }) {
                         rows={openReports}
                         empty="No hay reportes operativos abiertos."
                     />
-                </ChartCard>
+                </ReportOptionCard>
+
+                <ReportOptionCard
+                    icon={Package}
+                    title="Repuestos consumidos"
+                    description={`${partsConsumption.length} tipos de repuesto usados en el período`}
+                    columns={[
+                        { key: 'part', label: 'Repuesto' },
+                        { key: 'used', label: 'Cantidad', align: 'right' },
+                    ]}
+                    rows={partsConsumption}
+                    filename={`cerraduras_repuestos_${range.from}_${range.to}.csv`}
+                >
+                    <ReportTable
+                        columns={[
+                            { key: 'part', label: 'Repuesto' },
+                            { key: 'used', label: 'Cantidad', align: 'right' },
+                        ]}
+                        rows={partsConsumption}
+                        empty="No se registraron consumos de repuestos en el período."
+                    />
+                </ReportOptionCard>
             </div>
         </ReportSection>
     );
