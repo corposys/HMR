@@ -1,8 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
-    Home, Settings, Wrench, ChevronDown, Shield, BedDouble,
-    ServerCog, CalendarCheck, Monitor, LayoutGrid, Receipt, ClipboardCheck
+    Home, Settings, ChevronDown, ServerCog, ClipboardCheck
 } from 'lucide-react';
 
 function BrandLogo({ collapsed = false }) {

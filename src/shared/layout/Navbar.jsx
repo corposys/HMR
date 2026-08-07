@@ -9,20 +9,14 @@ import {
     Menu,
     X,
     LayoutDashboard,
-    Hotel,
     DoorOpen,
-    Shield,
     FileSignature,
     SettingsIcon,
-    BedDouble,
     RefreshCw,
     TrendingUp,
     TrendingDown,
-    LayoutGrid,
-    CalendarCheck,
     Sun,
     Moon,
-    Receipt,
     ClipboardCheck,
     Printer,
     Ticket,
@@ -132,73 +126,9 @@ export default function Navbar({ onMenuClick, isMobileSidebarOpen }) {
             title: 'Dashboard HMR',
             icon: LayoutDashboard,
         },
-        '/rack': {
-            title: 'Rack Operativo',
-            icon: LayoutGrid,
-        },
-        '/demo-rack': {
-            title: 'Demo Rack',
-            icon: LayoutGrid,
-        },
-        '/billing': {
-            title: 'Facturación',
-            icon: Receipt,
-        },
-        '/audit': {
-            title: 'Auditoría',
-            icon: ClipboardCheck,
-        },
-        '/audit/nocturna': {
-            title: 'Auditoría Nocturna',
-            icon: ClipboardCheck,
-        },
-        '/reservaciones': {
-            title: 'Reservaciones',
-            icon: CalendarCheck,
-        },
-        '/reservaciones/tarifario': {
-            title: 'Tarifario',
-            icon: CalendarCheck,
-        },
-        '/reception/reservas': {
-            title: 'Recepción',
-            icon: Hotel,
-        },
-        '/housekeeping': {
-            title: 'Housekeeping',
-            icon: BedDouble,
-        },
-        '/housekeeping/operaciones': {
-            title: 'Operaciones',
-            icon: BedDouble,
-        },
-        '/housekeeping/control': {
-            title: 'Control',
-            icon: BedDouble,
-        },
-        '/housekeeping/gestion': {
-            title: 'Gestión',
-            icon: BedDouble,
-        },
-        '/housekeeping/lenceria': {
-            title: 'Lencería',
-            icon: Hotel,
-        },
         '/systems/rooms': {
             title: 'Control de Cerraduras',
             icon: DoorOpen,
-        },
-        '/maintenance': {
-            title: 'Habitaciones',
-            icon: BedDouble,
-        },
-        '/maintenance/habitaciones': {
-            title: 'Habitaciones',
-            icon: BedDouble,
-        },
-        '/security/vehicle-control': {
-            title: 'Control de Vehículos',
-            icon: Shield,
         },
         '/systems/signatures': {
             title: 'Firmas Corporativas',
@@ -234,10 +164,6 @@ export default function Navbar({ onMenuClick, isMobileSidebarOpen }) {
 
         if (location.pathname.startsWith('/systems/room/')) {
             return pageMeta['/systems/rooms'];
-        }
-
-        if (location.pathname.startsWith('/maintenance/habitaciones')) {
-            return pageMeta['/maintenance/habitaciones'];
         }
 
         if (location.pathname.startsWith('/systems/signatures/')) {
