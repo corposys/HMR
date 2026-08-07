@@ -14,14 +14,8 @@ from routes.auth import router as auth_router
 from routes.signatures import router as signatures_router
 from routes.structure import router as structure_router
 from routes.maintenance import router as maintenance_router
-from routes.reception import router as reception_router
 from routes.settings import router as settings_router
-from routes.roles import router as roles_router
 from routes.users import router as users_router
-from routes.rack import router as rack_router
-from routes.housekeeping import router as housekeeping_router
-from routes.linen import router as linen_router
-from routes.rates import router as rates_router
 from routes.systems import router as systems_router
 from routes.tickets import router as tickets_router
 from routes.reports import router as reports_router
@@ -52,14 +46,8 @@ app.include_router(auth_router)
 app.include_router(signatures_router)
 app.include_router(structure_router)
 app.include_router(maintenance_router)
-app.include_router(reception_router)
 app.include_router(settings_router)
-app.include_router(roles_router)
 app.include_router(users_router)
-app.include_router(rack_router)
-app.include_router(housekeeping_router)
-app.include_router(linen_router)
-app.include_router(rates_router)
 app.include_router(systems_router)
 app.include_router(tickets_router)
 app.include_router(reports_router)
