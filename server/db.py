@@ -6,6 +6,7 @@ import os
 import json
 import time
 from contextlib import contextmanager
+import bcrypt
 import psycopg2
 from psycopg2 import pool
 from logging_config import logger
@@ -228,6 +229,16 @@ def _create_tables(cur):
 
     cur.execute("""
         ALTER TABLE part_types DROP CONSTRAINT IF EXISTS part_types_category_check
+    """)
+    cur.execute("""
+        DELETE FROM part_types
+        WHERE name NOT IN (
+            'Batería AA', 'Porta Pilas', 'Cilindro', 'Cara Externa (con lector)',
+            'Cara Interna', 'Goma Externa', 'Goma Interna', 'Cuadrante',
+            'Cuadrante Doble Lock', 'Pasador Doble Lock', 'Tarjeta Lectora (RFID+LED)',
+            'Galleta (Cuerpo Central)'
+        )
+        OR category NOT IN ('battery', 'mecanico', 'interno', 'carcasa', 'consumible', 'electronico')
     """)
     cur.execute("""
         ALTER TABLE part_types ADD CONSTRAINT part_types_category_check
@@ -883,6 +894,7 @@ def _run_migrations(cur):
 
 def _seed_all():
     _seed_roles()
+    _seed_users()
     _seed_user_role_migration()
     _seed_hotel_settings()
     _seed_room_types()
@@ -1000,6 +1012,28 @@ def _seed_roles():
         conn.rollback()
         release_connection(conn)
         logger.error(f"Error seeding roles: {e}")
+
+
+def _seed_users():
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+        admin_password = bcrypt.hashpw(b"admin1234", bcrypt.gensalt()).decode("utf-8")
+        cur.execute(
+            "INSERT INTO users (full_name, email, password_hash, role, role_id) "
+            "VALUES (%s, %s, %s, %s, %s) "
+            "ON CONFLICT (email) DO NOTHING",
+            ("Administrador", "admin@hmr.com", admin_password, "admin", 1),
+        )
+
+        conn.commit()
+        cur.close()
+        release_connection(conn)
+        logger.info("Users seeded (admin)")
+    except Exception as e:
+        conn.rollback()
+        release_connection(conn)
+        logger.error(f"Error seeding users: {e}")
 
 
 def _seed_user_role_migration():

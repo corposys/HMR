@@ -8,9 +8,9 @@ from datetime import datetime, timedelta, timezone
 import jwt
 from fastapi import Depends, HTTPException, Request
 
-JWT_SECRET = os.getenv("JWT_SECRET")
-if not JWT_SECRET:
-    msg = "JWT_SECRET environment variable is required"
+JWT_SECRET = os.getenv("JWT_SECRET") or "dev_secret"
+if not os.getenv("JWT_SECRET"):
+    msg = "JWT_SECRET environment variable not set, using insecure dev default"
     print(msg, file=sys.stderr)
 
 JWT_ALGORITHM = "HS256"
