@@ -1,7 +1,7 @@
 services:
   postgres:
     image: postgres:15-alpine
-    restart: always
+    restart: unless-stopped
     environment:
       POSTGRES_USER: ${DB_USER:-hmr}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-hmr_secret}
@@ -13,17 +13,15 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 10s
 
-  hmr-backend:
+  backend:
     build:
       context: ./server
       dockerfile: Dockerfile.prod
-    restart: always
+    restart: unless-stopped
     volumes:
       - uploads:/app/uploads
     environment:
-      - PYTHONDONTWRITEBYTECODE=1
       - DB_HOST=postgres
       - DB_PORT=5432
       - DB_USER=${DB_USER:-hmr}
@@ -31,25 +29,25 @@ services:
       - DB_NAME=${DB_NAME:-hmr_db}
       - JWT_SECRET=${JWT_SECRET}
       - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost}
-    depends_on:
-      postgres:
-        condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "python -c \"from urllib.request import urlopen; urlopen('http://localhost:8000/api/health')\" || exit 1"]
+      test: ["CMD", "python", "-c", "from urllib.request import urlopen; urlopen('http://localhost:8000/api/health')"]
       interval: 10s
       timeout: 5s
       retries: 10
-      start_period: 45s
+      start_period: 30s
+    depends_on:
+      postgres:
+        condition: service_healthy
 
-  hmr-app:
+  app:
     build:
       context: .
       dockerfile: Dockerfile.prod
-    restart: always
+    restart: unless-stopped
     ports:
-      - "80:80"
+      - "80:8080"
     depends_on:
-      hmr-backend:
+      backend:
         condition: service_healthy
 
 volumes:

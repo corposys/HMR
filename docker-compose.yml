@@ -2,7 +2,7 @@ services:
   postgres:
     image: postgres:15-alpine
     container_name: hmr_postgres
-    restart: always
+    restart: unless-stopped
     ports:
       - "127.0.0.1:15432:5432"
     environment:
@@ -16,64 +16,45 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 10s
 
-  hmr-backend:
-    build:
-      context: ./server
-      dockerfile: Dockerfile
+  backend:
+    build: ./server
     container_name: hmr_backend
-    restart: always
+    restart: unless-stopped
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     volumes:
       - ./server:/app
       - uploads:/app/uploads
     environment:
-      - PYTHONDONTWRITEBYTECODE=1
       - DB_HOST=postgres
       - DB_PORT=5432
       - DB_USER=${DB_USER:-hmr}
       - DB_PASSWORD=${DB_PASSWORD:-hmr_secret}
       - DB_NAME=${DB_NAME:-hmr_db}
-      - JWT_SECRET=${JWT_SECRET}
+      - JWT_SECRET=${JWT_SECRET:-dev_secret}
       - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
     depends_on:
       postgres:
         condition: service_healthy
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
 
-  hmr-app:
-    build:
-      context: .
-      dockerfile: Dockerfile
+  app:
+    build: .
     container_name: hmr_app
-    restart: always
+    restart: unless-stopped
     ports:
       - "5173:5173"
     volumes:
-      - ./src:/app/src:ro
-      - ./public:/app/public:ro
-      - ./index.html:/app/index.html:ro
-      - ./vite.config.js:/app/vite.config.js:ro
-      - ./components.json:/app/components.json:ro
+      - ./src:/app/src
+      - ./public:/app/public
+      - ./index.html:/app/index.html
+      - ./vite.config.js:/app/vite.config.js
+      - ./components.json:/app/components.json
     environment:
-      - VITE_PORT=5173
       - CHOKIDAR_USEPOLLING=true
     depends_on:
-      hmr-backend:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5173/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
+      backend:
+        condition: service_started
 
 volumes:
   pgdata:

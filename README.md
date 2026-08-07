@@ -1,106 +1,87 @@
-# Hotel Margarita Real (HMR)
+# Hotel Margarita Real
 
-Sistema de gestión integral para operaciones internas del Hotel Margarita Real. Enfocado en minimalismo, rendimiento y experiencia de usuario.
+Sistema de gestión integral para operaciones internas del hotel (frontdesk, habitaciones, mantenimiento, reportes).
 
----
-
-## Tech Stack
-
-| Capa | Tecnologías |
-|------|-------------|
-| **Frontend** | React 19 + Vite + Tailwind CSS v4 + Lucide React + Recharts + React Router v7 |
-| **Backend** | FastAPI (Python) + PostgreSQL + Uvicorn + PyJWT + Pydantic |
-| **Infraestructura** | Docker / Docker Compose |
+**Stack:** React 19 + Vite + Tailwind CSS v4 · FastAPI + PostgreSQL · Docker
 
 ---
 
-## Guía de Instalación
+## Inicio rápido (Docker)
 
-### Requisitos
-
-- Node.js 20+
-- Docker & Docker Compose (para entorno completo)
-- PostgreSQL (solo para desarrollo nativo)
-
-### Instalación con Docker (recomendado)
+Requerimientos: Docker y Docker Compose.
 
 ```bash
-# Construir imágenes (sin caché)
-npm run docker:build
+# 1. Configura tus credenciales (opcional, hay valores por defecto)
+cp .env.example .env
 
-# Iniciar contenedores
-npm run docker:up
+# 2. Levanta todo (Postgres + Backend + Frontend)
+docker compose up -d --build
 
-# Verificar estado de salud
-npm run docker:verify
-
-# Ver logs en vivo
-npm run docker:logs
-
-# Detener contenedores
-npm run docker:down
+# 3. Abre el navegador
+http://localhost:5173
 ```
 
-Servicios:
-- Frontend: http://localhost:5173
-- Backend: http://localhost:8000 (Swagger en /docs)
-- Postgres: localhost:15432 (solo 127.0.0.1)
+La base de datos (tablas y datos de demo) se crea automáticamente al iniciar.
 
-### Desarrollo nativo (solo frontend)
+### Servicios
 
-Requiere mantener los contenedores del backend corriendo:
+| Servicio         | URL                          |
+|------------------|------------------------------|
+| Frontend (Vite)  | http://localhost:5173        |
+| Backend (FastAPI)| http://localhost:8000        |
+| Swagger Doc      | http://localhost:8000/docs   |
+| PostgreSQL       | localhost:5432               |
+
+### Credenciales de prueba
+
+| Rol  | Email         | Contraseña |
+|------|---------------|------------|
+| Admin| admin@hmr.com | admin1234  |
+
+---
+
+## Uso diario
 
 ```bash
-# Instalar dependencias
+docker compose up -d          # iniciar
+docker compose logs -f        # ver logs
+docker compose down           # detener
+docker compose down -v        # detener y borrar datos (reinicio limpio)
+```
+
+Con `npm run dev`, `npm run lint`, `npm run build` trabajas sobre el frontend nativo.
+
+---
+
+## Producción
+
+```bash
+# Requiere .env con JWT_SECRET real
+cp .env.example .env
+
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+Frontend en http://localhost (puerto 80), se sirve con Nginx y redirige `/api` al backend.
+
+---
+
+## Desarrollo nativo (solo frontend)
+
+Mantén los contenedores del backend corriendo y ejecuta:
+
+```bash
 npm install
-
-# Iniciar Vite dev (cambiar proxy en vite.config.js a localhost:8000)
 npm run dev
-
-# Verificar código
-npm run lint && npm run build
 ```
 
-### Producción
-
-```bash
-npm run docker:build
-npm run docker:up -- -f docker-compose.prod.yml
-```
-
-Frontend disponible en http://localhost
+Nota: cambiar el target del proxy en `vite.config.js` de `http://backend:8000` a `http://localhost:8000`.
 
 ---
 
-## Credenciales de Prueba
+## Estructura
 
-| Rol | Email | Contraseña |
-|-----|-------|------------|
-| Administrador | admin@hmr.com | admin1234 |
-
----
-
-## Comandos Útiles
-
-| Comando | Descripción |
-|---------|-------------|
-| `npm run dev` | Inicia Vite en modo desarrollo |
-| `npm run lint` | Ejecuta ESLint |
-| `npm run build` | Compila para producción |
-| `npm run docker:build` | Construye imágenes Docker |
-| `npm run docker:up` | Inicia contenedores |
-| `npm run docker:down` | Detiene contenedores |
-| `npm run docker:logs` | Logs en vivo de todos los servicios |
-| `npm run docker:verify` | Health check de los servicios |
-
----
-
-## Base de Datos
-
-```bash
-# Conexión desde el host
-psql -h localhost -p 15432 -U hmr -d hmr_db
-# Contraseña: hmr_secret
-```
-
-El esquema y datos de prueba se crean automáticamente al iniciar el backend (`init_db()` en `server/db.py`).
+- `src/` · Frontend React (features por dominio)
+- `server/` · Backend FastAPI con routers y esquema SQL en `db.py`
+- `docker-compose.yml` · Entorno desarrollo
+- `docker-compose.prod.yml` · Entorno producción (Nginx)

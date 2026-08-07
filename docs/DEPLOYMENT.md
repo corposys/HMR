@@ -72,13 +72,13 @@ docker compose -f docker-compose.prod.yml up -d --build
 docker compose -f docker-compose.prod.yml logs -f
 
 # Scale backend workers (if needed)
-docker compose -f docker-compose.prod.yml up -d --scale hmr-backend=3
+docker compose -f docker-compose.prod.yml up -d --scale backend=3
 
 # Backup database
-docker exec hmr_postgres pg_dump -U hmr hmr_db > backup_$(date +%Y%m%d).sql
+docker compose -f docker-compose.prod.yml exec postgres pg_dump -U hmr hmr_db > backup_$(date +%Y%m%d).sql
 
 # Restore database
-docker exec -i hmr_postgres psql -U hmr hmr_db < backup_file.sql
+docker compose -f docker-compose.prod.yml exec -T postgres psql -U hmr hmr_db < backup_file.sql
 ```
 
 ## Support

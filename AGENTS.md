@@ -8,20 +8,21 @@ React 19 + Vite 7 + Tailwind CSS v4 + React Router v7 | FastAPI + PostgreSQL | D
 
 | Command | What |
 |---|---|
-| `npm run docker:build` | Build images (no cache) |
-| `npm run docker:up` | Start containers |
-| `npm run docker:verify` | Health check (requires bash — fails on Windows) |
-| `npm run docker:logs` | Live logs |
-| `npm run docker:down` | Stop containers |
+| `docker compose up -d` | Start dev containers (postgres + backend + app) |
+| `docker compose up -d --build` | Rebuild + start dev |
+| `docker compose logs -f` | Live logs |
+| `docker compose down` | Stop containers |
+| `docker compose -f docker-compose.prod.yml up -d --build` | Start production |
 | `npm run lint && npm run build` | CI frontend verification |
-| `npm run verify-deps` | Check required packages are installed |
 | `npm run dev` | Native Vite dev (see proxy note) |
 
 **No test framework.** Skip all `npm test`, `pytest`.
 
+**Dev compose service names:** `postgres`, `backend`, `app` (used for internal DNS). No npm docker scripts.
+
 ## Vite proxy
 
-`vite.config.js` proxies `/api` → `http://hmr-backend:8000` (works inside Docker only). To run `npm run dev` natively: keep backend containers running, change proxy target to `http://localhost:8000`.
+`vite.config.js` proxies `/api` → `http://backend:8000` (works inside Docker only). To run `npm run dev` natively: keep backend containers running, change proxy target to `http://localhost:8000`.
 
 ## Architecture
 
@@ -95,12 +96,12 @@ Backend responses:
 
 - Docker health: `GET /api/health` returns `{ success: True, status: "ok", service: "hmr-backend" }`
 - Seeded admin: `admin@hmr.com` / `admin1234` (`role_id=1`)
-- PG from host: `psql -h localhost -p 15432 -U hmr -d hmr_db` (pass: `hmr_secret`); port is `127.0.0.1` only
-- Logs: `docker compose logs hmr-backend -f`, `docker compose logs hmr-app -f`
-- JWT: HS256, 7-day expiry, stored in `localStorage` key `token`
-- Docker volumes (frontend dev): only `src/`, `public/`, `index.html`, `vite.config.js`, `components.json` mounted. `node_modules` stays in container.
+- PG from host: `psql -h localhost -p 5432 -U hmr -d hmr_db` (pass: `hmr_secret`); port is `127.0.0.1` only
+- Logs: `docker compose logs backend -f`, `docker compose logs app -f`
+- Docker dev: code is volume-mounted (hot reload). `node_modules`/Python deps stay in containers.
 - Dockerfiles: `Dockerfile` (Vite dev) / `Dockerfile.prod` (nginx) for frontend; `server/Dockerfile` (uvicorn `--reload`) / `server/Dockerfile.prod` for backend
 - Windows Docker: `CHOKIDAR_USEPOLLING=true` is set in `docker-compose.yml` for file watching
+- Prod Nginx listens on `8080` internally, mapped to host `80` (lets it run as non-root)
 
 ## Theme (Dark/Light Mode)
 

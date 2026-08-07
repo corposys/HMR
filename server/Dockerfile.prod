@@ -35,5 +35,4 @@ USER appuser
 
 EXPOSE 8000
 
-# Single worker, init_db() retries PostgreSQL 10x with 2s intervals
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

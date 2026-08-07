@@ -8,12 +8,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "verify-deps": "node scripts/verify-deps.js",
-    "docker:build": "docker compose build --no-cache",
-    "docker:up": "docker compose up -d",
-    "docker:verify": "sh scripts/docker-verify.sh",
-    "docker:logs": "docker compose logs -f",
-    "docker:down": "docker compose down"
+    "verify-deps": "node scripts/verify-deps.js"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.15",
