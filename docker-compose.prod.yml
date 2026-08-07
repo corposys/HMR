@@ -45,7 +45,7 @@ services:
       dockerfile: Dockerfile.prod
     restart: unless-stopped
     ports:
-      - "80:8080"
+      - "8081:8080"
     depends_on:
       backend:
         condition: service_healthy
