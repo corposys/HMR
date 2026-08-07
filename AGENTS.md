@@ -27,19 +27,20 @@ React 19 + Vite 7 + Tailwind CSS v4 + React Router v7 | FastAPI + PostgreSQL | D
 ## Architecture
 
 ### Frontend (`src/`)
-- 14 feature modules: `src/features/<domain>/` — pages + components per domain
-- Routing: `src/app/routes/` — lazy-loaded, `ProtectedRoute` + `Layout`
+- 5 feature modules: `src/features/<domain>/` — pages + components per domain. Remaining: `auth`, `dashboard`, `reports`, `settings`, `systems` (locks, printers, signatures, tickets). PMS modules (rack, reception, housekeeping, billing, etc.) were removed — don't revive them.
+- Routing: `src/app/routes/protectedRoutes.jsx` — 10 lazy-loaded routes + settings sub-routes (`general`, `structure` only). No other settings tabs exist.
 - Contexts: `AuthContext.jsx` (JWT in localStorage), `ToastContext.jsx`, `ThemeContext.jsx`
 - Shared components: `src/shared/common/` — `PageWrapper`, `Button`, `Modal`, `DataTable`, `LoadingSpinner`, `EmptyState`, `ErrorState`, `Card`, `Tabs`, `CustomDropdown`, `Input`, `Alert`, `Badge`, `StatCard`, `ToggleSwitch`, `WhatsAppButton`, `ProtectedRoute`, `ErrorBoundary`. **Use these before creating new ones.**
-- Hooks: `usePermissions()` (RBAC), `useSettings()` (hotel config), `useSeasons()`, `useRates()`, `useQuote()`, `useOccupancyConfigs()`
+- Hooks: only `usePermissions()` (RBAC) and `useSettings()` (hotel config) in `src/hooks/`. Deleted: `useQuote`, `useSeasons`, `useRates`, `useOccupancyConfigs`.
 - shadcn configured via `components.json` — 8 generated UI primitives in `src/components/ui/` (button, badge, card, dialog, separator, table, tabs, tooltip). Uses `@/lib/utils` (`cn()` helper) which is a `.ts` file (Vite transpiles it, project is otherwise `.jsx`/`.js`).
 - Constants: `src/utils/constants.js` — check before hardcoding
 - API client: `apiFetch`/`apiJson` from `@utils/api` — auto-attaches Bearer token, 401 redirects to `/login`
 
 ### Backend (`server/`)
-- Entrypoint: `server/main.py` — FastAPI, CORS, mounts 13 routers under `/api` + `/uploads`
+- Entrypoint: `server/main.py` — FastAPI, CORS, mounts 15 routers under `/api` + `/uploads`
+- **Not fully pruned:** backend still mounts + seeds data for removed PMS modules (`rack`, `reception`, `housekeeping`, `linen`, `rates`, `roles`, `structure`, `maintenance`). Frontend no longer calls most of these. Don't assume a mounted router has a frontend page.
 - No ORM: raw psycopg2, `SimpleConnectionPool(1, 10)` in `db.py`. Schema + seed data in same file.
-- On startup `init_db()` creates tables and seeds: roles (6), settings (27), room types (6), hotel structure (96 rooms), demo data (25 guests, ~33 reservations)
+- On startup `init_db()` runs `_seed_all()` (16 seed functions) — tables, roles (6), settings, room types, hotel structure (96 rooms), demo data (25 guests, ~33 reservations), locks, printers/toners, tickets.
 - Rate limiting: **in-memory only** (resets on restart). Login: 10/min, register: 5/5min.
 - Dev hot reload enabled via `./server:/app` volume + uvicorn `--reload`
 
@@ -64,7 +65,7 @@ React 19 + Vite 7 + Tailwind CSS v4 + React Router v7 | FastAPI + PostgreSQL | D
 
 ## RBAC
 
-Frontend: `usePermissions()` returns `{ can, isAdmin }`. Gate UI with `can(resource, action)`. 9 resources: settings, users, reception, guests, rooms, housekeeping, maintenance, reports, financial.
+Frontend: `usePermissions()` returns `{ can, isAdmin }`. Gate UI with `can(resource, action)`. Resources seeded: settings, users, reception, guests, rooms, housekeeping, maintenance, reports, financial.
 Backend: `require_permission(resource, action)` FastAPI dependency. Admin (`role_id=1`) bypasses all checks. Permissions stored as JSON in `roles.permissions`.
 
 ## API patterns
@@ -89,19 +90,20 @@ Backend responses:
 | `DB_USER` | `hmr` | — |
 | `DB_PASSWORD` | `hmr_secret` | — |
 | `DB_NAME` | `hmr_db` | — |
-| `JWT_SECRET` | (required) | CI injects via GitHub secret |
+| `JWT_SECRET` | `dev_secret` fallback | `server/middleware/auth.py` warns to stderr if unset — insecure default for dev only |
 | `CORS_ORIGINS` | `http://localhost:5173,http://127.0.0.1:5173` | — |
 
 ## Dev tips
 
-- Docker health: `GET /api/health` returns `{ success: True, status: "ok", service: "hmr-backend" }`
-- Seeded admin: `admin@hmr.com` / `admin1234` (`role_id=1`)
-- PG from host: `psql -h localhost -p 5432 -U hmr -d hmr_db` (pass: `hmr_secret`); port is `127.0.0.1` only
+- Docker health: `GET /api/health` returns `{ success: True, status: "ok", service: "hmr-backend" }` (service field is `hmr-backend`, compose service is `backend`)
+- Seeded admin: `admin@hmr.com` / `admin1234` (`role_id=1`) — created via `_seed_users()` on startup (also add any missing admin if DB is stale)
+- PG from host: `psql -h localhost -p 15432 -U hmr -d hmr_db` (pass: `hmr_secret`); host port is `15432` (5432 is used by native PG on dev machines)
 - Logs: `docker compose logs backend -f`, `docker compose logs app -f`
 - Docker dev: code is volume-mounted (hot reload). `node_modules`/Python deps stay in containers.
 - Dockerfiles: `Dockerfile` (Vite dev) / `Dockerfile.prod` (nginx) for frontend; `server/Dockerfile` (uvicorn `--reload`) / `server/Dockerfile.prod` for backend
 - Windows Docker: `CHOKIDAR_USEPOLLING=true` is set in `docker-compose.yml` for file watching
 - Prod Nginx listens on `8080` internally, mapped to host `80` (lets it run as non-root)
+- `npm run lint` currently emits only exhaustive-deps warnings (no errors) — keep it that way
 
 ## Theme (Dark/Light Mode)
 
@@ -109,9 +111,9 @@ Toggle button in `Navbar.jsx` (Sun/Moon icons). Preference persisted in `localSt
 - `ThemeContext` (`src/context/ThemeContext.jsx`) adds/removes `.dark` class on `<html>`
 - CSS variables in `src/index.css` use `:root` for light, `.dark` override for dark
 
-## Locks Module (`/systems/rooms`)
+## Locks Module
 
-- Frontend routes: `/systems/rooms` (rack), `/systems/room/:id` (detail/timeline)
+- Frontend routes: `/systems/rooms` (rack + inventory tab, `PartsInventory` is embedded in `LocksRackPage`), `/systems/room/:id` (detail/timeline)
 - Backend API: endpoints are under `/api/maintenance/locks/*` (not `/api/systems/`)
-- `LocksRackPage` uses tabs navigation (like RackOperativo); `LockSummaryCard` mirrors `RackRoomCard` styling
-- Data via `useLocksOverview` hook → `useLockRackData` for grouping
+- Data via `useLocksOverview` (`@features/systems/locks/hooks/useLocks`) → `useLockRackData` for grouping
+- Also on `/systems`: `signatures`, `printers`, `tickets`
