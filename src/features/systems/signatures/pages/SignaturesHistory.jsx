@@ -57,8 +57,9 @@ export default function SignaturesHistory() {
         mobilePhone: '+58 414-0000000',
     };
     const fixedData = {
-        officePhone: `Ofic: ${getSetting('hotel_phone', '+58 0295-5001300')}`,
-        website: getSetting('hotel_website', 'www.hotelmargaritareal.com'),
+        officePhone: 'Ofic: +58 0295-5001300',
+        website: 'www.hotelmargaritareal.com',
+        websiteUrl: 'https://www.hotelmargaritareal.com/',
         address: getSetting('hotel_address', 'Av. Aldonza Manrique, Final Calle Camarón, Hotel Margarita Real. Ofc. Admin. Pampatar, Edo. Nueva Esparta. Venezuela 6316'),
     };
 

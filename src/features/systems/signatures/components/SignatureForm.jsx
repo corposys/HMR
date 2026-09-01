@@ -14,20 +14,6 @@ export default function SignatureForm({ formData, setFormData, handleClear, fixe
             return;
         }
 
-        if (name === 'jobTitle') {
-            const regex = /[^a-zA-ZáéíóúÁÉÍÓÚñÑ0-9\s\-/.]/g;
-            const sanitizedValue = value.replace(regex, '');
-            setFormData(prev => ({ ...prev, [name]: sanitizedValue }));
-            return;
-        }
-
-        if (name === 'extension') {
-            const regex = /[^0-9\-<>]/g;
-            const sanitizedValue = value.replace(regex, '');
-            setFormData(prev => ({ ...prev, [name]: sanitizedValue }));
-            return;
-        }
-
         if (name === 'email') {
             const regex = /[^a-zA-Z0-9@._-]/g;
             const sanitizedValue = value.replace(regex, '');
@@ -72,7 +58,7 @@ export default function SignatureForm({ formData, setFormData, handleClear, fixe
                             readOnly={readOnly}
                             className="w-full pl-10 pr-3 py-2 text-sm bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] rounded-lg text-[var(--color-text-primary)] focus:border-[var(--color-primary)] focus:outline-none transition-colors disabled:opacity-60"
                             placeholder="NOMBRE Y APELLIDO"
-                            maxLength={18}
+                            maxLength={50}
                         />
                     </div>
                 </div>
@@ -91,7 +77,7 @@ export default function SignatureForm({ formData, setFormData, handleClear, fixe
                             readOnly={readOnly}
                             className="w-full pl-10 pr-3 py-2 text-sm bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] rounded-lg text-[var(--color-text-primary)] focus:border-[var(--color-primary)] focus:outline-none transition-colors disabled:opacity-60"
                             placeholder="CARGO / DEPARTAMENTO"
-                            maxLength={18}
+                            maxLength={50}
                         />
                     </div>
                 </div>
@@ -110,7 +96,7 @@ export default function SignatureForm({ formData, setFormData, handleClear, fixe
                             readOnly={readOnly}
                             className="w-full pl-10 pr-3 py-2 text-sm bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] rounded-lg text-[var(--color-text-primary)] focus:border-[var(--color-primary)] focus:outline-none transition-colors disabled:opacity-60"
                             placeholder="CORREO ELECTRÓNICO"
-                            maxLength={40}
+                            maxLength={60}
                         />
                     </div>
                 </div>
@@ -130,7 +116,7 @@ export default function SignatureForm({ formData, setFormData, handleClear, fixe
                             readOnly={readOnly}
                             className="w-full pl-10 pr-3 py-2 text-sm bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] rounded-lg text-[var(--color-text-primary)] focus:border-[var(--color-primary)] focus:outline-none transition-colors disabled:opacity-60"
                             placeholder="+58 414-0000000"
-                            maxLength={15}
+                            maxLength={20}
                         />
                     </div>
                 </div>
@@ -149,7 +135,7 @@ export default function SignatureForm({ formData, setFormData, handleClear, fixe
                             readOnly={readOnly}
                             className="w-full pl-10 pr-3 py-2 text-sm bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] rounded-lg text-[var(--color-text-primary)] focus:border-[var(--color-primary)] focus:outline-none transition-colors disabled:opacity-60"
                             placeholder="0000"
-                            maxLength={10}
+                            maxLength={20}
                         />
                     </div>
                 </div>

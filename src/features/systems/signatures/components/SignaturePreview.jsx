@@ -118,7 +118,7 @@ export default function SignaturePreview({
                                                 </tr>
                                                 <tr>
                                                     <td style={{ margin: 0, padding: '2px 0', fontFamily: 'Arial', lineHeight: '1' }}>
-                                                        <a href={`https://${fixedData.website}`} style={{ fontSize: '11px', fontWeight: 'bold', color: BRAND_TEAL, textDecoration: 'none', lineHeight: '1' }}>
+                                                        <a href={fixedData.websiteUrl} style={{ fontSize: '11px', fontWeight: 'bold', color: BRAND_TEAL, textDecoration: 'none', lineHeight: '1' }}>
                                                             {fixedData.website}
                                                         </a>
                                                     </td>
