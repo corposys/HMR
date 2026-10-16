@@ -54,6 +54,7 @@ export default function SignaturesHistory() {
     const [isDownloading, setIsDownloading] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const signatureRef = useRef(null);
+    const lastSavedRef = useRef({ id: null, name: '', email: '' });
 
     const activeTemplate = getSignatureTemplate(templateId);
 
@@ -108,6 +109,9 @@ export default function SignaturesHistory() {
         try {
             await apiFetch(`/api/signatures/${toDelete.id}`, { method: 'DELETE' });
             setSignatures(prev => prev.filter(s => s.id !== toDelete.id));
+            if (lastSavedRef.current.id === toDelete.id) {
+                lastSavedRef.current = { id: null, name: '', email: '' };
+            }
             if (currentId === toDelete.id) {
                 handleClear();
             }
@@ -150,6 +154,7 @@ export default function SignaturesHistory() {
         });
         setCurrentId(null);
         setTemplateId(DEFAULT_SIGNATURE_TEMPLATE_ID);
+        lastSavedRef.current = { id: null, name: '', email: '' };
 
         const params = new URLSearchParams();
         params.set('tab', 'generator');
@@ -170,11 +175,16 @@ export default function SignaturesHistory() {
             template: templateId,
             address: formData.address || null,
         };
-        const endpoint = currentId ? `/api/signatures/${currentId}` : '/api/signatures';
-        const method = currentId ? 'PUT' : 'POST';
+        const nameKey = formData.fullName.trim().toLowerCase();
+        const emailKey = formData.email.trim().toLowerCase();
+        const last = lastSavedRef.current;
+        const sameAsLast = last.id && last.name === nameKey && last.email === emailKey;
+        const targetId = currentId || (sameAsLast ? last.id : null);
+        const endpoint = targetId ? `/api/signatures/${targetId}` : '/api/signatures';
+        const method = targetId ? 'PUT' : 'POST';
         const data = await apiJson(endpoint, { method, body: payload });
-        if (!currentId && data.signature?.id) {
-            setCurrentId(data.signature.id);
+        if (data.signature?.id) {
+            lastSavedRef.current = { id: data.signature.id, name: nameKey, email: emailKey };
         }
         return data;
     };
