@@ -131,7 +131,7 @@ export default function SignaturePreview({
                                                 <tr>
                                                     <td style={{ margin: 0, padding: '3px 0 0 0', fontFamily: 'Arial', lineHeight: '1' }}>
                                                         <span style={{ fontSize: '10px', color: colors.address, lineHeight: '1.1', display: 'block', fontFamily: FONT_ADDRESS }}>
-                                                            {`${template.addressLine1} ${template.addressLine2}`}
+                                                            {formData.address || placeholders.address}
                                                         </span>
                                                     </td>
                                                 </tr>

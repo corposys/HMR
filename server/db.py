@@ -104,6 +104,7 @@ def _create_tables(cur):
             mobile_phone VARCHAR(20),
             extension   VARCHAR(20),
             template    VARCHAR(30) NOT NULL DEFAULT 'hmr',
+            address     TEXT,
             created_by  INTEGER REFERENCES users(id) ON DELETE SET NULL,
             created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
@@ -600,6 +601,7 @@ def _run_migrations(cur):
     cur.execute("ALTER TABLE part_types ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE")
     cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE")
     cur.execute("ALTER TABLE signatures ADD COLUMN IF NOT EXISTS template VARCHAR(30) NOT NULL DEFAULT 'hmr'")
+    cur.execute("ALTER TABLE signatures ADD COLUMN IF NOT EXISTS address TEXT")
 
     cur.execute("""
         DO $$

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowLeft, User, Settings as SettingsIcon, Mail, Smartphone, PhoneCall, Globe, Eraser } from 'lucide-react';
+import { ArrowLeft, User, Settings as SettingsIcon, Mail, Smartphone, PhoneCall, Globe, MapPin, Eraser } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function SignatureForm({ formData, setFormData, handleClear, template, readOnly = false }) {
@@ -142,6 +142,25 @@ export default function SignatureForm({ formData, setFormData, handleClear, temp
                             className="w-full pl-10 pr-3 py-2 text-sm bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] rounded-lg text-[var(--color-text-primary)] focus:border-[var(--color-primary)] focus:outline-none transition-colors disabled:opacity-60"
                             placeholder="0000"
                             maxLength={20}
+                        />
+                    </div>
+                </div>
+
+                <div>
+                    <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1">
+                        Dirección
+                    </label>
+                    <div className="relative">
+                        <MapPin className="absolute left-3 top-2.5 w-4 h-4 text-[var(--color-text-muted)]" />
+                        <textarea
+                            name="address"
+                            value={formData.address}
+                            onChange={handleInputChange}
+                            readOnly={readOnly}
+                            rows={3}
+                            className="w-full pl-10 pr-3 py-2 text-sm bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] rounded-lg text-[var(--color-text-primary)] focus:border-[var(--color-primary)] focus:outline-none transition-colors resize-none disabled:opacity-60"
+                            placeholder="DIRECCIÓN"
+                            maxLength={200}
                         />
                     </div>
                 </div>

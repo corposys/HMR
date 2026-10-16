@@ -8,8 +8,7 @@ export const SIGNATURE_TEMPLATES = [
         officePhone: '+58(0295)5001300',
         website: 'www.hotelmargaritareal.com',
         websiteUrl: 'https://www.hotelmargaritareal.com/',
-        addressLine1: 'Av. Aldonza Manrique, Final Calle Camarón, Hotel Margarita Real.',
-        addressLine2: 'Ofc. Admin. Pampatar, Edo. Nueva Esparta. Venezuela 6316',
+        address: 'Av. Aldonza Manrique, Final Calle Camarón, Hotel Margarita Real. Ofc. Admin. Pampatar, Edo. Nueva Esparta. Venezuela 6316',
         emailPlaceholder: 'correo@margaritareal.com.ve',
         colors: {
             logoBackground: '#009098',
@@ -32,8 +31,7 @@ export const SIGNATURE_TEMPLATES = [
         officePhone: '+58(0295)5001300',
         website: '',
         websiteUrl: '',
-        addressLine1: 'Av. Aldonza Manrique, Final Calle Camarón, Hotel Margarita Real.',
-        addressLine2: 'Ofc. Admin. Pampatar, Edo. Nueva Esparta. Venezuela 6316',
+        address: 'Av. Aldonza Manrique, Final Calle Camarón, Hotel Margarita Real. Ofc. Admin. Pampatar, Edo. Nueva Esparta. Venezuela 6316',
         emailPlaceholder: 'correo@corporeal.com.ve',
         colors: {
             logoBackground: '#002d72',

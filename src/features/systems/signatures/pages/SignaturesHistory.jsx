@@ -47,6 +47,7 @@ export default function SignaturesHistory() {
         email: searchParams.get('email') || '',
         extension: searchParams.get('extension') || '',
         mobilePhone: searchParams.get('mobilePhone') || '',
+        address: searchParams.get('address') || getSignatureTemplate(searchParams.get('template')).address,
     });
     const [currentId, setCurrentId] = useState(searchParams.get('id') || null);
     const [templateId, setTemplateId] = useState(searchParams.get('template') || DEFAULT_SIGNATURE_TEMPLATE_ID);
@@ -63,6 +64,7 @@ export default function SignaturesHistory() {
         email: activeTemplate.emailPlaceholder,
         extension: '0000',
         mobilePhone: '+58 414-0000000',
+        address: 'Dirección',
     };
 
     const isFormValid = formData.fullName.trim() !== '' &&
@@ -125,6 +127,7 @@ export default function SignaturesHistory() {
             email: sig.email,
             mobilePhone: sig.mobile_phone || '',
             extension: sig.extension || '',
+            address: sig.address || getSignatureTemplate(sig.template).address,
         });
         setCurrentId(sig.id);
         setTemplateId(sig.template || DEFAULT_SIGNATURE_TEMPLATE_ID);
@@ -142,7 +145,8 @@ export default function SignaturesHistory() {
             jobTitle: '',
             email: '',
             extension: '',
-            mobilePhone: ''
+            mobilePhone: '',
+            address: getSignatureTemplate(DEFAULT_SIGNATURE_TEMPLATE_ID).address,
         });
         setCurrentId(null);
         setTemplateId(DEFAULT_SIGNATURE_TEMPLATE_ID);
@@ -164,6 +168,7 @@ export default function SignaturesHistory() {
             mobile_phone: formData.mobilePhone || null,
             extension: formData.extension || null,
             template: templateId,
+            address: formData.address || null,
         };
         const endpoint = currentId ? `/api/signatures/${currentId}` : '/api/signatures';
         const method = currentId ? 'PUT' : 'POST';
