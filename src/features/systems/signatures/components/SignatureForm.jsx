@@ -2,7 +2,7 @@ import React from 'react';
 import { ArrowLeft, User, Settings as SettingsIcon, Mail, Smartphone, PhoneCall, Globe, Eraser } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
-export default function SignatureForm({ formData, setFormData, handleClear, fixedData, readOnly = false }) {
+export default function SignatureForm({ formData, setFormData, handleClear, template, readOnly = false }) {
     const handleInputChange = (e) => {
         if (readOnly) return;
         const { name, value } = e.target;
@@ -17,6 +17,12 @@ export default function SignatureForm({ formData, setFormData, handleClear, fixe
         if (name === 'email') {
             const regex = /[^a-zA-Z0-9@._-]/g;
             const sanitizedValue = value.replace(regex, '');
+            setFormData(prev => ({ ...prev, [name]: sanitizedValue }));
+            return;
+        }
+
+        if (name === 'mobilePhone') {
+            const sanitizedValue = value.replace(/\D/g, '');
             setFormData(prev => ({ ...prev, [name]: sanitizedValue }));
             return;
         }
@@ -115,8 +121,8 @@ export default function SignatureForm({ formData, setFormData, handleClear, fixe
                             onChange={handleInputChange}
                             readOnly={readOnly}
                             className="w-full pl-10 pr-3 py-2 text-sm bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] rounded-lg text-[var(--color-text-primary)] focus:border-[var(--color-primary)] focus:outline-none transition-colors disabled:opacity-60"
-                            placeholder="+58 414-0000000"
-                            maxLength={20}
+                            placeholder="04148224620"
+                            maxLength={11}
                         />
                     </div>
                 </div>
@@ -146,19 +152,21 @@ export default function SignatureForm({ formData, setFormData, handleClear, fixe
                     </label>
                     <div className="p-3 bg-[var(--color-bg-tertiary)]/50 rounded-lg border border-[var(--color-border)] flex items-start gap-3">
                         <PhoneCall className="w-4 h-4 text-[var(--color-text-muted)] shrink-0" />
-                        <p className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider font-semibold">{fixedData.officePhone}</p>
+                        <p className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider font-semibold">{template.officePhone}</p>
                     </div>
                 </div>
 
-                <div>
-                    <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1">
-                        Sitio Web
-                    </label>
-                    <div className="p-3 bg-[var(--color-bg-tertiary)]/50 rounded-lg border border-[var(--color-border)] flex items-start gap-3">
-                        <Globe className="w-4 h-4 text-[var(--color-text-muted)] shrink-0" />
-                        <p className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider font-semibold">{fixedData.website}</p>
+                {template.website && (
+                    <div>
+                        <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1">
+                            Sitio Web
+                        </label>
+                        <div className="p-3 bg-[var(--color-bg-tertiary)]/50 rounded-lg border border-[var(--color-border)] flex items-start gap-3">
+                            <Globe className="w-4 h-4 text-[var(--color-text-muted)] shrink-0" />
+                            <p className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider font-semibold">{template.website}</p>
+                        </div>
                     </div>
-                </div>
+                )}
             </CardContent>
         </Card>
     );

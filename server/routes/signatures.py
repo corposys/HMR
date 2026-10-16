@@ -19,6 +19,7 @@ class SignatureCreate(BaseModel):
     email: str
     mobile_phone: Optional[str] = None
     extension: Optional[str] = None
+    template: Optional[str] = 'hmr'
 
 
 # --- Routes ---
@@ -32,7 +33,7 @@ async def list_signatures(current_user: dict = Depends(get_current_user)):
         cur.execute("""
             SELECT s.id, s.full_name, s.job_title, s.email,
                    s.mobile_phone, s.extension, s.created_at,
-                   u.full_name AS created_by_name
+                   u.full_name AS created_by_name, s.template
             FROM signatures s
             LEFT JOIN users u ON s.created_by = u.id
             ORDER BY s.created_at DESC
@@ -48,6 +49,7 @@ async def list_signatures(current_user: dict = Depends(get_current_user)):
                 "extension": r[5],
                 "created_at": r[6].isoformat() if r[6] else None,
                 "created_by_name": r[7],
+                "template": r[8] or "hmr",
             }
             for r in rows
         ]
@@ -70,9 +72,9 @@ async def create_signature(
         cur = conn.cursor()
         cur.execute(
             """
-            INSERT INTO signatures (full_name, job_title, email, mobile_phone, extension, created_by)
-            VALUES (%s, %s, %s, %s, %s, %s)
-            RETURNING id, full_name, job_title, email, mobile_phone, extension, created_at
+            INSERT INTO signatures (full_name, job_title, email, mobile_phone, extension, created_by, template)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            RETURNING id, full_name, job_title, email, mobile_phone, extension, created_at, template
             """,
             (
                 data.full_name,
@@ -81,6 +83,7 @@ async def create_signature(
                 data.mobile_phone or None,
                 data.extension or None,
                 current_user["id"],
+                data.template or "hmr",
             ),
         )
         row = cur.fetchone()
@@ -95,6 +98,7 @@ async def create_signature(
                 "mobile_phone": row[4],
                 "extension": row[5],
                 "created_at": row[6].isoformat() if row[6] else None,
+                "template": row[7] or "hmr",
             },
         }
     except Exception:
@@ -130,9 +134,9 @@ async def update_signature(
             """
             UPDATE signatures
             SET full_name = %s, job_title = %s, email = %s,
-                mobile_phone = %s, extension = %s
+                mobile_phone = %s, extension = %s, template = %s
             WHERE id = %s
-            RETURNING id, full_name, job_title, email, mobile_phone, extension, created_at
+            RETURNING id, full_name, job_title, email, mobile_phone, extension, created_at, template
             """,
             (
                 data.full_name,
@@ -140,6 +144,7 @@ async def update_signature(
                 data.email,
                 data.mobile_phone or None,
                 data.extension or None,
+                data.template or "hmr",
                 signature_id,
             ),
         )
@@ -155,6 +160,7 @@ async def update_signature(
                 "mobile_phone": row[4],
                 "extension": row[5],
                 "created_at": row[6].isoformat() if row[6] else None,
+                "template": row[7] or "hmr",
             },
         }
     except HTTPException:

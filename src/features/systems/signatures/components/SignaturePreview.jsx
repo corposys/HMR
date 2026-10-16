@@ -1,12 +1,15 @@
 import React from 'react';
 import { Monitor, Download, Loader2, Save } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { formatSignaturePhone } from '@utils/signatureTemplates';
 
-const BRAND_TEAL = '#009098';
+const FONT_ROUNDED = '"Nunito", "Arial Rounded MT Bold", Arial, sans-serif';
+const FONT_EMAIL = '"Arimo", Arial, sans-serif';
+const FONT_ADDRESS = '"Source Sans 3", "Myriad Pro", Arial, sans-serif';
 
 export default function SignaturePreview({
     formData,
-    fixedData,
+    template,
     placeholders,
     isFormValid,
     isDownloading,
@@ -17,6 +20,8 @@ export default function SignaturePreview({
     compact = false
 }) {
     const previewPlaceholderStyle = { color: '#c0c0c0' };
+    const colors = template.colors;
+    const mobileFormatted = formatSignaturePhone(formData.mobilePhone);
 
     return (
         <Card className="border-[var(--color-border)] bg-[var(--color-bg-secondary)] shadow-sm">
@@ -63,71 +68,70 @@ export default function SignaturePreview({
             <CardContent>
                 <div className={`bg-[var(--color-bg-primary)] rounded-lg p-4 border border-[var(--color-border)] overflow-x-auto flex justify-center items-center ${compact ? 'min-h-[160px]' : 'min-h-[200px]'}`}>
                     <div ref={signatureRef} data-signature style={{ width: '567px', height: '128px', overflow: 'hidden', minWidth: '567px' }}>
-                        <table cellPadding="0" cellSpacing="0" border="0" style={{ margin: 0, padding: 0, fontFamily: 'Arial, sans-serif', width: '567px', height: '128px', maxHeight: '128px', backgroundColor: '#ffffff', tableLayout: 'fixed' }}>
+                        <table cellPadding="0" cellSpacing="0" border="0" style={{ margin: 0, padding: 0, fontFamily: 'Arial, sans-serif', width: '567px', height: '128px', maxHeight: '128px', backgroundColor: colors.panelBackground, tableLayout: 'fixed' }}>
                             <tbody>
                                 <tr>
-                                    <td width="200" style={{ width: '180px', backgroundColor: BRAND_TEAL, padding: '0', textAlign: 'center', verticalAlign: 'middle', height: '128px' }}>
+                                    <td width="200" style={{ width: '180px', backgroundColor: colors.logoBackground, padding: '0', textAlign: 'center', verticalAlign: 'middle', height: '128px' }}>
                                         <img
-                                            src="/img/logo-hmr-main-white-.png"
-                                            alt="Hotel Margarita Real"
+                                            src={template.logoPath}
+                                            alt={template.logoAlt}
                                             width="170"
                                             style={{ display: 'block', margin: 'auto', maxWidth: '100%', height: 'auto' }}
                                         />
                                     </td>
                                     <td width="15" style={{ width: '5px' }}>&nbsp;</td>
-                                    <td style={{ verticalAlign: 'top', padding: '15px 0 0 10px', backgroundColor: '#ffffff', overflow: 'hidden' }}>
-                                        <table cellPadding="0" cellSpacing="0" border="0" style={{ margin: 0, padding: 0, borderCollapse: 'collapse' }}>
+                                    <td style={{ verticalAlign: 'middle', padding: '0 15px 0 10px', backgroundColor: colors.panelBackground, overflow: 'hidden' }}>
+                                        <table cellPadding="0" cellSpacing="0" border="0" style={{ margin: 0, padding: 0, borderCollapse: 'collapse', width: '100%' }}>
                                             <tbody>
                                                 <tr>
-                                                    <td style={{ margin: 0, padding: '0 0 2px 0', fontFamily: 'Arial', lineHeight: '1' }}>
-                                                        <span style={{ fontSize: '12px', fontWeight: 'bold', color: formData.fullName ? BRAND_TEAL : '#c0c0c0', textTransform: 'uppercase', lineHeight: '1', display: 'inline-block', verticalAlign: 'middle' }}>
+                                                    <td style={{ margin: 0, padding: '0', fontFamily: 'Arial', lineHeight: '1', whiteSpace: 'nowrap' }}>
+                                                        <span style={{ fontSize: '12px', fontWeight: 'bold', color: formData.fullName ? colors.name : '#c0c0c0', textTransform: 'uppercase', lineHeight: '1', display: 'inline-block', verticalAlign: 'middle', fontFamily: FONT_ROUNDED }}>
                                                             {formData.fullName || placeholders.fullName}
                                                         </span>
-                                                        <span style={{ color: BRAND_TEAL, fontWeight: 'bold', fontSize: '14px', margin: '0 6px', display: 'inline-block', verticalAlign: 'middle', transform: 'translateY(-2px)' }}>|</span>
-                                                        <span style={{ fontSize: '12px', fontWeight: 'bold', color: formData.jobTitle ? '#555555' : '#c0c0c0', textTransform: 'uppercase', lineHeight: '1', display: 'inline-block', verticalAlign: 'middle' }}>
+                                                        <span style={{ color: colors.separator, fontWeight: '900', fontSize: '15px', margin: '0 8px', display: 'inline-block', verticalAlign: 'middle', transform: 'translateY(-2px)' }}>|</span>
+                                                        <span style={{ fontSize: '12px', fontWeight: 'bold', color: formData.jobTitle ? colors.jobTitle : '#c0c0c0', textTransform: 'uppercase', lineHeight: '1', display: 'inline-block', verticalAlign: 'middle', fontFamily: FONT_ROUNDED }}>
                                                             {formData.jobTitle || placeholders.jobTitle}
                                                         </span>
                                                     </td>
                                                 </tr>
                                                 <tr>
-                                                    <td style={{ margin: 0, padding: '2px 0', fontFamily: 'Arial', lineHeight: '0.5' }}>
-                                                        <span style={{ fontSize: '11px', fontWeight: 'bold', color: formData.email ? '#555555' : '#c0c0c0', textDecoration: 'none', lineHeight: '1' }}>
+                                                    <td style={{ margin: 0, padding: '6px 0 0 0', fontFamily: 'Arial', lineHeight: '0.5' }}>
+                                                        <span style={{ fontSize: '11px', fontWeight: 'bold', color: formData.email ? colors.email : '#c0c0c0', textDecoration: 'none', lineHeight: '1', fontFamily: FONT_EMAIL }}>
                                                             {formData.email || placeholders.email}
                                                         </span>
                                                     </td>
                                                 </tr>
                                                 <tr>
-                                                    <td style={{ margin: 0, padding: '0', fontFamily: 'Arial', lineHeight: '1' }}>
-                                                        <span style={{ fontSize: '11px', fontWeight: 'bold', color: BRAND_TEAL, lineHeight: '1' }}>
-                                                            {fixedData.officePhone}
+                                                    <td style={{ margin: 0, padding: '8px 0 0 0', fontFamily: 'Arial', lineHeight: '1' }}>
+                                                        <span style={{ fontSize: '11px', fontWeight: 'bold', color: colors.phone, lineHeight: '1', fontFamily: FONT_ROUNDED }}>
+                                                            {`TELEF: ${template.officePhone}`}
+                                                            {mobileFormatted ? (
+                                                                <span>
+                                                                    {' '}
+                                                                    <span style={{ display: 'inline-block', transform: 'translateY(-1.5px)' }}>|</span>
+                                                                    {` ${mobileFormatted}`}
+                                                                </span>
+                                                            ) : ''}
                                                             {' '}
                                                             <span style={formData.extension ? {} : previewPlaceholderStyle}>
                                                                 {`Ext: ${formData.extension || placeholders.extension}`}
                                                             </span>
-                                                            {formData.mobilePhone ? (
-                                                                <span>
-                                                                    {` Teléf: ${formData.mobilePhone}`}
-                                                                </span>
-                                                            ) : (
-                                                                <span className="export-hide" style={previewPlaceholderStyle}>
-                                                                    {` Teléf: ${placeholders.mobilePhone}`}
-                                                                </span>
-                                                            )}
                                                         </span>
                                                     </td>
                                                 </tr>
+                                                {template.website && (
+                                                    <tr>
+                                                        <td style={{ margin: 0, padding: '0', fontFamily: 'Arial', lineHeight: '1' }}>
+                                                            <a href={template.websiteUrl} style={{ fontSize: '11px', fontWeight: 'bold', color: colors.website, textDecoration: 'none', lineHeight: '1', fontFamily: FONT_ROUNDED }}>
+                                                                {template.website}
+                                                            </a>
+                                                        </td>
+                                                    </tr>
+                                                )}
                                                 <tr>
-                                                    <td style={{ margin: 0, padding: '2px 0', fontFamily: 'Arial', lineHeight: '1' }}>
-                                                        <a href={fixedData.websiteUrl} style={{ fontSize: '11px', fontWeight: 'bold', color: BRAND_TEAL, textDecoration: 'none', lineHeight: '1' }}>
-                                                            {fixedData.website}
-                                                        </a>
-                                                    </td>
-                                                </tr>
-                                                <tr>
-                                                    <td style={{ margin: 0, padding: '2px 0 0 0', fontFamily: 'Arial', lineHeight: '1' }}>
-                                                        <span style={{ fontSize: '10px', color: '#555555', lineHeight: '1.1', display: 'block' }}>
-                                                            {fixedData.address.split('Hotel Margarita Real.')[0]}Hotel Margarita Real.<br />
-                                                            {fixedData.address.split('Hotel Margarita Real. ')[1]}
+                                                    <td style={{ margin: 0, padding: '3px 0 0 0', fontFamily: 'Arial', lineHeight: '1' }}>
+                                                        <span style={{ fontSize: '10px', color: colors.address, lineHeight: '1.1', display: 'block', fontFamily: FONT_ADDRESS }}>
+                                                            {`${template.addressLine1} ${template.addressLine2}`}
                                                         </span>
                                                     </td>
                                                 </tr>

@@ -2,6 +2,7 @@ import React from 'react';
 import { Mail, Smartphone, Edit3, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { formatDate } from '@utils/formatters';
+import { getSignatureTemplate } from '@utils/signatureTemplates';
 
 const AVATAR_COLORS = [
     { bg: '#009098', text: '#fff' },
@@ -35,6 +36,7 @@ export default function SignatureTable({ signatures, onEdit, onDelete }) {
                     {signatures.map((sig, idx) => {
                         const colorData = AVATAR_COLORS[idx % AVATAR_COLORS.length];
                         const hasMobilePhone = Boolean(sig.mobile_phone);
+                        const brand = getSignatureTemplate(sig.template);
 
                         return (
                             <tr key={sig.id} className="hover:bg-[var(--color-bg-tertiary)]/50 transition-colors group">
@@ -51,9 +53,18 @@ export default function SignatureTable({ signatures, onEdit, onDelete }) {
                                             <p className="truncate font-medium text-[var(--color-text-primary)]">
                                                 {sig.full_name}
                                             </p>
-                                            <p className="truncate text-xs text-[var(--color-text-muted)]">
-                                                {sig.job_title}
-                                            </p>
+                                            <div className="flex items-center gap-2">
+                                                <p className="truncate text-xs text-[var(--color-text-muted)]">
+                                                    {sig.job_title}
+                                                </p>
+                                                <Badge
+                                                    variant="outline"
+                                                    className="shrink-0 border-transparent px-1.5 py-0 text-[10px] font-semibold text-white"
+                                                    style={{ backgroundColor: brand.colors.logoBackground }}
+                                                >
+                                                    {brand.label}
+                                                </Badge>
+                                            </div>
                                             {/* Vista móvil para contacto/fecha que se oculta en sm/md */}
                                             <div className="mt-1 flex flex-col gap-1 sm:hidden">
                                                 <div className="flex items-center gap-1.5 text-xs">

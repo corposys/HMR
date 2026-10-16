@@ -13,7 +13,13 @@ import ErrorState from '@shared/common/ErrorState';
 import EmptyState from '@shared/common/EmptyState';
 import PageWrapper from '@shared/common/PageWrapper';
 import Button from '@shared/common/Button';
-import { useSettings } from '@hooks/useSettings';
+import CustomDropdown from '@shared/common/CustomDropdown';
+import {
+    SIGNATURE_TEMPLATES,
+    DEFAULT_SIGNATURE_TEMPLATE_ID,
+    getSignatureTemplate,
+    detectSignatureTemplate
+} from '@utils/signatureTemplates';
 import {
     Card, CardHeader
 } from '@/components/ui/card';
@@ -30,7 +36,6 @@ import SignatureTable from '@features/systems/signatures/components/SignatureTab
 export default function SignaturesHistory() {
     const [searchParams, setSearchParams] = useSearchParams();
     const { showToast } = useToast();
-    const { getSetting } = useSettings();
 
     // Tab principal (generator vs history)
     const [mainTab, setMainTab] = useState(searchParams.get('tab') || 'generator');
@@ -44,23 +49,20 @@ export default function SignaturesHistory() {
         mobilePhone: searchParams.get('mobilePhone') || '',
     });
     const [currentId, setCurrentId] = useState(searchParams.get('id') || null);
+    const [templateId, setTemplateId] = useState(searchParams.get('template') || DEFAULT_SIGNATURE_TEMPLATE_ID);
     const [isDownloading, setIsDownloading] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const signatureRef = useRef(null);
+
+    const activeTemplate = getSignatureTemplate(templateId);
 
     // Constantes del formulario
     const placeholders = {
         fullName: 'NOMBRE APELLIDO',
         jobTitle: 'CARGO',
-        email: 'correo@margaritareal.com.ve',
+        email: activeTemplate.emailPlaceholder,
         extension: '0000',
         mobilePhone: '+58 414-0000000',
-    };
-    const fixedData = {
-        officePhone: 'Ofic: +58 0295-5001300',
-        website: 'www.hotelmargaritareal.com',
-        websiteUrl: 'https://www.hotelmargaritareal.com/',
-        address: getSetting('hotel_address', 'Av. Aldonza Manrique, Final Calle Camarón, Hotel Margarita Real. Ofc. Admin. Pampatar, Edo. Nueva Esparta. Venezuela 6316'),
     };
 
     const isFormValid = formData.fullName.trim() !== '' &&
@@ -76,6 +78,12 @@ export default function SignaturesHistory() {
     const [toDelete, setToDelete] = useState(null);
     const [deleting, setDeleting] = useState(false);
     const [historyFilterTab, setHistoryFilterTab] = useState('all');
+    const [brandFilter, setBrandFilter] = useState('all');
+
+    useEffect(() => {
+        const detected = detectSignatureTemplate(formData.email);
+        if (detected) setTemplateId(prev => (prev === detected.id ? prev : detected.id));
+    }, [formData.email]);
 
     const fetchSignatures = useCallback(async () => {
         setLoading(true);
@@ -119,6 +127,7 @@ export default function SignaturesHistory() {
             extension: sig.extension || '',
         });
         setCurrentId(sig.id);
+        setTemplateId(sig.template || DEFAULT_SIGNATURE_TEMPLATE_ID);
 
         const params = new URLSearchParams();
         params.set('tab', 'generator');
@@ -136,6 +145,7 @@ export default function SignaturesHistory() {
             mobilePhone: ''
         });
         setCurrentId(null);
+        setTemplateId(DEFAULT_SIGNATURE_TEMPLATE_ID);
 
         const params = new URLSearchParams();
         params.set('tab', 'generator');
@@ -153,6 +163,7 @@ export default function SignaturesHistory() {
             email: formData.email,
             mobile_phone: formData.mobilePhone || null,
             extension: formData.extension || null,
+            template: templateId,
         };
         const endpoint = currentId ? `/api/signatures/${currentId}` : '/api/signatures';
         const method = currentId ? 'PUT' : 'POST';
@@ -189,12 +200,19 @@ export default function SignaturesHistory() {
         setIsDownloading(true);
 
         try {
+            await Promise.all([
+                document.fonts.load('700 12px "Nunito"'),
+                document.fonts.load('700 11px "Arimo"'),
+                document.fonts.load('400 10px "Source Sans 3"'),
+            ]);
+            await document.fonts.ready;
+
             const dataUrl = await toPng(signatureRef.current, {
                 width: 567,
                 height: 128,
                 pixelRatio: 1,
-                backgroundColor: '#ffffff',
-                skipFonts: true,
+                backgroundColor: activeTemplate.colors.panelBackground,
+                skipFonts: false,
             });
 
             const link = document.createElement('a');
@@ -243,14 +261,18 @@ export default function SignaturesHistory() {
         return s.full_name.toLowerCase().includes(q) || s.job_title.toLowerCase().includes(q) || s.email.toLowerCase().includes(q);
     });
 
+    const brandFiltered = brandFilter === 'all'
+        ? filtered
+        : filtered.filter(s => (s.template || DEFAULT_SIGNATURE_TEMPLATE_ID) === brandFilter);
+
     const tabFiltered = historyFilterTab === 'month'
-        ? filtered.filter(s => {
+        ? brandFiltered.filter(s => {
             if (!s.created_at) return false;
             const d = new Date(s.created_at);
             const now = new Date();
             return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
         })
-        : filtered;
+        : brandFiltered;
 
     const visibleSignatures = [...tabFiltered].sort((a, b) => {
         const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
@@ -277,6 +299,18 @@ export default function SignaturesHistory() {
 
                 {/* --- PESTAÑA: GENERADOR --- */}
                 <TabsContent value="generator" className="mt-0">
+                    <div className="mb-4 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-lg p-3">
+                        <label className="flex items-center gap-2 text-xs font-medium text-[var(--color-text-secondary)] shrink-0">
+                            <FileSignature className="w-4 h-4 text-[var(--color-primary)]" />
+                            Plantilla de firma
+                        </label>
+                        <CustomDropdown
+                            value={templateId}
+                            onChange={setTemplateId}
+                            options={SIGNATURE_TEMPLATES.map(t => ({ value: t.id, label: t.label }))}
+                            className="w-full sm:w-64"
+                        />
+                    </div>
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                         {/* Columna Izquierda: Formulario */}
                         <div className="lg:col-span-1">
@@ -284,7 +318,7 @@ export default function SignaturesHistory() {
                                 formData={formData}
                                 setFormData={setFormData}
                                 handleClear={handleClear}
-                                fixedData={fixedData}
+                                template={activeTemplate}
                             />
                         </div>
                         
@@ -292,7 +326,7 @@ export default function SignaturesHistory() {
                         <div className="lg:col-span-2 space-y-4">
                             <SignaturePreview
                                 formData={formData}
-                                fixedData={fixedData}
+                                template={activeTemplate}
                                 placeholders={placeholders}
                                 isFormValid={isFormValid}
                                 isDownloading={isDownloading}
@@ -331,6 +365,19 @@ export default function SignaturesHistory() {
 
                                 {/* Derecha: Búsqueda, Filtros y Acciones */}
                                 <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+                                    <Tabs value={brandFilter} onValueChange={setBrandFilter} className="w-auto h-8">
+                                        <TabsList className="h-full bg-[var(--color-bg-tertiary)] border border-[var(--color-border)]">
+                                            <TabsTrigger value="all" className="h-full text-xs data-[state=active]:bg-[var(--color-bg-secondary)] data-[state=active]:text-[var(--color-text-primary)]">
+                                                Todas las marcas
+                                            </TabsTrigger>
+                                            {SIGNATURE_TEMPLATES.map(t => (
+                                                <TabsTrigger key={t.id} value={t.id} className="h-full text-xs data-[state=active]:bg-[var(--color-bg-secondary)] data-[state=active]:text-[var(--color-text-primary)]">
+                                                    {t.label}
+                                                </TabsTrigger>
+                                            ))}
+                                        </TabsList>
+                                    </Tabs>
+
                                     <Tabs value={historyFilterTab} onValueChange={setHistoryFilterTab} className="w-auto h-8">
                                         <TabsList className="h-full bg-[var(--color-bg-tertiary)] border border-[var(--color-border)]">
                                             <TabsTrigger value="all" className="h-full text-xs data-[state=active]:bg-[var(--color-bg-secondary)] data-[state=active]:text-[var(--color-text-primary)]">
