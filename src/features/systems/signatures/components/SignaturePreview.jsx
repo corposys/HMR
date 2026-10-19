@@ -19,7 +19,6 @@ export default function SignaturePreview({
     signatureRef,
     compact = false
 }) {
-    const previewPlaceholderStyle = { color: '#c0c0c0' };
     const colors = template.colors;
     const mobileFormatted = formatSignaturePhone(formData.mobilePhone);
 
@@ -112,10 +111,7 @@ export default function SignaturePreview({
                                                                     {` ${mobileFormatted}`}
                                                                 </span>
                                                             ) : ''}
-                                                            {' '}
-                                                            <span style={formData.extension ? {} : previewPlaceholderStyle}>
-                                                                {`Ext: ${formData.extension || placeholders.extension}`}
-                                                            </span>
+                                                            {formData.extension ? ` Ext: ${formData.extension}` : ''}
                                                         </span>
                                                     </td>
                                                 </tr>

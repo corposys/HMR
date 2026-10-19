@@ -8,7 +8,7 @@ export default function SignatureForm({ formData, setFormData, handleClear, temp
         const { name, value } = e.target;
 
         if (name === 'fullName') {
-            const regex = /[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g;
+            const regex = /[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s.]/g;
             const sanitizedValue = value.replace(regex, '');
             setFormData(prev => ({ ...prev, [name]: sanitizedValue }));
             return;
@@ -128,8 +128,9 @@ export default function SignatureForm({ formData, setFormData, handleClear, temp
                 </div>
 
                 <div>
-                    <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1">
-                        Extensión Telefónica
+                    <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1 flex justify-between items-center">
+                        <span>Extensión Telefónica</span>
+                        <span className="text-[var(--color-text-muted)] text-[11px] font-normal">(Opcional)</span>
                     </label>
                     <div className="relative">
                         <PhoneCall className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-text-muted)]" />

@@ -63,15 +63,13 @@ export default function SignaturesHistory() {
         fullName: 'NOMBRE APELLIDO',
         jobTitle: 'CARGO',
         email: activeTemplate.emailPlaceholder,
-        extension: '0000',
         mobilePhone: '+58 414-0000000',
         address: 'Dirección',
     };
 
     const isFormValid = formData.fullName.trim() !== '' &&
         formData.jobTitle.trim() !== '' &&
-        formData.email.trim() !== '' &&
-        formData.extension.trim() !== '';
+        formData.email.trim() !== '';
 
     // Estado del Historial
     const [signatures, setSignatures] = useState([]);
